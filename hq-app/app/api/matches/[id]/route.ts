@@ -35,7 +35,6 @@ export async function PATCH(
       scoreA,
       scoreB,
       status,
-      scheduledAt,
       teamAId,
       teamBId,
     } = body
@@ -54,7 +53,6 @@ export async function PATCH(
         scoreA,
         scoreB,
         status: status || deriveMatchStatus(scoreA, scoreB),
-        scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
         teamAId,
         teamBId,
       },
