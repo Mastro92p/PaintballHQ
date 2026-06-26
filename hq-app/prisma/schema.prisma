@@ -7,13 +7,41 @@ datasource db {
   provider = "postgresql"
 }
 
+model League {
+  id          Int          @id @default(autoincrement())
+  name        String
+  description String?
+  logoUrl     String?
+  createdAt   DateTime     @default(now())
+
+  tournaments Tournament[]
+  teams       LeagueTeam[]
+}
+
+model LeagueTeam {
+  league     League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  leagueId   Int
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId     Int
+  joinedAt   DateTime @default(now())
+
+  @@id([leagueId, teamId])
+}
+
 model Tournament {
   id        Int      @id @default(autoincrement())
   name      String
   date      String
   location  String
   status    String   @default("upcoming")
+  type      String   @default("round_robin")
+  // "round_robin" | "bracket" | "group_and_bracket"
+  teamsToAdvance Int @default(4)
+  formatConfig   Json? 
   createdAt DateTime @default(now())
+
+  leagueId  Int?
+  league    League?  @relation(fields: [leagueId], references: [id], onDelete: SetNull)
 
   teams   TournamentTeam[]
   matches Match[]
@@ -25,9 +53,10 @@ model Team {
   contact   String?
   createdAt DateTime @default(now())
 
+  leagues     LeagueTeam[]
   tournaments TournamentTeam[]
-  matchesA    Match[] @relation("TeamA")
-  matchesB    Match[] @relation("TeamB")
+  matchesA    Match[]          @relation("TeamA")
+  matchesB    Match[]          @relation("TeamB")
 }
 
 model TournamentTeam {
@@ -43,15 +72,29 @@ model Match {
   id           Int        @id @default(autoincrement())
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   tournamentId Int
-  teamA        Team       @relation("TeamA", fields: [teamAId], references: [id])
-  teamAId      Int
-  teamB        Team       @relation("TeamB", fields: [teamBId], references: [id])
-  teamBId      Int
+  teamA        Team?       @relation("TeamA", fields: [teamAId], references: [id])
+  teamAId      Int?
+  teamB        Team?       @relation("TeamB", fields: [teamBId], references: [id])
+  teamBId      Int?
   scoreA       Int?
   scoreB       Int?
   round        Int        @default(1)
+  phase        String     @default("group")
+  // "group" | "round_of_32" | "round_of_16" | "quarter_final" | "semi_final" | "final"
+  group        String? 
   field        String?
+
+  nextMatchId    Int?
+  nextMatch      Match?  @relation("MatchProgression", fields: [nextMatchId], references: [id])
+  prevMatches    Match[] @relation("MatchProgression")
+
+  bracketOrder   Int?
+  nextMatchOrder Int?
+  nextSlot       String?
+
+
   status       String     @default("pending")
+  manualOverride Boolean  @default(false)
   createdAt    DateTime   @default(now())
 }
 

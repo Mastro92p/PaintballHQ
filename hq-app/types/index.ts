@@ -11,6 +11,7 @@ export interface Tournament {
   createdAt: Date
   teams?: TournamentTeam[]
   matches?: Match[]
+  formatConfig: FormatConfig | null;
 }
 
 export interface Team {
@@ -42,6 +43,8 @@ export interface Match {
   tournament?: Tournament
   teamA?: Team
   teamB?: Team
+  phase: string
+  group?: string | null
 }
 
 export interface User {
@@ -56,16 +59,24 @@ export interface CreateTournamentBody {
   name: string
   date: string
   location: string
-  status?: TournamentStatus
+  status?: string
+  type?: string           // ← new
+  teamsToAdvance?: number // ← new
+  leagueId?: number       // ← new
   teamIds?: number[]
+  formatConfig?: FormatConfig;
 }
 
 export interface UpdateTournamentBody {
   name?: string
   date?: string
   location?: string
-  status?: TournamentStatus
+  status?: string
+  type?: string           // ← new
+  teamsToAdvance?: number // ← new
+  leagueId?: number | null // ← new
   teamIds?: number[]
+  formatConfig?: FormatConfig;
 }
 
 export interface CreateTeamBody {
@@ -109,3 +120,61 @@ export interface Standing {
   goalDiff: number
   points: number
 }
+
+export interface CreateLeagueBody {
+  name: string
+  description?: string
+  logoUrl?: string
+  teamIds?: number[]
+}
+
+export interface UpdateLeagueBody {
+  name?: string
+  description?: string | null
+  logoUrl?: string | null
+  teamIds?: number[]
+}
+
+
+export interface League {
+  id:          number;
+  name:        string;
+  description: string | null;
+  logoUrl:     string | null;
+  createdAt:   string;
+  tournaments?: Tournament[];
+  teams?:      { teamId: number; team: Team }[];
+}
+
+// Update Tournament type:
+export interface Tournament {
+  // ...existing fields...
+  type:           string;
+  teamsToAdvance: number;
+  leagueId:       number | null;
+}
+
+
+export type FormatConfig = {
+  groupCount:         number;
+  teamsPerGroup:      number;
+  qualifiersPerGroup: number;
+  wildCardCount: number;
+  bracketSeedingRule: "crossover" | "sequential";
+};
+
+export type EnrolledTeam = {
+  teamId: number;
+  team: Team;
+};
+
+export type TournamentDetail = Tournament & {
+  id: number;
+  name: string;
+  status?: string;
+  type?: string;
+  date?: string;
+  location?: string | null;
+  teams: EnrolledTeam[];
+  matches: Match[];
+};

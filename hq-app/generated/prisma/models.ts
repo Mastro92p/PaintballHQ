@@ -8,6 +8,8 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/League'
+export type * from './models/LeagueTeam'
 export type * from './models/Tournament'
 export type * from './models/Team'
 export type * from './models/TournamentTeam'

@@ -49,6 +49,10 @@ export async function PATCH(
         ...(body.date && { date: body.date }),
         ...(body.location && { location: body.location.trim() }),
         ...(body.status && { status: body.status }),
+        ...(body.type && { type: body.type }),                          // ← new
+        ...(body.formatConfig !== undefined && { formatConfig: body.formatConfig ?? null }),
+        ...(body.teamsToAdvance && { teamsToAdvance: body.teamsToAdvance }), // ← new
+        ...(body.leagueId !== undefined && { leagueId: body.leagueId ?? null }), // ← new
       },
       include: { teams: { include: { team: true } }, matches: true },
     })

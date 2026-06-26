@@ -51,6 +51,8 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  League: 'League',
+  LeagueTeam: 'LeagueTeam',
   Tournament: 'Tournament',
   Team: 'Team',
   TournamentTeam: 'TournamentTeam',
@@ -74,13 +76,37 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const LeagueScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  description: 'description',
+  logoUrl: 'logoUrl',
+  createdAt: 'createdAt'
+} as const
+
+export type LeagueScalarFieldEnum = (typeof LeagueScalarFieldEnum)[keyof typeof LeagueScalarFieldEnum]
+
+
+export const LeagueTeamScalarFieldEnum = {
+  leagueId: 'leagueId',
+  teamId: 'teamId',
+  joinedAt: 'joinedAt'
+} as const
+
+export type LeagueTeamScalarFieldEnum = (typeof LeagueTeamScalarFieldEnum)[keyof typeof LeagueTeamScalarFieldEnum]
+
+
 export const TournamentScalarFieldEnum = {
   id: 'id',
   name: 'name',
   date: 'date',
   location: 'location',
   status: 'status',
-  createdAt: 'createdAt'
+  type: 'type',
+  teamsToAdvance: 'teamsToAdvance',
+  formatConfig: 'formatConfig',
+  createdAt: 'createdAt',
+  leagueId: 'leagueId'
 } as const
 
 export type TournamentScalarFieldEnum = (typeof TournamentScalarFieldEnum)[keyof typeof TournamentScalarFieldEnum]
@@ -112,8 +138,15 @@ export const MatchScalarFieldEnum = {
   scoreA: 'scoreA',
   scoreB: 'scoreB',
   round: 'round',
+  phase: 'phase',
+  group: 'group',
   field: 'field',
+  nextMatchId: 'nextMatchId',
+  bracketOrder: 'bracketOrder',
+  nextMatchOrder: 'nextMatchOrder',
+  nextSlot: 'nextSlot',
   status: 'status',
+  manualOverride: 'manualOverride',
   createdAt: 'createdAt'
 } as const
 
@@ -139,6 +172,14 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
+  JsonNull: JsonNull
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
 export const QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
@@ -153,4 +194,13 @@ export const NullsOrder = {
 } as const
 
 export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+export const JsonNullValueFilter = {
+  DbNull: DbNull,
+  JsonNull: JsonNull,
+  AnyNull: AnyNull
+} as const
+
+export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 

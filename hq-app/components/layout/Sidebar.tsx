@@ -39,6 +39,16 @@ function IconTeams() {
   );
 }
 
+function IconLeague() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  );
+}
+
 function IconManageTournaments() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
@@ -103,11 +113,13 @@ function IconChevron({ collapsed }: { collapsed: boolean }) {
 
 const navLinks = [
   { href: "/dashboard",   label: "Dashboard",   Icon: IconDashboard },
+  { href: "/leagues",     label: "Leagues",     Icon: IconLeague },
   { href: "/tournaments", label: "Tournaments", Icon: IconTournament },
   { href: "/teams",       label: "Teams",       Icon: IconTeams },
 ];
 
 const adminLinks = [
+  { href: "/manage/leagues",     label: "Manage Leagues",     Icon: IconLeague },
   { href: "/manage/tournaments", label: "Manage Tournaments", Icon: IconManageTournaments },
   { href: "/manage/teams",       label: "Manage Teams",       Icon: IconManageTeams },
 ];

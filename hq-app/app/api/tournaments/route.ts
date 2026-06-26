@@ -26,6 +26,8 @@ export async function POST(req: Request) {
         date: body.date,
         location: body.location.trim(),
         status: body.status ?? 'upcoming',
+        type:         body.type,
+        formatConfig: body.formatConfig ?? undefined,
         teams: body.teamIds?.length
           ? { create: body.teamIds.map(teamId => ({ teamId })) }
           : undefined,
