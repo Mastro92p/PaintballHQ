@@ -155,6 +155,8 @@ export default async function DashboardPage() {
               {recentMatches.map((m) => {
                 const isDraw = m.scoreA === m.scoreB;
                 const aWon = (m.scoreA ?? 0) > (m.scoreB ?? 0);
+                const teamAName = m.teamA?.name ?? "TBD";
+                const teamBName = m.teamB?.name ?? "TBD";
 
                 return (
                   <Link
@@ -167,7 +169,7 @@ export default async function DashboardPage() {
                     </p>
                     <p className="text-sm font-mono tabular-nums text-right text-gray-900 dark:text-gray-100">
                       <span className={!aWon && !isDraw ? "text-gray-400 dark:text-gray-500" : ""}>
-                        {m.teamA.name}
+                        {teamAName}
                       </span>
                       {" "}
                       <span className="font-bold">
@@ -175,7 +177,7 @@ export default async function DashboardPage() {
                       </span>
                       {" "}
                       <span className={aWon && !isDraw ? "text-gray-400 dark:text-gray-500" : ""}>
-                        {m.teamB.name}
+                        {teamBName}
                       </span>
                     </p>
                   </Link>
