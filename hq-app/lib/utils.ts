@@ -27,6 +27,7 @@ export function calcStandings(
   // Then seed from matches (covers teams not enrolled but in a match)
   matches.forEach(m => {
     [m.teamAId, m.teamBId].forEach(id => {
+      if (id == null) return
       if (!table[id]) {
         table[id] = {
           teamId: id,
@@ -38,8 +39,8 @@ export function calcStandings(
     })
   })
 
-  const completed = matches.filter(
-    m => m.status === 'completed' && m.scoreA != null && m.scoreB != null
+  const completed = matches.filter((m): m is Match & { teamAId: number; teamBId: number; scoreA: number; scoreB: number } =>
+    m.status === 'completed' && m.scoreA != null && m.scoreB != null && m.teamAId != null && m.teamBId != null
   )
 
   completed.forEach(m => {
@@ -99,8 +100,8 @@ export function calcStandings_tour(
     })
   })
 
-  const completed = matches.filter(
-    m => m.status === 'completed' && m.scoreA != null && m.scoreB != null
+  const completed = matches.filter((m): m is { teamAId: number; teamBId: number; scoreA: number; scoreB: number; status: string } =>
+    m.status === 'completed' && m.scoreA != null && m.scoreB != null && m.teamAId != null && m.teamBId != null
   )
 
   completed.forEach(m => {
@@ -146,4 +147,49 @@ export function formatDate(dateString: string | Date | null | undefined): string
 
 export function cn(...classes: (string | undefined | false | null)[]): string {
   return classes.filter(Boolean).join(' ')
+}
+
+
+export function getClassicMatchResult(
+  scoreA: number | null,
+  scoreB: number | null,
+  bodyCountA: number | null,
+  bodyCountB: number | null
+): {
+  winner: "A" | "B" | "draw" | null;
+  pointsA: number;
+  pointsB: number;
+  bodyCountA: number;
+  bodyCountB: number;
+} {
+  const aliveA = bodyCountA ?? 0;
+  const aliveB = bodyCountB ?? 0;
+
+  if (scoreA == null || scoreB == null) {
+    return { winner: null, pointsA: 0, pointsB: 0, bodyCountA: aliveA, bodyCountB: aliveB };
+  }
+
+  let winner: "A" | "B" | "draw";
+  let basePointsA = 0;
+  let basePointsB = 0;
+
+  if (scoreA > scoreB) {
+    winner = "A";
+    basePointsA = 3;
+  } else if (scoreB > scoreA) {
+    winner = "B";
+    basePointsB = 3;
+  } else {
+    winner = "draw";
+    basePointsA = 1;
+    basePointsB = 1;
+  }
+
+  return {
+    winner,
+    pointsA: basePointsA + aliveA,
+    pointsB: basePointsB + aliveB,
+    bodyCountA: aliveA,
+    bodyCountB: aliveB,
+  };
 }

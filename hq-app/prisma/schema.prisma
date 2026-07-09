@@ -80,22 +80,28 @@ model Match {
   scoreB       Int?
   round        Int        @default(1)
   phase        String     @default("group")
-  // "group" | "round_of_32" | "round_of_16" | "quarter_final" | "semi_final" | "final"
-  group        String? 
+  // "group" | "round_of_32" | "round_of_16" | "quarter_final" | "semi_final" | "third_place" | "final"
+  group        String?
   field        String?
 
   nextMatchId    Int?
   nextMatch      Match?  @relation("MatchProgression", fields: [nextMatchId], references: [id])
   prevMatches    Match[] @relation("MatchProgression")
 
+  loserNextMatchId Int?
+  loserNextSlot    String?
+
   bracketOrder   Int?
   nextMatchOrder Int?
   nextSlot       String?
 
-
   status       String     @default("pending")
   manualOverride Boolean  @default(false)
   createdAt    DateTime   @default(now())
+
+  bodyCountA Int?
+  bodyCountB Int?
+
 }
 
 model User {

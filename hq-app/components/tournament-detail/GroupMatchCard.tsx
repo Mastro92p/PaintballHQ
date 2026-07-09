@@ -59,9 +59,14 @@ export function GroupMatchCard({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {m.status === "completed" ? (
             <>
+              {m.bodyCountA != null && (
+                <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 tabular-nums">
+                  {m.bodyCountA}
+                </span>
+              )}
               <span
                 className={`min-w-[28px] h-7 px-2 rounded-md flex items-center justify-center text-xs font-bold tabular-nums text-white ${
                   aWins ? "bg-green-600" : draw ? "bg-gray-500" : "bg-red-500"
@@ -77,6 +82,11 @@ export function GroupMatchCard({
               >
                 {m.scoreB}
               </span>
+              {m.bodyCountB != null && (
+                <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 tabular-nums">
+                  {m.bodyCountB}
+                </span>
+              )}
             </>
           ) : (
             <span className="px-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">

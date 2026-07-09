@@ -12,6 +12,9 @@ export interface Tournament {
   teams?: TournamentTeam[]
   matches?: Match[]
   formatConfig: FormatConfig | null;
+  type:           string;
+  teamsToAdvance: number;
+  leagueId:       number | null;
 }
 
 export interface Team {
@@ -32,8 +35,8 @@ export interface TournamentTeam {
 export interface Match {
   id: number
   tournamentId: number
-  teamAId: number
-  teamBId: number
+  teamAId?: number | null
+  teamBId?: number | null
   scoreA?: number | null
   scoreB?: number | null
   round: number
@@ -41,10 +44,24 @@ export interface Match {
   status: MatchStatus
   createdAt: Date
   tournament?: Tournament
-  teamA?: Team
-  teamB?: Team
+  teamA?: Team | null
+  teamB?: Team | null
   phase: string
   group?: string | null
+
+  nextMatchId?: number | null
+  bracketOrder?: number | null
+  nextMatchOrder?: number | null
+  nextSlot?: string | null
+
+  loserNextMatchId?: number | null
+  loserNextSlot?: string | null
+
+  manualOverride?: boolean
+
+  bodyCountA?: number | null;
+  bodyCountB?: number | null;
+
 }
 
 export interface User {
@@ -95,6 +112,8 @@ export interface CreateMatchBody {
   teamBId: number
   scoreA?: number
   scoreB?: number
+  bodyCountA?: number
+  bodyCountB?: number
   round?: number
   field?: string
 }
@@ -104,6 +123,8 @@ export type UpdateMatchBody = {
   teamBId?: number;
   scoreA?:  number | null;
   scoreB?:  number | null;
+  bodyCountA?: number | null;
+  bodyCountB?: number | null;
   round?:   number;
   field?:   string | null;
 }
@@ -147,20 +168,14 @@ export interface League {
 }
 
 // Update Tournament type:
-export interface Tournament {
-  // ...existing fields...
-  type:           string;
-  teamsToAdvance: number;
-  leagueId:       number | null;
-}
-
 
 export type FormatConfig = {
-  groupCount:         number;
-  teamsPerGroup:      number;
-  qualifiersPerGroup: number;
-  wildCardCount: number;
-  bracketSeedingRule: "crossover" | "sequential";
+  groupCount?:         number;
+  teamsPerGroup?:      number;
+  qualifiersPerGroup?: number;
+  wildCardCount?: number;
+  bracketSeedingRule?: "crossover" | "sequential";
+  thirdPlaceMatch?: boolean;
 };
 
 export type EnrolledTeam = {

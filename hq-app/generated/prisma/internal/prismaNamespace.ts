@@ -1033,12 +1033,16 @@ export const MatchScalarFieldEnum = {
   group: 'group',
   field: 'field',
   nextMatchId: 'nextMatchId',
+  loserNextMatchId: 'loserNextMatchId',
+  loserNextSlot: 'loserNextSlot',
   bracketOrder: 'bracketOrder',
   nextMatchOrder: 'nextMatchOrder',
   nextSlot: 'nextSlot',
   status: 'status',
   manualOverride: 'manualOverride',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  bodyCountA: 'bodyCountA',
+  bodyCountB: 'bodyCountB'
 } as const
 
 export type MatchScalarFieldEnum = (typeof MatchScalarFieldEnum)[keyof typeof MatchScalarFieldEnum]

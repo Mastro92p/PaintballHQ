@@ -34,6 +34,8 @@ export async function PATCH(
     const {
       scoreA,
       scoreB,
+      bodyCountA,
+      bodyCountB,
       status,
       teamAId,
       teamBId,
@@ -52,6 +54,8 @@ export async function PATCH(
       data: {
         scoreA,
         scoreB,
+        bodyCountA,
+        bodyCountB,
         status: status || deriveMatchStatus(scoreA, scoreB),
         teamAId,
         teamBId,
@@ -93,33 +97,40 @@ export async function PATCH(
         ? updatedMatch.teamAId
         : updatedMatch.teamBId
 
-      if (!updatedMatch.nextMatchId || !updatedMatch.nextSlot) {
-        return Response.json(updatedMatch)
-      }
+    const loserId =
+      updatedMatch.scoreA > updatedMatch.scoreB
+        ? updatedMatch.teamBId
+        : updatedMatch.teamAId
 
+    // Advance winner to next bracket match
+    if (updatedMatch.nextMatchId && updatedMatch.nextSlot) {
       const targetMatch = await prisma.match.findUnique({
         where: { id: updatedMatch.nextMatchId },
       })
 
-      if (!targetMatch) {
-        return Response.json(updatedMatch)
-      }
-
-      if (updatedMatch.nextSlot === "teamAId") {
-
+      if (targetMatch) {
         await prisma.match.update({
           where: { id: targetMatch.id },
-          data: { teamAId: winnerId },
-        })
-      } else {
-
-        await prisma.match.update({
-          where: { id: targetMatch.id },
-          data: { teamBId: winnerId },
+          data: { [updatedMatch.nextSlot]: winnerId },
         })
       }
+    }
 
-        return Response.json(updatedMatch)
+    // Advance loser to third-place match (semifinals only, when enabled)
+    if (updatedMatch.loserNextMatchId && updatedMatch.loserNextSlot) {
+      const loserTargetMatch = await prisma.match.findUnique({
+        where: { id: updatedMatch.loserNextMatchId },
+      })
+
+      if (loserTargetMatch) {
+        await prisma.match.update({
+          where: { id: loserTargetMatch.id },
+          data: { [updatedMatch.loserNextSlot]: loserId },
+        })
+      }
+    }
+
+    return Response.json(updatedMatch)
 
       } catch (error) {
         console.error("Error updating match:", error)

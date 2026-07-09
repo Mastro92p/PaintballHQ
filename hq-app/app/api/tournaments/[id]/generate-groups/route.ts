@@ -22,16 +22,19 @@ export async function POST(
 
     const fc = tournament.formatConfig as FormatConfig
 
-    // ── 2. Validate enrolled teams ──────────────────────────────────
     const enrolledTeams = tournament.teams.map((tt) => tt.team)
-    const totalExpected = fc.groupCount * fc.teamsPerGroup
+
+    if (fc.groupCount == null || fc.teamsPerGroup == null) {
+      return apiError('Missing group configuration (groupCount or teamsPerGroup)', 400)
+    }
+
+    const groupCount = fc.groupCount
+    const teamsPerGroup = fc.teamsPerGroup
+    const totalExpected = groupCount * teamsPerGroup
 
     if (enrolledTeams.length < 2) {
       return apiError('Not enough teams enrolled (minimum 2)', 400)
     }
-
-    // Warn but don't block — we'll distribute what we have
-    const actualTeamsPerGroup = Math.ceil(enrolledTeams.length / fc.groupCount)
 
     // ── 3. Wipe any existing group-stage matches ────────────────────
     await prisma.match.deleteMany({
@@ -47,7 +50,7 @@ export async function POST(
       () => []
     )
     shuffled.forEach((team, i) => {
-      groups[i % fc.groupCount].push(team)
+      groups[i % groupCount].push(team)
     })
 
     // ── 5. Generate round-robin matches per group ───────────────────

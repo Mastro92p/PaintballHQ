@@ -6,12 +6,14 @@ import type { Match, Team } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { GroupMatchCard } from "@/components/tournament-detail/GroupMatchCard";
+import { getClassicMatchResult } from "@/lib/utils";
 
 type Props = {
   matches: Match[];
   enrolledTeams: Team[];
   isGroupAndBracket: boolean;
   hasGroupMatches: boolean;
+  isClassic: boolean;
   generatingGroups: boolean;
   groupsError: string | null;
   deletingMatch: number | null;
@@ -21,11 +23,11 @@ type Props = {
   onDeleteMatch: (id: number) => void;
 };
 
-function computeStandings(teams: Team[], matches: Match[]) {
-  const table: Record<number, { team: Team; w: number; d: number; l: number; gf: number; ga: number }> = {};
+function computeStandings(teams: Team[], matches: Match[], isClassic: boolean) {
+  const table: Record<number, { team: Team; w: number; d: number; l: number; gf: number; ga: number; pts: number; bodyCount: number }> = {};
 
   for (const t of teams) {
-    table[t.id] = { team: t, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+    table[t.id] = { team: t, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, bodyCount: 0 };
   }
 
   for (const m of matches) {
@@ -41,22 +43,30 @@ function computeStandings(teams: Team[], matches: Match[]) {
     b.gf += m.scoreB;
     b.ga += m.scoreA;
 
-    if (m.scoreA > m.scoreB) {
-      a.w++;
-      b.l++;
-    } else if (m.scoreB > m.scoreA) {
-      b.w++;
-      a.l++;
-    } else {
-      a.d++;
-      b.d++;
+    if (isClassic) {
+      const result = getClassicMatchResult(m.scoreA, m.scoreB, m.bodyCountA ?? null, m.bodyCountB ?? null);
+      if (result.winner === null) {
+        // match not actually decided — skip, don't count as played
+      } else {
+        a.pts += result.pointsA;
+        b.pts += result.pointsB;
+        a.bodyCount += result.bodyCountA;
+        b.bodyCount += result.bodyCountB;
+
+        if (result.winner === "A") {
+          a.w++; b.l++;
+        } else if (result.winner === "B") {
+          b.w++; a.l++;
+        } else {
+          a.d++; b.d++;
+        }
+      }
     }
   }
 
   return Object.values(table).sort((a, b) => {
-    const pts = (x: typeof a) => x.w * 3 + x.d;
     const gd = (x: typeof a) => x.gf - x.ga;
-    return pts(b) - pts(a) || gd(b) - gd(a) || b.gf - a.gf;
+    return b.pts - a.pts || gd(b) - gd(a) || b.bodyCount - a.bodyCount || b.gf - a.gf;
   });
 }
 
@@ -64,6 +74,7 @@ export function MatchesTab({
   matches,
   enrolledTeams,
   isGroupAndBracket,
+  isClassic,
   hasGroupMatches,
   generatingGroups,
   groupsError,
@@ -141,9 +152,9 @@ export function MatchesTab({
   );
 
   const currentGroupTeams = enrolledTeams.filter((t) => currentTeamIds.has(t.id));
-  const currentStandings = computeStandings(currentGroupTeams, currentMatches);
+  const currentStandings = computeStandings(currentGroupTeams, currentMatches, isClassic);
 
-  return (
+return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -306,6 +317,56 @@ export function MatchesTab({
         </div>
       ) : (
         <div className="space-y-6">
+          {isClassic && (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 dark:bg-gray-800 text-gray-400 uppercase tracking-wide">
+                  <tr>
+                    <th className="px-3 py-2 text-left w-6">#</th>
+                    <th className="px-3 py-2 text-left">Team</th>
+                    <th className="px-3 py-2 text-center w-8">W</th>
+                    <th className="px-3 py-2 text-center w-8">D</th>
+                    <th className="px-3 py-2 text-center w-8">L</th>
+                    <th className="px-3 py-2 text-center w-14">Bodies</th>
+                    <th className="px-3 py-2 text-center w-10 font-bold text-gray-600 dark:text-gray-300">
+                      Pts
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {computeStandings(enrolledTeams, matches, true).map((row, idx) => (
+                    <tr
+                      key={row.team.id}
+                      className={`bg-white dark:bg-gray-900 ${
+                        idx === 0 ? "border-l-2 border-l-teal-500" : ""
+                      }`}
+                    >
+                      <td className="px-3 py-2 text-gray-400 tabular-nums">{idx + 1}</td>
+                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
+                        {row.team.name}
+                      </td>
+                      <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">
+                        {row.w}
+                      </td>
+                      <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">
+                        {row.d}
+                      </td>
+                      <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">
+                        {row.l}
+                      </td>
+                      <td className="px-3 py-2 text-center tabular-nums text-gray-500">
+                        {row.bodyCount}
+                      </td>
+                      <td className="px-3 py-2 text-center tabular-nums font-bold text-gray-900 dark:text-gray-100">
+                        {row.pts}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {Object.entries(matchesByRound)
             .sort(([a], [b]) => Number(a) - Number(b))
             .map(([round, rMatches]) => (
@@ -331,4 +392,5 @@ export function MatchesTab({
       )}
     </section>
   );
+
 }

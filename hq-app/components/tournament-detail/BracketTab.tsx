@@ -32,6 +32,7 @@ const PHASE_ORDER: Record<string, number> = {
   quarter_final: 3,
   semi_final: 4,
   final: 5,
+  third_place: 6,
 };
 
 export function BracketTab({

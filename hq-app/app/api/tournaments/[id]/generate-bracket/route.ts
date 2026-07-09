@@ -70,6 +70,8 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   // ── Step 1: Determine seeded team list ────────────────────────────────────
   let seededTeamIds: number[] = [];
+  const fc = (tournament.formatConfig ?? {}) as { thirdPlaceMatch?: boolean };
+  const wantsThirdPlace = fc.thirdPlaceMatch === true;
 
   if (tournament.type === "group_and_bracket") {
     const fc = (tournament.formatConfig ?? {}) as {
@@ -390,8 +392,46 @@ export async function POST(req: NextRequest, { params }: Params) {
     )
   }
 
+  // Pass 3: optional third-place match, wired from the two semifinal losers
+  let thirdPlaceCreated = false;
+
+  try {
+    const semiIds = createdIds["semi_final"];
+    if (wantsThirdPlace && semiIds && semiIds[0] && semiIds[1]) {
+      const thirdPlace = await prisma.match.create({
+        data: {
+          tournamentId,
+          teamAId: null,
+          teamBId: null,
+          phase: "third_place",
+          round: 1,
+          status: "pending",
+          bracketOrder: 0,
+        } as any,
+      });
+
+      await prisma.match.update({
+        where: { id: semiIds[0] },
+        data: { loserNextMatchId: thirdPlace.id, loserNextSlot: "teamAId" },
+      });
+
+      await prisma.match.update({
+        where: { id: semiIds[1] },
+        data: { loserNextMatchId: thirdPlace.id, loserNextSlot: "teamBId" },
+      });
+
+      thirdPlaceCreated = true;
+    }
+  } catch (err) {
+    console.error("third place wiring failed:", JSON.stringify(err, null, 2));
+    return NextResponse.json(
+      { error: "Third place wiring failed", detail: String(err) },
+      { status: 500 }
+    );
+  }
+
   return NextResponse.json({
-    created: allMatchData.length,
+    created: allMatchData.length + (thirdPlaceCreated ? 1 : 0),
     byeTeams,
     bracketSize,
     firstPhase: allPhases[0],
@@ -400,5 +440,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     byeCount,
     phases: allPhases,
     seededTeamIds,
+    thirdPlaceCreated,
   });
 }

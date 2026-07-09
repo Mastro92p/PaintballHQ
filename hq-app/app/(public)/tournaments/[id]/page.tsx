@@ -9,9 +9,10 @@ import PublicGroupStage from "@/components/ui/PublicGroupStage";
 import { PublicTournamentInfo } from "@/components/tournaments/PublicTournamentInfo";
 import PublicStandingsTable from "@/components/tournaments/PublicStandingsTable";
 
-
 type Tab = "standings" | "groupStage" | "bracket" | "info";
 
+// Treat classic round robin the same as round robin, except we still show body/match counts.
+const ROUND_ROBIN_TYPES = ["round_robin", "round_robin_classic"] as const;
 
 export default function TournamentPublicPage({
   params,
@@ -24,6 +25,10 @@ export default function TournamentPublicPage({
   const { data, loading, error } = useFetch<TournamentDetail>(`/api/tournaments/${id}`);
   const { data: allTeams } = useFetch<Team[]>("/api/teams");
 
+  const isRoundRobin = useMemo(
+    () => ROUND_ROBIN_TYPES.includes(data?.type as any),
+    [data?.type]
+  );
 
   const groupStageCount =
     data?.matches?.filter((match) => match.phase === "group").length ?? 0;
@@ -31,28 +36,27 @@ export default function TournamentPublicPage({
   const bracketCount =
     data?.matches?.filter((match) => match.phase && match.phase !== "group").length ?? 0;
 
-  const groupStageLabel =
-    data?.type === "round_robin" ? "Game Details" : "Group Stage";
+  // Round robin variants show match counts inline in the label context via the `count` field below,
+  // instead of relabeling the tab. Only the classic tab keeps the "Game Details" copy if that's desired.
+  const groupStageLabel = isRoundRobin ? "Game Details" : "Group Stage";
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "standings", label: "Standings", count: data?.teams?.length ?? 0 },
-    { key: "groupStage", label: groupStageLabel, count: groupStageCount },
-    ...(data?.type !== "round_robin"
+    {
+      key: "groupStage",
+      label: groupStageLabel,
+      count: isRoundRobin ? (data?.matches?.length ?? 0) : groupStageCount,
+    },
+    ...(!isRoundRobin
       ? [{ key: "bracket" as Tab, label: "Bracket", count: bracketCount }]
       : []),
     { key: "info", label: "Info" },
   ];
 
   const hasBracketMatches = useMemo(
-    () =>
-      data?.matches.some(
-        (m) =>
-          m.phase &&
-          m.phase !== "group"
-      ) ?? false,
+    () => data?.matches.some((m) => m.phase && m.phase !== "group") ?? false,
     [data]
   );
-
 
   const hasGroupMatches = useMemo(
     () => data?.matches.some((m) => m.phase === "group") ?? false,
@@ -90,7 +94,6 @@ export default function TournamentPublicPage({
 
   const activeMatches = activeGroup ? groupMatchesByGroup[activeGroup] ?? [] : [];
 
-
   if (loading) {
     return (
       <main className="min-h-screen bg-[#07131f] text-white">
@@ -123,42 +126,39 @@ export default function TournamentPublicPage({
         <section className="space-y-5">
           <TournamentHeader tournament={data} theme="dark" />
 
-          <TabSelector
-            tabs={tabs}
-            activeTab={activeTab}
-            onChange={setActiveTab}
-          />
+          <TabSelector tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
-          {activeTab === "standings" && (<PublicStandingsTable
-            tournamentType={data.type}
-            teams={data.teams}
-            matches={data.matches}
-            formatConfig={data.formatConfig as {
-            qualifiersPerGroup?: number;
-            wildCardCount?: number;
-               }}
-          />)}
+          {activeTab === "standings" && (
+            <PublicStandingsTable
+              tournamentType={data.type}
+              teams={data.teams}
+              matches={data.matches}
+              formatConfig={data.formatConfig as {
+                qualifiersPerGroup?: number;
+                wildCardCount?: number;
+              }}
+            />
+          )}
 
-          {activeTab === "groupStage" && (<PublicGroupStage 
-            matches={data.matches}
-            isGroupAndBracket={isGroupAndBracket} 
-            hasGroupMatches={hasGroupMatches}
-            tournamentType={data.type}
-          />)}
+          {activeTab === "groupStage" && (
+            <PublicGroupStage
+              matches={data.matches}
+              isGroupAndBracket={isGroupAndBracket}
+              hasGroupMatches={hasGroupMatches}
+              tournamentType={data.type}
+              isRoundRobin={isRoundRobin}
+            />
+          )}
 
-          {activeTab === "bracket" && (
-                            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-sm text-slate-400">
-            Active tab: <span className="font-medium text-slate-200">{activeTab} 2</span>
-          </div>
-                )}
+          {activeTab === "bracket" && !isRoundRobin && (
+            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-sm text-slate-400">
+              Active tab: <span className="font-medium text-slate-200">{activeTab}</span>
+            </div>
+          )}
 
-          {activeTab === "info" && data && (
-            <PublicTournamentInfo tournament={data} />
-          )}         
-
-
+          {activeTab === "info" && data && <PublicTournamentInfo tournament={data} />}
         </section>
       </div>
     </main>
   );
-} //"standings" | "groupStage" | "bracket" | "info";
+}

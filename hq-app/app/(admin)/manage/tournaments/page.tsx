@@ -18,6 +18,7 @@ const STATUS_OPTIONS = ["upcoming", "active", "completed"] as const;
 
 const TYPE_OPTIONS = [
   { value: "round_robin", label: "Round Robin" },
+  { value: "round_robin_classic", label: "Round Robin Classic" },
   { value: "bracket", label: "Bracket (Knockout)" },
   { value: "group_and_bracket", label: "Group Stage + Bracket" },
 ] as const;
@@ -47,6 +48,7 @@ type FormState = {
   qualifiersPerGroup: string;
   wildCardCount: string;
   bracketSeedingRule: FormatConfig["bracketSeedingRule"];
+  thirdPlaceMatch: boolean;
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
@@ -62,6 +64,7 @@ const emptyForm: FormState = {
   qualifiersPerGroup: "2",
   wildCardCount: "2",
   bracketSeedingRule: "crossover",
+  thirdPlaceMatch: false,
 };
 
 export default function ManageTournamentsPage() {
@@ -110,6 +113,7 @@ export default function ManageTournamentsPage() {
       qualifiersPerGroup: String(fc.qualifiersPerGroup ?? 2),
       wildCardCount: String(fc.wildCardCount ?? 2),
       bracketSeedingRule: fc.bracketSeedingRule ?? "crossover",
+      thirdPlaceMatch: fc.thirdPlaceMatch ?? false,
     });
 
     setFormErrors({});
@@ -164,19 +168,24 @@ export default function ManageTournamentsPage() {
 
     setSaving(true);
 
+    const isKnockout = form.type === "bracket" || form.type === "group_and_bracket";
+
     const body: CreateTournamentBody | UpdateTournamentBody = {
       name: form.name,
       date: form.date,
       location: form.location,
       status: form.status as Tournament["status"],
       type: form.type,
-      ...(form.type === "group_and_bracket" && {
+      ...(isKnockout && {
         formatConfig: {
-          groupCount: parseInt(form.groupCount || "0", 10),
-          teamsPerGroup: parseInt(form.teamsPerGroup || "0", 10),
-          qualifiersPerGroup: parseInt(form.qualifiersPerGroup || "0", 10),
-          wildCardCount: parseInt(form.wildCardCount || "0", 10),
-          bracketSeedingRule: form.bracketSeedingRule,
+          ...(form.type === "group_and_bracket" && {
+            groupCount: parseInt(form.groupCount || "0", 10),
+            teamsPerGroup: parseInt(form.teamsPerGroup || "0", 10),
+            qualifiersPerGroup: parseInt(form.qualifiersPerGroup || "0", 10),
+            wildCardCount: parseInt(form.wildCardCount || "0", 10),
+            bracketSeedingRule: form.bracketSeedingRule,
+          }),
+          thirdPlaceMatch: form.thirdPlaceMatch,
         },
       }),
     };
@@ -532,6 +541,41 @@ export default function ManageTournamentsPage() {
                 <strong>{groupCount * qualifiersPerGroup + wildCardCount} advance</strong>
                 {" "}to the bracket
               </div>
+            </div>
+          )}
+
+          {(form.type === "bracket" || form.type === "group_and_bracket") && (
+            <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div className="space-y-0.5">
+                <label
+                  htmlFor="thirdPlaceMatch"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                >
+                  Play a 3rd place match
+                </label>
+                <p className="text-xs text-gray-400">
+                  Losers of the semifinals will play each other for 3rd place
+                </p>
+              </div>
+
+              <button
+                type="button"
+                id="thirdPlaceMatch"
+                role="switch"
+                aria-checked={form.thirdPlaceMatch}
+                onClick={() => setField("thirdPlaceMatch", !form.thirdPlaceMatch)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 ${
+                  form.thirdPlaceMatch
+                    ? "bg-teal-600"
+                    : "bg-gray-200 dark:bg-gray-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    form.thirdPlaceMatch ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
             </div>
           )}
 

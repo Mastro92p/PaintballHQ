@@ -64,8 +64,8 @@ export default function LeagueDetailPage({
         if (tt.team?.name) teamMap[tt.teamId] = tt.team.name;
       });
       t.matches?.forEach((m) => {
-        if (m.teamA?.name) teamMap[m.teamAId] = m.teamA.name;
-        if (m.teamB?.name) teamMap[m.teamBId] = m.teamB.name;
+        if (m.teamA?.name && m.teamAId != null) teamMap[m.teamAId] = m.teamA.name;
+        if (m.teamB?.name && m.teamBId != null) teamMap[m.teamBId] = m.teamB.name;
         allMatches.push(m);
       });
     });

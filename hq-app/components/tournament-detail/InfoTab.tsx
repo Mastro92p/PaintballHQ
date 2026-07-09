@@ -21,11 +21,11 @@ export function InfoTab({ data }: Props) {
         {fc && (
           <>
             <Row label="Groups"             value={String(fc.groupCount)} />
-            <Row label="Teams per group"    value={String(fc.teamsPerGroup)} />
-            <Row label="Qualifiers/group"   value={String(fc.qualifiersPerGroup)} />
-            <Row label="Bracket seeding"    value={fc.bracketSeedingRule} />
-            <Row label="Total capacity"     value={`${fc.groupCount * fc.teamsPerGroup} teams`} />
-            <Row label="Advancing"          value={`${fc.groupCount * fc.qualifiersPerGroup} teams`} />
+            <Row label="Teams per group"    value={String(fc.teamsPerGroup ?? "—")} />
+            <Row label="Qualifiers/group"   value={String(fc.qualifiersPerGroup ?? "—")} />
+            <Row label="Bracket seeding"    value={fc.bracketSeedingRule ?? "—"} />
+            <Row label="Total capacity"     value={`${(fc.groupCount ?? 0) * (fc.teamsPerGroup ?? 0)} teams`} />
+            <Row label="Advancing"          value={`${(fc.groupCount ?? 0) * (fc.qualifiersPerGroup ?? 0)} teams`} />
           </>
         )}
         <Row label="Enrolled teams" value={`${data.teams.length} teams`} />

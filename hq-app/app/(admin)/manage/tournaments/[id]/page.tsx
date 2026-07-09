@@ -26,6 +26,8 @@ type MatchForm = {
   teamBId: string;
   scoreA: string;
   scoreB: string;
+  bodyCountA: string;
+  bodyCountB: string;
   round: string;
   field: string;
 };
@@ -41,6 +43,8 @@ const emptyMatchForm: MatchForm = {
   teamBId: "",
   scoreA: "",
   scoreB: "",
+  bodyCountA: "",
+  bodyCountB: "",
   round: "1",
   field: "",
 };
@@ -316,6 +320,8 @@ export default function ManageTournamentDetailPage({
       field: matchForm.field || undefined,
       scoreA: matchForm.scoreA !== "" ? parseInt(matchForm.scoreA, 10) : undefined,
       scoreB: matchForm.scoreB !== "" ? parseInt(matchForm.scoreB, 10) : undefined,
+      bodyCountA: matchForm.bodyCountA !== "" ? parseInt(matchForm.bodyCountA, 10) : undefined,
+      bodyCountB: matchForm.bodyCountB !== "" ? parseInt(matchForm.bodyCountB, 10) : undefined,
     };
 
     await fetch("/api/matches", {
@@ -337,8 +343,10 @@ export default function ManageTournamentDetailPage({
     setEditForm({
       teamAId: String(m.teamAId),
       teamBId: String(m.teamBId),
-      scoreA: m.scoreA != null ? String(m.scoreA) : "",
-      scoreB: m.scoreB != null ? String(m.scoreB) : "",
+      scoreA: m.scoreA !== null ? String(m.scoreA) : "",
+      scoreB: m.scoreB !== null ? String(m.scoreB) : "",
+      bodyCountA: m.bodyCountA != null ? String(m.bodyCountA) : "",
+      bodyCountB: m.bodyCountB != null ? String(m.bodyCountB) : "",
       round: String(m.round ?? 1),
       field: m.field ?? "",
     });
@@ -368,6 +376,8 @@ export default function ManageTournamentDetailPage({
         teamBId: parseInt(editForm.teamBId, 10),
         scoreA: editForm.scoreA !== "" ? parseInt(editForm.scoreA, 10) : null,
         scoreB: editForm.scoreB !== "" ? parseInt(editForm.scoreB, 10) : null,
+        bodyCountA: editForm.bodyCountA !== "" ? parseInt(editForm.bodyCountA, 10) : null,
+        bodyCountB: editForm.bodyCountB !== "" ? parseInt(editForm.bodyCountB, 10) : null,
         round: parseInt(editForm.round, 10),
         field: editForm.field || null,
       }),
@@ -535,6 +545,7 @@ export default function ManageTournamentDetailPage({
         matches={data.matches} 
         enrolledTeams={enrolledTeams} 
         isGroupAndBracket={isGroupAndBracket} 
+        isClassic={data.type === "round_robin_classic"}
         hasGroupMatches={hasGroupMatches} 
         generatingGroups={generatingGroups} 
         groupsError={groupsError}
@@ -686,6 +697,53 @@ export default function ManageTournamentDetailPage({
               />
             </div>
           </div>
+
+                    {/* NEW BLOCK — paste this */}
+          {data.type === "round_robin_classic" && (
+            <div style={threeColGrid}>
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                  Bodies A{" "}
+                  <span className="text-gray-400 font-normal normal-case tracking-normal">
+                    (alive, 0-3)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={3}
+                  value={matchForm.bodyCountA}
+                  onChange={(e) => setMatchForm({ ...matchForm, bodyCountA: e.target.value })}
+                  className={inputCls()}
+                  placeholder="—"
+                />
+              </div>
+
+              <div className="flex items-center justify-center pb-2">
+                <span className="text-sm font-bold text-gray-300 dark:text-gray-600">–</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                  Bodies B{" "}
+                  <span className="text-gray-400 font-normal normal-case tracking-normal">
+                    (alive, 0-3)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={3}
+                  value={matchForm.bodyCountB}
+                  onChange={(e) => setMatchForm({ ...matchForm, bodyCountB: e.target.value })}
+                  className={inputCls()}
+                  placeholder="—"
+                />
+              </div>
+            </div>
+          )}
+          {/* END NEW BLOCK */}
+
 
           <div className="border-t border-gray-100 dark:border-gray-700" />
 
@@ -844,6 +902,53 @@ export default function ManageTournamentDetailPage({
               />
             </div>
           </div>
+
+           {/* NEW BLOCK — paste this */}
+          {data.type === "round_robin_classic" && (
+            <div style={threeColGrid}>
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                  Bodies A{" "}
+                  <span className="text-gray-400 font-normal normal-case tracking-normal">
+                    (alive, 0-3)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={3}
+                  value={editForm.bodyCountA}
+                  onChange={(e) => setEditForm({ ...editForm, bodyCountA: e.target.value })}
+                  className={inputCls()}
+                  placeholder="—"
+                />
+              </div>
+
+              <div className="flex items-center justify-center pb-2">
+                <span className="text-sm font-bold text-gray-300 dark:text-gray-600">–</span>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                  Bodies B{" "}
+                  <span className="text-gray-400 font-normal normal-case tracking-normal">
+                    (alive, 0-3)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={3}
+                  value={editForm.bodyCountB}
+                  onChange={(e) => setEditForm({ ...editForm, bodyCountB: e.target.value })}
+                  className={inputCls()}
+                  placeholder="—"
+                />
+              </div>
+            </div>
+          )}
+          {/* END NEW BLOCK */}
+
 
           <div className="border-t border-gray-100 dark:border-gray-700" />
 
