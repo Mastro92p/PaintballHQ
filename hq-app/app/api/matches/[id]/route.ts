@@ -39,6 +39,7 @@ export async function PATCH(
       status,
       teamAId,
       teamBId,
+      round,
     } = body
 
     const existingMatch = await prisma.match.findUnique({
@@ -59,6 +60,7 @@ export async function PATCH(
         status: status || deriveMatchStatus(scoreA, scoreB),
         teamAId,
         teamBId,
+        round,
       },
     })
 

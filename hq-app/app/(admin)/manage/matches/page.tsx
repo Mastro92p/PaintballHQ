@@ -96,12 +96,17 @@ export default function ManageMatchesPage() {
   async function handleSaveScore(
     matchId: number,
     scoreA: number,
-    scoreB: number
+    scoreB: number,
+    round?: number
   ) {
     await fetch(`/api/matches/${matchId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scoreA, scoreB }),
+          body: JSON.stringify({
+          scoreA,
+          scoreB,
+          ...(round != null ? { round } : {}),
+        }),
     });
     refetch();
   }
