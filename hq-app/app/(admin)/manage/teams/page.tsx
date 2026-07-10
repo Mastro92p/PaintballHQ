@@ -27,6 +27,12 @@ export default function ManageTeamsPage() {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [search, setSearch] = useState("");
 
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [removingLogo, setRemovingLogo] = useState(false);
+
   const filtered = useMemo(() => {
     if (!data) return [];
     return data.filter((t) =>
@@ -38,6 +44,9 @@ export default function ManageTeamsPage() {
     setEditing(null);
     setForm(emptyForm);
     setFormErrors({});
+    setLogoFile(null);
+    setLogoPreview(null);
+    setLogoError(null);
     setModalOpen(true);
   }
 
@@ -45,6 +54,9 @@ export default function ManageTeamsPage() {
     setEditing(t);
     setForm({ name: t.name, contact: t.contact ?? "" });
     setFormErrors({});
+    setLogoFile(null);
+    setLogoPreview(t.logoUrl ?? null);
+    setLogoError(null);
     setModalOpen(true);
   }
 
@@ -53,6 +65,43 @@ export default function ManageTeamsPage() {
     setEditing(null);
     setForm(emptyForm);
     setFormErrors({});
+    setLogoFile(null);
+    setLogoPreview(null);
+    setLogoError(null);
+  }
+
+  
+
+  const MAX_LOGO_SIZE = 2 * 1024 * 1024;
+  const MAX_LOGO_DIMENSION = 2000;
+  const ALLOWED_LOGO_TYPES = ["image/png", "image/jpeg", "image/webp"];
+
+  function validateLogoFile(file: File): Promise<string | null> {
+    return new Promise((resolve) => {
+      if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+        resolve("Only PNG, JPEG, or WebP images are allowed");
+        return;
+      }
+      if (file.size > MAX_LOGO_SIZE) {
+        resolve("Image must be under 2MB");
+        return;
+      }
+      const img = new window.Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        if (img.width > MAX_LOGO_DIMENSION || img.height > MAX_LOGO_DIMENSION) {
+          resolve(`Image must not exceed ${MAX_LOGO_DIMENSION}x${MAX_LOGO_DIMENSION}px`);
+        } else {
+          resolve(null);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve("Could not read image file");
+      };
+      img.src = url;
+    });
   }
 
   function validate(): boolean {
@@ -71,6 +120,8 @@ export default function ManageTeamsPage() {
       contact: form.contact || undefined,
     };
 
+    let teamId = editing?.id ?? null;
+
     if (editing) {
       await fetch(`/api/teams/${editing.id}`, {
         method: "PATCH",
@@ -78,17 +129,65 @@ export default function ManageTeamsPage() {
         body: JSON.stringify(body),
       });
     } else {
-      await fetch("/api/teams", {
+      const res = await fetch("/api/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      const created = await res.json();
+      teamId = created.id;
+    }
+
+    if (teamId && logoFile) {
+      await uploadLogo(teamId, logoFile);
     }
 
     setSaving(false);
     closeModal();
     refetch();
   }
+
+
+  async function handleLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const error = await validateLogoFile(file);
+    if (error) {
+      setLogoError(error);
+      return;
+    }
+
+    setLogoError(null);
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  }
+
+  async function uploadLogo(teamId: number, file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    setUploadingLogo(true);
+    try {
+      await fetch(`/api/teams/${teamId}/logo`, { method: "POST", body: formData });
+    } finally {
+      setUploadingLogo(false);
+    }
+  }
+
+  async function handleRemoveLogo() {
+    if (!editing) {
+      setLogoFile(null);
+      setLogoPreview(null);
+      return;
+    }
+    setRemovingLogo(true);
+    await fetch(`/api/teams/${editing.id}/logo`, { method: "DELETE" });
+    setRemovingLogo(false);
+    setLogoFile(null);
+    setLogoPreview(null);
+    refetch();
+  }
+
 
   async function handleDelete(id: number) {
     if (!confirm("Delete this team?")) return;
@@ -143,6 +242,7 @@ export default function ManageTeamsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wide">
               <tr>
+                <th className="px-4 py-3 text-left">Logo</th>
                 <th className="px-4 py-3 text-left">Team Name</th>
                 <th className="px-4 py-3 text-left">Contact</th>
                 <th className="px-4 py-3 text-left">Registered</th>
@@ -152,7 +252,7 @@ export default function ManageTeamsPage() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
                     No teams found
                   </td>
                 </tr>
@@ -162,6 +262,22 @@ export default function ManageTeamsPage() {
                     key={t.id}
                     className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                   >
+                    <td className="px-4 py-3">
+                      <div className="w-10 h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
+                        {t.logoUrl ? (
+                          <img
+                            src={t.logoUrl}
+                            alt={`${t.name} logo`}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span className="text-[10px] text-gray-400 text-center leading-tight">
+                            No logo
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                       {t.name}
                     </td>
@@ -200,55 +316,102 @@ export default function ManageTeamsPage() {
         onClose={closeModal}
         title={editing ? "Edit Team" : "New Team"}
       >
-        <form
-          onSubmit={(e) => { e.preventDefault(); handleSave(); }}
-          className="space-y-4"
-        >
-          {/* Team Name */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Team Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              value={form.name}
-              onChange={(e) => {
-                setForm({ ...form, name: e.target.value });
-                if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
-              }}
-              className={`w-full px-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white dark:bg-gray-900 ${
-                formErrors.name
-                  ? "border-red-400 dark:border-red-500"
-                  : "border-gray-200 dark:border-gray-700"
-              }`}
-              placeholder="e.g. Desert Eagles"
-            />
-            {formErrors.name && (
-              <p className="text-xs text-red-500">{formErrors.name}</p>
-            )}
-          </div>
+      <form
+        onSubmit={(e) => { e.preventDefault(); handleSave(); }}
+        className="space-y-4"
+      >
+        {/* Team Name */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Team Name <span className="text-red-500">*</span>
+          </label>
+          <input
+            value={form.name}
+            onChange={(e) => {
+              setForm({ ...form, name: e.target.value });
+              if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
+            }}
+            className={`w-full px-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white dark:bg-gray-900 ${
+              formErrors.name
+                ? "border-red-400 dark:border-red-500"
+                : "border-gray-200 dark:border-gray-700"
+            }`}
+            placeholder="e.g. Desert Eagles"
+          />
+          {formErrors.name && (
+            <p className="text-xs text-red-500">{formErrors.name}</p>
+          )}
+        </div>
 
-          {/* Contact */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Contact <span className="text-gray-400 font-normal">(optional)</span>
-            </label>
-            <input
-              value={form.contact}
-              onChange={(e) => setForm({ ...form, contact: e.target.value })}
-              className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
-              placeholder="email or phone"
-            />
-          </div>
+        {/* Team Logo */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Team Logo <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={saving}>
-              {editing ? "Save Changes" : "Create Team"}
-            </Button>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
+              {logoPreview ? (
+                <img src={logoPreview} alt="Team logo preview" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-xs text-gray-400">No logo</span>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-1">
+              <div className="flex gap-2">
+                <label className="cursor-pointer">
+                  <span className="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    {uploadingLogo ? "Uploading..." : "Choose file"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    disabled={uploadingLogo}
+                    onChange={handleLogoSelect}
+                  />
+                </label>
+                {logoPreview && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    loading={removingLogo}
+                    onClick={handleRemoveLogo}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-gray-400">PNG, JPEG, or WebP. Max 2MB, 2000x2000px.</p>
+              {logoError && <p className="text-xs text-red-500">{logoError}</p>}
+            </div>
           </div>
-        </form>
+        </div>
+
+        {/* Contact */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Contact <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            value={form.contact}
+            onChange={(e) => setForm({ ...form, contact: e.target.value })}
+            className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+            placeholder="email or phone"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="secondary" type="button" onClick={closeModal}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={saving}>
+            {editing ? "Save Changes" : "Create Team"}
+          </Button>
+        </div>
+      </form>
       </Modal>
 
     </main>

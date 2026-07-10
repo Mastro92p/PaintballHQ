@@ -169,7 +169,23 @@ function StandingsTable({
                 )}
 
 
-                <td className="px-4 py-3 font-medium text-white">{row.teamName}</td>
+                <td className="px-4 py-3 font-medium text-white">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-md border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
+                    {row.teamLogoUrl ? (
+                      <img
+                        src={row.teamLogoUrl}
+                        alt={`${row.teamName} logo`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="text-[8px] text-slate-500">—</span>
+                    )}
+                  </div>
+                  <span>{row.teamName}</span>
+                </div>
+              </td>
                 <td className="px-3 py-3 text-right">{row.played}</td>
                 <td className="px-3 py-3 text-right text-emerald-400">{row.wins}</td>
                 <td className="px-3 py-3 text-right">{row.draws}</td>

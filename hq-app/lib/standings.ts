@@ -5,14 +5,14 @@ export type TournamentTeam = {
   team?: {
     id: number;
     name: string;
+    logoUrl?: string | null;
   } | null;
 };
-
-
 
 export type StandingRow = {
   teamId: number;
   teamName: string;
+  teamLogoUrl: string | null;
   group: string | null;
   played: number;
   wins: number;
@@ -42,10 +42,13 @@ export function sortStandings(a: StandingRow, b: StandingRow) {
 }
 
 function buildTeamMap(teams: TournamentTeam[]) {
-  const map: Record<number, string> = {};
+  const map: Record<number, { name: string; logoUrl: string | null }> = {};
 
   for (const tt of teams) {
-    map[tt.teamId] = tt.team?.name ?? `Team ${tt.teamId}`;
+    map[tt.teamId] = {
+      name: tt.team?.name ?? `Team ${tt.teamId}`,
+      logoUrl: tt.team?.logoUrl ?? null,
+    };
   }
 
   return map;
@@ -55,12 +58,14 @@ function getOrCreateRow(
   rows: Record<number, StandingRow>,
   teamId: number,
   teamName: string,
+  teamLogoUrl: string | null,
   group: string | null
 ) {
   if (!rows[teamId]) {
     rows[teamId] = {
       teamId,
       teamName,
+      teamLogoUrl,
       group,
       played: 0,
       wins: 0,
@@ -116,7 +121,8 @@ export function computeRoundRobinStandings(
   for (const tt of teams) {
     rows[tt.teamId] = {
       teamId: tt.teamId,
-      teamName: teamMap[tt.teamId],
+      teamName: teamMap[tt.teamId].name,
+      teamLogoUrl: teamMap[tt.teamId].logoUrl,
       group: null,
       played: 0,
       wins: 0,
@@ -187,14 +193,16 @@ export function computeGroupedStandings(
     const rowA = getOrCreateRow(
       rowsByGroup[group],
       match.teamAId as number,
-      teamMap[match.teamAId as number] ?? `Team ${match.teamAId}`,
+      teamMap[match.teamAId as number]?.name ?? `Team ${match.teamAId}`,
+      teamMap[match.teamAId as number]?.logoUrl ?? null,
       group
     );
 
     const rowB = getOrCreateRow(
       rowsByGroup[group],
       match.teamBId as number,
-      teamMap[match.teamBId as number] ?? `Team ${match.teamBId}`,
+      teamMap[match.teamBId as number]?.name ?? `Team ${match.teamBId}`,
+      teamMap[match.teamBId as number]?.logoUrl ?? null,
       group
     );
 

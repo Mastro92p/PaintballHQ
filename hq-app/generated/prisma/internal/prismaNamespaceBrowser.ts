@@ -116,6 +116,7 @@ export const TeamScalarFieldEnum = {
   id: 'id',
   name: 'name',
   contact: 'contact',
+  logoUrl: 'logoUrl',
   createdAt: 'createdAt'
 } as const
 

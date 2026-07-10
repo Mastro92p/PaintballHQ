@@ -268,9 +268,23 @@ export default function TeamsPage() {
                       <tr
                         key={t.id}
                         className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                      >
+                                              >
                         <td className="px-3 py-4 sm:px-5 font-semibold text-gray-900 dark:text-gray-100">
-                          {t.name}
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
+                              {t.logoUrl ? (
+                                <img
+                                  src={t.logoUrl}
+                                  alt={`${t.name} logo`}
+                                  className="w-full h-full object-cover"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <span className="text-[9px] text-gray-400">—</span>
+                              )}
+                            </div>
+                            <span>{t.name}</span>
+                          </div>
                         </td>
                         <td className="hidden sm:table-cell px-5 py-4 text-gray-700 dark:text-gray-300 tabular-nums">
                           {tournaments}
@@ -331,27 +345,33 @@ export default function TeamsPage() {
             className="relative z-10 w-full max-w-[640px] bg-white dark:bg-gray-900 rounded-2xl shadow-xl flex flex-col max-h-[85dvh] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
+                {selectedTeam.logoUrl ? (
+                  <img
+                    src={selectedTeam.logoUrl}
+                    alt={`${selectedTeam.name} logo`}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-[10px] text-gray-400">—</span>
+                )}
+              </div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {selectedTeam.name}
               </h2>
-              <button
-                onClick={() => setSelectedTeam(null)}
-                className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
             </div>
+            <button
+              onClick={() => setSelectedTeam(null)}
+              className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
 
             <div className="overflow-y-auto flex-1 px-4 sm:px-5 py-4 sm:py-5">
               <TeamHistoryModalContent team={selectedTeam} />

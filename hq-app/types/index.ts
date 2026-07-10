@@ -21,6 +21,7 @@ export interface Team {
   id: number
   name: string
   contact?: string | null
+  logoUrl: string | null;
   createdAt: Date
   tournaments?: TournamentTeam[]
 }
