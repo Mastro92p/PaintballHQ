@@ -14,6 +14,7 @@ type Props = {
   isGroupAndBracket: boolean;
   hasGroupMatches: boolean;
   isClassic: boolean;
+   canAddMatch: boolean;
   generatingGroups: boolean;
   groupsError: string | null;
   deletingMatch: number | null;
@@ -76,6 +77,7 @@ export function MatchesTab({
   isGroupAndBracket,
   isClassic,
   hasGroupMatches,
+  canAddMatch,
   generatingGroups,
   groupsError,
   deletingMatch,
@@ -172,7 +174,7 @@ return (
             >
               ⚡ Generate Groups
             </Button>
-          ) : (
+          ) : canAddMatch ? (
             <Button
               size="sm"
               onClick={onOpenAddMatch}
@@ -181,7 +183,7 @@ return (
             >
               + Add Match
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 

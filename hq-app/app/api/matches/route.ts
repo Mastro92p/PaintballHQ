@@ -32,6 +32,8 @@ export async function POST(req: Request) {
         teamBId: body.teamBId,
         scoreA: body.scoreA ?? null,
         scoreB: body.scoreB ?? null,
+        bodyCountA: body.bodyCountA ?? null,
+        bodyCountB: body.bodyCountB ?? null,
         round: body.round ?? 1,
         field: body.field?.trim() ?? null,
         status,

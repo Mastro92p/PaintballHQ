@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useFetch } from "@/hooks/use-fetch";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Modal } from "@/components/ui/Modal";
 import { TeamsTab } from "@/components/tournament-detail/TeamsTab";
 import { MatchesTab } from "@/components/tournament-detail/MatchesTab";
 import { formatDate } from "@/lib/utils";
@@ -13,7 +12,11 @@ import type { Tournament, Team, Match, CreateMatchBody } from "@/types";
 import { BracketTab } from "@/components/tournament-detail/BracketTab";
 import { InfoTab } from "@/components/tournament-detail/InfoTab";
 import type { TournamentDetail } from "@/types";
-
+import MatchModal, {
+  MatchForm,
+  MatchFormErrors,
+  emptyMatchForm,
+} from "@/components/matches/MatchModal";
 
 const statusVariant: Record<string, "default" | "success" | "warning" | "muted"> = {
   upcoming: "warning",
@@ -21,58 +24,7 @@ const statusVariant: Record<string, "default" | "success" | "warning" | "muted">
   completed: "muted",
 };
 
-type MatchForm = {
-  teamAId: string;
-  teamBId: string;
-  scoreA: string;
-  scoreB: string;
-  bodyCountA: string;
-  bodyCountB: string;
-  round: string;
-  field: string;
-};
-
-type MatchFormErrors = {
-  teamAId?: string;
-  teamBId?: string;
-  round?: string;
-};
-
-const emptyMatchForm: MatchForm = {
-  teamAId: "",
-  teamBId: "",
-  scoreA: "",
-  scoreB: "",
-  bodyCountA: "",
-  bodyCountB: "",
-  round: "1",
-  field: "",
-};
-
 type Tab = "teams" | "matches" | "bracket" | "info";
-
-function selectCls(hasError?: boolean) {
-  return `w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ${
-    hasError
-      ? "border-red-400 dark:border-red-500"
-      : "border-gray-200 dark:border-gray-700"
-  }`;
-}
-
-function inputCls(hasError?: boolean) {
-  return `w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 ${
-    hasError
-      ? "border-red-400 dark:border-red-500"
-      : "border-gray-200 dark:border-gray-700"
-  }`;
-}
-
-const threeColGrid: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr auto 1fr",
-  gap: "0.75rem",
-  alignItems: "end",
-};
 
 export default function ManageTournamentDetailPage({
   params,
@@ -139,41 +91,40 @@ export default function ManageTournamentDetailPage({
     setLocalAvailable(allTeams.filter((t) => !enrolledIds.has(t.id)));
   }
 
+  const [editingBracketMatch, setEditingBracketMatch] = useState<Match | null>(null);
+  const [bracketEditSaving, setBracketEditSaving] = useState(false);
 
-    const [editingBracketMatch, setEditingBracketMatch] = useState<Match | null>(null);
-    const [bracketEditSaving, setBracketEditSaving] = useState(false);
+  function openBracketEdit(match: Match) {
+    setEditingBracketMatch(match);
+  }
 
-    function openBracketEdit(match: Match) {
-      setEditingBracketMatch(match);
-    }
+  function closeBracketEdit() {
+    setEditingBracketMatch(null);
+  }
 
-    function closeBracketEdit() {
-      setEditingBracketMatch(null);
-    }
+  async function handleSaveBracketEdit(
+    matchId: number,
+    teamAId: number | null,
+    teamBId: number | null
+  ) {
+    setBracketEditSaving(true);
 
-    async function handleSaveBracketEdit(
-      matchId: number,
-      teamAId: number | null,
-      teamBId: number | null
-    ) {
-      setBracketEditSaving(true);
+    await fetch(`/api/matches/${matchId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        teamAId,
+        teamBId,
+        scoreA: null,
+        scoreB: null,
+        status: "pending",
+      }),
+    });
 
-      await fetch(`/api/matches/${matchId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          teamAId,
-          teamBId,
-          scoreA: null,
-          scoreB: null,
-          status: "pending",
-        }),
-      });
-
-      setBracketEditSaving(false);
-      setEditingBracketMatch(null);
-      refetch();
-    }
+    setBracketEditSaving(false);
+    setEditingBracketMatch(null);
+    refetch();
+  }
 
   async function handleBulkSave() {
     if (!data) return;
@@ -291,6 +242,8 @@ export default function ManageTournamentDetailPage({
   );
 
   const isGroupAndBracket = data?.type === "group_and_bracket";
+  const isClassic = data?.type === "round_robin_classic";
+  const canAddMatch = data?.type === "round_robin" || data?.type === "round_robin_classic";
 
   function validateMatchForm(form: MatchForm): MatchFormErrors {
     const errors: MatchFormErrors = {};
@@ -418,6 +371,14 @@ export default function ManageTournamentDetailPage({
   }
 
   async function handleGenerateBracket() {
+
+    if (!data) return;
+    
+    if (data.type === "round_robin" || data.type === "round_robin_classic") {
+      setBracketError("Bracket generation is not available for round robin tournaments");
+      return;
+    }
+
     if (!confirm("Generate bracket from current standings? This cannot be undone.")) return;
     setGeneratingBracket(true);
     setBracketError(null);
@@ -461,7 +422,7 @@ export default function ManageTournamentDetailPage({
       label: "Matches",
       count: data.matches.filter((m) => m.phase === "group").length,
     },
-    ...(data.type !== "round_robin"
+    ...(data.type !== "round_robin" && data.type !== "round_robin_classic"
       ? [
           {
             key: "bracket" as Tab,
@@ -540,474 +501,93 @@ export default function ManageTournamentDetailPage({
         />
       )}
 
-      {activeTab === "matches" && 
-      <MatchesTab 
-        matches={data.matches} 
-        enrolledTeams={enrolledTeams} 
-        isGroupAndBracket={isGroupAndBracket} 
-        isClassic={data.type === "round_robin_classic"}
-        hasGroupMatches={hasGroupMatches} 
-        generatingGroups={generatingGroups} 
-        groupsError={groupsError}
-        deletingMatch={deletingMatch}
-        onGenerateGroups={handleGenerateGroups}
-        onOpenAddMatch={() => { setMatchForm(emptyMatchForm); setMatchErrors({}); setMatchModalOpen(true); }} 
-        onEditMatch={openEditMatch} onDeleteMatch={handleDeleteMatch} />}
+      {activeTab === "matches" && (
+        <MatchesTab
+          matches={data.matches}
+          enrolledTeams={enrolledTeams}
+          isGroupAndBracket={isGroupAndBracket}
+          isClassic={isClassic}
+          canAddMatch={canAddMatch}
+          hasGroupMatches={hasGroupMatches}
+          generatingGroups={generatingGroups}
+          groupsError={groupsError}
+          deletingMatch={deletingMatch}
+          onGenerateGroups={handleGenerateGroups}
+          onOpenAddMatch={() => {
+            setMatchForm(emptyMatchForm);
+            setMatchErrors({});
+            setMatchModalOpen(true);
+          }}
+          onEditMatch={openEditMatch}
+          onDeleteMatch={handleDeleteMatch}
+        />
+      )}
 
-      {activeTab === "bracket" &&
-       <BracketTab 
-        matches={data.matches} 
-        enrolledTeams={enrolledTeams} 
-        hasBracketMatches={hasBracketMatches} 
-        generatingBracket={generatingBracket} 
-        resettingBracket={resettingBracket} 
-        bracketError={bracketError} 
-        savingBracketMatch={savingBracketMatch} 
-        bracketScores={bracketScores} 
-        onGenerateBracket={handleGenerateBracket} 
-        onResetBracket={handleResetBracket} 
-        onScoreChange={(id, field, val) => setBracketScores(prev => ({ ...prev, [id]: { ...( prev[id] ?? { scoreA: "", scoreB: "" }), [field]: val }}))} 
-        onSaveBracketScore={handleSaveBracketScore} 
-        editingBracketMatch={editingBracketMatch}
-        bracketEditSaving={bracketEditSaving}
-        onOpenBracketEdit={openBracketEdit}
-        onCloseBracketEdit={closeBracketEdit}
-        onSaveBracketEdit={handleSaveBracketEdit} />}
+      {activeTab === "bracket" && (
+        <BracketTab
+          matches={data.matches}
+          enrolledTeams={enrolledTeams}
+          hasBracketMatches={hasBracketMatches}
+          generatingBracket={generatingBracket}
+          resettingBracket={resettingBracket}
+          bracketError={bracketError}
+          savingBracketMatch={savingBracketMatch}
+          bracketScores={bracketScores}
+          onGenerateBracket={handleGenerateBracket}
+          onResetBracket={handleResetBracket}
+          onScoreChange={(id, field, val) =>
+            setBracketScores((prev) => ({
+              ...prev,
+              [id]: { ...(prev[id] ?? { scoreA: "", scoreB: "" }), [field]: val },
+            }))
+          }
+          onSaveBracketScore={handleSaveBracketScore}
+          editingBracketMatch={editingBracketMatch}
+          bracketEditSaving={bracketEditSaving}
+          onOpenBracketEdit={openBracketEdit}
+          onCloseBracketEdit={closeBracketEdit}
+          onSaveBracketEdit={handleSaveBracketEdit}
+        />
+      )}
 
-      {activeTab === "info"    && <InfoTab data={data} />}
+      {activeTab === "info" && <InfoTab data={data} />}
 
-      <Modal
+      <MatchModal
         open={matchModalOpen}
+        title="Add Match"
+        submitLabel="+ Add Match"
+        loading={matchSaving}
+        isClassic={isClassic}
+        requireTeams
+        teams={enrolledTeams}
+        form={matchForm}
+        errors={matchErrors}
+        setForm={setMatchForm}
+        setErrors={setMatchErrors}
         onClose={() => {
           setMatchModalOpen(false);
           setMatchErrors({});
         }}
-        title="Add Match"
-        size="lg"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleAddMatch();
-          }}
-          className="space-y-5"
-        >
-          <div style={threeColGrid}>
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Team A <span className="text-red-400">*</span>
-              </label>
-              <select
-                value={matchForm.teamAId}
-                onChange={(e) => {
-                  setMatchForm({ ...matchForm, teamAId: e.target.value });
-                  if (matchErrors.teamAId)
-                    setMatchErrors((p) => ({ ...p, teamAId: undefined }));
-                }}
-                className={selectCls(!!matchErrors.teamAId)}
-              >
-                <option value="">Select team...</option>
-                {enrolledTeams.map((t) => (
-                  <option
-                    key={t.id}
-                    value={t.id}
-                    disabled={String(t.id) === matchForm.teamBId}
-                  >
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              {matchErrors.teamAId && (
-                <p className="text-xs text-red-500">{matchErrors.teamAId}</p>
-              )}
-            </div>
+        onSubmit={handleAddMatch}
+      />
 
-            <div className="flex items-center justify-center pb-2">
-              <span className="text-sm font-bold text-gray-400 dark:text-gray-500">
-                VS
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Team B <span className="text-red-400">*</span>
-              </label>
-              <select
-                value={matchForm.teamBId}
-                onChange={(e) => {
-                  setMatchForm({ ...matchForm, teamBId: e.target.value });
-                  if (matchErrors.teamBId)
-                    setMatchErrors((p) => ({ ...p, teamBId: undefined }));
-                }}
-                className={selectCls(!!matchErrors.teamBId)}
-              >
-                <option value="">Select team...</option>
-                {enrolledTeams.map((t) => (
-                  <option
-                    key={t.id}
-                    value={t.id}
-                    disabled={String(t.id) === matchForm.teamAId}
-                  >
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-              {matchErrors.teamBId && (
-                <p className="text-xs text-red-500">{matchErrors.teamBId}</p>
-              )}
-            </div>
-          </div>
-
-          <div style={threeColGrid}>
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Score A{" "}
-                <span className="text-gray-400 font-normal normal-case tracking-normal">
-                  (optional)
-                </span>
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={matchForm.scoreA}
-                onChange={(e) => setMatchForm({ ...matchForm, scoreA: e.target.value })}
-                className={inputCls()}
-                placeholder="—"
-              />
-            </div>
-
-            <div className="flex items-center justify-center pb-2">
-              <span className="text-sm font-bold text-gray-300 dark:text-gray-600">–</span>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Score B{" "}
-                <span className="text-gray-400 font-normal normal-case tracking-normal">
-                  (optional)
-                </span>
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={matchForm.scoreB}
-                onChange={(e) => setMatchForm({ ...matchForm, scoreB: e.target.value })}
-                className={inputCls()}
-                placeholder="—"
-              />
-            </div>
-          </div>
-
-                    {/* NEW BLOCK — paste this */}
-          {data.type === "round_robin_classic" && (
-            <div style={threeColGrid}>
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                  Bodies A{" "}
-                  <span className="text-gray-400 font-normal normal-case tracking-normal">
-                    (alive, 0-3)
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={3}
-                  value={matchForm.bodyCountA}
-                  onChange={(e) => setMatchForm({ ...matchForm, bodyCountA: e.target.value })}
-                  className={inputCls()}
-                  placeholder="—"
-                />
-              </div>
-
-              <div className="flex items-center justify-center pb-2">
-                <span className="text-sm font-bold text-gray-300 dark:text-gray-600">–</span>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                  Bodies B{" "}
-                  <span className="text-gray-400 font-normal normal-case tracking-normal">
-                    (alive, 0-3)
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={3}
-                  value={matchForm.bodyCountB}
-                  onChange={(e) => setMatchForm({ ...matchForm, bodyCountB: e.target.value })}
-                  className={inputCls()}
-                  placeholder="—"
-                />
-              </div>
-            </div>
-          )}
-          {/* END NEW BLOCK */}
-
-
-          <div className="border-t border-gray-100 dark:border-gray-700" />
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Round <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={matchForm.round}
-                onChange={(e) => {
-                  setMatchForm({ ...matchForm, round: e.target.value });
-                  if (matchErrors.round)
-                    setMatchErrors((p) => ({ ...p, round: undefined }));
-                }}
-                className={inputCls(!!matchErrors.round)}
-              />
-              {matchErrors.round && (
-                <p className="text-xs text-red-500">{matchErrors.round}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Field{" "}
-                <span className="text-gray-400 font-normal normal-case tracking-normal">
-                  (optional)
-                </span>
-              </label>
-              <input
-                type="text"
-                value={matchForm.field}
-                onChange={(e) => setMatchForm({ ...matchForm, field: e.target.value })}
-                className={inputCls()}
-                placeholder="e.g. Field 1"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => {
-                setMatchModalOpen(false);
-                setMatchErrors({});
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" loading={matchSaving}>
-              + Add Match
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal
+      <MatchModal
         open={!!editingMatch}
+        title="Edit Match"
+        submitLabel="Save Changes"
+        loading={editSaving}
+        isClassic={isClassic}
+        teams={enrolledTeams}
+        form={editForm}
+        errors={editErrors}
+        setForm={setEditForm}
+        setErrors={setEditErrors}
         onClose={() => {
           setEditingMatch(null);
           setEditErrors({});
         }}
-        title="Edit Match"
-        size="lg"
-      >
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleEditMatch();
-          }}
-          className="space-y-5"
-        >
-          <div style={threeColGrid}>
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Team A
-              </label>
-              <select
-                value={editForm.teamAId}
-                onChange={(e) => setEditForm({ ...editForm, teamAId: e.target.value })}
-                className={selectCls()}
-              >
-                {enrolledTeams.map((t) => (
-                  <option
-                    key={t.id}
-                    value={t.id}
-                    disabled={String(t.id) === editForm.teamBId}
-                  >
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-center justify-center pb-2">
-              <span className="text-sm font-bold text-gray-400 dark:text-gray-500">
-                VS
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Team B
-              </label>
-              <select
-                value={editForm.teamBId}
-                onChange={(e) => setEditForm({ ...editForm, teamBId: e.target.value })}
-                className={selectCls()}
-              >
-                {enrolledTeams.map((t) => (
-                  <option
-                    key={t.id}
-                    value={t.id}
-                    disabled={String(t.id) === editForm.teamAId}
-                  >
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div style={threeColGrid}>
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Score A
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={editForm.scoreA}
-                onChange={(e) => setEditForm({ ...editForm, scoreA: e.target.value })}
-                className={inputCls()}
-                placeholder="—"
-              />
-            </div>
-
-            <div className="flex items-center justify-center pb-2">
-              <span className="text-sm font-bold text-gray-300 dark:text-gray-600">–</span>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Score B
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={editForm.scoreB}
-                onChange={(e) => setEditForm({ ...editForm, scoreB: e.target.value })}
-                className={inputCls()}
-                placeholder="—"
-              />
-            </div>
-          </div>
-
-           {/* NEW BLOCK — paste this */}
-          {data.type === "round_robin_classic" && (
-            <div style={threeColGrid}>
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                  Bodies A{" "}
-                  <span className="text-gray-400 font-normal normal-case tracking-normal">
-                    (alive, 0-3)
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={3}
-                  value={editForm.bodyCountA}
-                  onChange={(e) => setEditForm({ ...editForm, bodyCountA: e.target.value })}
-                  className={inputCls()}
-                  placeholder="—"
-                />
-              </div>
-
-              <div className="flex items-center justify-center pb-2">
-                <span className="text-sm font-bold text-gray-300 dark:text-gray-600">–</span>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                  Bodies B{" "}
-                  <span className="text-gray-400 font-normal normal-case tracking-normal">
-                    (alive, 0-3)
-                  </span>
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  max={3}
-                  value={editForm.bodyCountB}
-                  onChange={(e) => setEditForm({ ...editForm, bodyCountB: e.target.value })}
-                  className={inputCls()}
-                  placeholder="—"
-                />
-              </div>
-            </div>
-          )}
-          {/* END NEW BLOCK */}
-
-
-          <div className="border-t border-gray-100 dark:border-gray-700" />
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Round <span className="text-red-400">*</span>
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={editForm.round}
-                onChange={(e) => {
-                  setEditForm({ ...editForm, round: e.target.value });
-                  if (editErrors.round)
-                    setEditErrors((p) => ({ ...p, round: undefined }));
-                }}
-                className={inputCls(!!editErrors.round)}
-              />
-              {editErrors.round && (
-                <p className="text-xs text-red-500">{editErrors.round}</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                Field{" "}
-                <span className="text-gray-400 font-normal normal-case tracking-normal">
-                  (optional)
-                </span>
-              </label>
-              <input
-                type="text"
-                value={editForm.field}
-                onChange={(e) => setEditForm({ ...editForm, field: e.target.value })}
-                className={inputCls()}
-                placeholder="e.g. Field 1"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              variant="secondary"
-              type="button"
-              onClick={() => {
-                setEditingMatch(null);
-                setEditErrors({});
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" loading={editSaving}>
-              Save Changes
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        onSubmit={handleEditMatch}
+      />
     </main>
   );
 }
-
