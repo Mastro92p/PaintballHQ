@@ -6,7 +6,7 @@ import type { Match, Team } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { GroupMatchCard } from "@/components/tournament-detail/GroupMatchCard";
-import { getClassicMatchResult } from "@/lib/utils";
+import { getClassicMatchResult, calcStandings } from "@/lib/utils";
 
 type Props = {
   matches: Match[];
@@ -14,7 +14,7 @@ type Props = {
   isGroupAndBracket: boolean;
   hasGroupMatches: boolean;
   isClassic: boolean;
-   canAddMatch: boolean;
+  canAddMatch: boolean;
   generatingGroups: boolean;
   groupsError: string | null;
   deletingMatch: number | null;
@@ -24,8 +24,27 @@ type Props = {
   onDeleteMatch: (id: number) => void;
 };
 
-function computeStandings(teams: Team[], matches: Match[], isClassic: boolean) {
-  const table: Record<number, { team: Team; w: number; d: number; l: number; gf: number; ga: number; pts: number; bodyCount: number }> = {};
+type StandingRow = {
+  teamId: number;
+  teamName: string;
+  w: number;
+  d: number;
+  l: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  pts: number;
+  bodyCount: number;
+};
+
+// Classic scoring — body count bonus points, via getClassicMatchResult.
+// Only meaningful for isClassic tournaments; keep this logic local since
+// calcStandings has no concept of body count.
+function computeClassicStandings(teams: Team[], matches: Match[]): StandingRow[] {
+  const table: Record<
+    number,
+    { team: Team; w: number; d: number; l: number; gf: number; ga: number; pts: number; bodyCount: number }
+  > = {};
 
   for (const t of teams) {
     table[t.id] = { team: t, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, bodyCount: 0 };
@@ -44,31 +63,98 @@ function computeStandings(teams: Team[], matches: Match[], isClassic: boolean) {
     b.gf += m.scoreB;
     b.ga += m.scoreA;
 
-    if (isClassic) {
-      const result = getClassicMatchResult(m.scoreA, m.scoreB, m.bodyCountA ?? null, m.bodyCountB ?? null);
-      if (result.winner === null) {
-        // match not actually decided — skip, don't count as played
-      } else {
-        a.pts += result.pointsA;
-        b.pts += result.pointsB;
-        a.bodyCount += result.bodyCountA;
-        b.bodyCount += result.bodyCountB;
+    const result = getClassicMatchResult(m.scoreA, m.scoreB, m.bodyCountA ?? null, m.bodyCountB ?? null);
+    if (result.winner === null) continue; // not decided — skip
 
-        if (result.winner === "A") {
-          a.w++; b.l++;
-        } else if (result.winner === "B") {
-          b.w++; a.l++;
-        } else {
-          a.d++; b.d++;
-        }
-      }
-    }
+    a.pts += result.pointsA;
+    b.pts += result.pointsB;
+    a.bodyCount += result.bodyCountA;
+    b.bodyCount += result.bodyCountB;
+
+    if (result.winner === "A") { a.w++; b.l++; }
+    else if (result.winner === "B") { b.w++; a.l++; }
+    else { a.d++; b.d++; }
   }
 
-  return Object.values(table).sort((a, b) => {
-    const gd = (x: typeof a) => x.gf - x.ga;
-    return b.pts - a.pts || gd(b) - gd(a) || b.bodyCount - a.bodyCount || b.gf - a.gf;
-  });
+  return Object.values(table)
+    .map((r) => ({
+      teamId: r.team.id,
+      teamName: r.team.name,
+      w: r.w,
+      d: r.d,
+      l: r.l,
+      gf: r.gf,
+      ga: r.ga,
+      gd: r.gf - r.ga,
+      pts: r.pts,
+      bodyCount: r.bodyCount,
+    }))
+    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.bodyCount - a.bodyCount || b.gf - a.gf);
+}
+
+// Standard scoring — delegates to the proven calcStandings in lib/utils,
+// which already handles W/D/L/points correctly for round robin play.
+function computeStandardStandings(teams: Team[], matches: Match[]): StandingRow[] {
+  const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
+  const enrolledIds = teams.map((t) => t.id);
+  const standings = calcStandings(matches, teamMap, enrolledIds);
+
+  return standings.map((s) => ({
+    teamId: s.teamId,
+    teamName: s.teamName,
+    w: s.wins,
+    d: s.draws,
+    l: s.losses,
+    gf: s.goalsFor,
+    ga: s.goalsAgainst,
+    gd: s.goalDiff,
+    pts: s.points,
+    bodyCount: 0,
+  }));
+}
+
+function getStandings(teams: Team[], matches: Match[], isClassic: boolean): StandingRow[] {
+  return isClassic ? computeClassicStandings(teams, matches) : computeStandardStandings(teams, matches);
+}
+
+function StandingsTable({ rows, isClassic }: { rows: StandingRow[]; isClassic: boolean }) {
+  return (
+    <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <table className="w-full text-xs">
+        <thead className="bg-gray-50 dark:bg-gray-800 text-gray-400 uppercase tracking-wide">
+          <tr>
+            <th className="px-3 py-2 text-left w-6">#</th>
+            <th className="px-3 py-2 text-left">Team</th>
+            <th className="px-3 py-2 text-center w-8">W</th>
+            <th className="px-3 py-2 text-center w-8">D</th>
+            <th className="px-3 py-2 text-center w-8">L</th>
+            <th className="px-3 py-2 text-center w-14">{isClassic ? "Bodies" : "GD"}</th>
+            <th className="px-3 py-2 text-center w-10 font-bold text-gray-600 dark:text-gray-300">Pts</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+          {rows.map((row, idx) => (
+            <tr
+              key={row.teamId}
+              className={`bg-white dark:bg-gray-900 ${idx === 0 ? "border-l-2 border-l-teal-500" : ""}`}
+            >
+              <td className="px-3 py-2 text-gray-400 tabular-nums">{idx + 1}</td>
+              <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">{row.teamName}</td>
+              <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{row.w}</td>
+              <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{row.d}</td>
+              <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{row.l}</td>
+              <td className="px-3 py-2 text-center tabular-nums text-gray-500">
+                {isClassic ? row.bodyCount : row.gd > 0 ? `+${row.gd}` : row.gd}
+              </td>
+              <td className="px-3 py-2 text-center tabular-nums font-bold text-gray-900 dark:text-gray-100">
+                {row.pts}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export function MatchesTab({
@@ -86,7 +172,6 @@ export function MatchesTab({
   onEditMatch,
   onDeleteMatch,
 }: Props) {
-
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -143,9 +228,7 @@ export function MatchesTab({
   }
 
   const currentGroup =
-    activeGroup && groupLabels.includes(activeGroup)
-      ? activeGroup
-      : groupLabels[0] || "";
+    activeGroup && groupLabels.includes(activeGroup) ? activeGroup : groupLabels[0] || "";
 
   const currentMatches = currentGroup ? matchesByGroup[currentGroup] ?? [] : [];
 
@@ -154,9 +237,11 @@ export function MatchesTab({
   );
 
   const currentGroupTeams = enrolledTeams.filter((t) => currentTeamIds.has(t.id));
-  const currentStandings = computeStandings(currentGroupTeams, currentMatches, isClassic);
+  const currentStandings = getStandings(currentGroupTeams, currentMatches, isClassic);
 
-return (
+  const overallStandings = getStandings(enrolledTeams, matches, isClassic);
+
+  return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -248,58 +333,7 @@ return (
                 </span>
               </div>
 
-              <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead className="bg-gray-50 dark:bg-gray-800 text-gray-400 uppercase tracking-wide">
-                    <tr>
-                      <th className="px-3 py-2 text-left w-6">#</th>
-                      <th className="px-3 py-2 text-left">Team</th>
-                      <th className="px-3 py-2 text-center w-8">W</th>
-                      <th className="px-3 py-2 text-center w-8">D</th>
-                      <th className="px-3 py-2 text-center w-8">L</th>
-                      <th className="px-3 py-2 text-center w-12">GD</th>
-                      <th className="px-3 py-2 text-center w-10 font-bold text-gray-600 dark:text-gray-300">
-                        Pts
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {currentStandings.map((row, idx) => {
-                      const pts = row.w * 3 + row.d;
-                      const gd = row.gf - row.ga;
-
-                      return (
-                        <tr
-                          key={row.team.id}
-                          className={`bg-white dark:bg-gray-900 ${
-                            idx === 0 ? "border-l-2 border-l-teal-500" : ""
-                          }`}
-                        >
-                          <td className="px-3 py-2 text-gray-400 tabular-nums">{idx + 1}</td>
-                          <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
-                            {row.team.name}
-                          </td>
-                          <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">
-                            {row.w}
-                          </td>
-                          <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">
-                            {row.d}
-                          </td>
-                          <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">
-                            {row.l}
-                          </td>
-                          <td className="px-3 py-2 text-center tabular-nums text-gray-500">
-                            {gd > 0 ? `+${gd}` : gd}
-                          </td>
-                          <td className="px-3 py-2 text-center tabular-nums font-bold text-gray-900 dark:text-gray-100">
-                            {pts}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <StandingsTable rows={currentStandings} isClassic={isClassic} />
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
                 {currentMatches
@@ -319,55 +353,7 @@ return (
         </div>
       ) : (
         <div className="space-y-6">
-          {isClassic && (
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <table className="w-full text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-800 text-gray-400 uppercase tracking-wide">
-                  <tr>
-                    <th className="px-3 py-2 text-left w-6">#</th>
-                    <th className="px-3 py-2 text-left">Team</th>
-                    <th className="px-3 py-2 text-center w-8">W</th>
-                    <th className="px-3 py-2 text-center w-8">D</th>
-                    <th className="px-3 py-2 text-center w-8">L</th>
-                    <th className="px-3 py-2 text-center w-14">Bodies</th>
-                    <th className="px-3 py-2 text-center w-10 font-bold text-gray-600 dark:text-gray-300">
-                      Pts
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {computeStandings(enrolledTeams, matches, true).map((row, idx) => (
-                    <tr
-                      key={row.team.id}
-                      className={`bg-white dark:bg-gray-900 ${
-                        idx === 0 ? "border-l-2 border-l-teal-500" : ""
-                      }`}
-                    >
-                      <td className="px-3 py-2 text-gray-400 tabular-nums">{idx + 1}</td>
-                      <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">
-                        {row.team.name}
-                      </td>
-                      <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">
-                        {row.w}
-                      </td>
-                      <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">
-                        {row.d}
-                      </td>
-                      <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">
-                        {row.l}
-                      </td>
-                      <td className="px-3 py-2 text-center tabular-nums text-gray-500">
-                        {row.bodyCount}
-                      </td>
-                      <td className="px-3 py-2 text-center tabular-nums font-bold text-gray-900 dark:text-gray-100">
-                        {row.pts}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <StandingsTable rows={overallStandings} isClassic={isClassic} />
 
           {Object.entries(matchesByRound)
             .sort(([a], [b]) => Number(a) - Number(b))
@@ -394,5 +380,4 @@ return (
       )}
     </section>
   );
-
 }

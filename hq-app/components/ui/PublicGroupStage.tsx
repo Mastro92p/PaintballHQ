@@ -60,6 +60,23 @@ export default function PublicGroupStage({
     );
   }, [activeGroup, groupMatchesByGroup]);
 
+  // Group matches by round — only meaningful for round robin (plain & classic).
+  // Group-and-bracket keeps its flat grid, unaffected by this.
+  const matchesByRound = useMemo(() => {
+    if (!isRoundRobin) return {};
+    return activeMatches.reduce<Record<number, Match[]>>((acc, m) => {
+      const r = m.round ?? 0;
+      if (!acc[r]) acc[r] = [];
+      acc[r].push(m);
+      return acc;
+    }, {});
+  }, [activeMatches, isRoundRobin]);
+
+  const roundKeys = useMemo(
+    () => Object.keys(matchesByRound).map(Number).sort((a, b) => a - b),
+    [matchesByRound]
+  );
+
   const groupStandings = useMemo(() => {
     const rows: Record<number, {
       teamId: number;
@@ -72,6 +89,7 @@ export default function PublicGroupStage({
       ga: number;
       gd: number;
       points: number;
+      bodyCount: number;
     }> = {};
 
     for (const match of activeMatches) {
@@ -79,14 +97,14 @@ export default function PublicGroupStage({
         rows[match.teamAId] = {
           teamId: match.teamAId,
           teamName: match.teamA?.name ?? "TBD",
-          played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0,
+          played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0, bodyCount: 0,
         };
       }
       if (match.teamBId && !rows[match.teamBId]) {
         rows[match.teamBId] = {
           teamId: match.teamBId,
           teamName: match.teamB?.name ?? "TBD",
-          played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0,
+          played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0, bodyCount: 0,
         };
       }
 
@@ -119,6 +137,8 @@ export default function PublicGroupStage({
 
         a.points += result.pointsA;
         b.points += result.pointsB;
+        a.bodyCount += result.bodyCountA;
+        b.bodyCount += result.bodyCountB;
 
         if (result.winner === "A") {
           a.wins += 1;
@@ -172,6 +192,111 @@ export default function PublicGroupStage({
       </section>
     );
   }
+
+  // Shared match card renderer — used both in the round-grouped layout
+  // and the flat group-and-bracket grid, so styling stays identical.
+  const renderMatchCard = (match: Match) => {
+    const completed =
+      match.status === "completed" && match.scoreA !== null && match.scoreB !== null;
+
+    let aWins = false;
+    let bWins = false;
+    let draw = false;
+
+    if (completed) {
+      if (isClassic) {
+        const result = getClassicMatchResult(
+          match.scoreA ?? null,
+          match.scoreB ?? null,
+          match.bodyCountA ?? null,
+          match.bodyCountB ?? null
+        );
+        aWins = result.winner === "A";
+        bWins = result.winner === "B";
+        draw = result.winner === "draw";
+      } else {
+        draw = match.scoreA === match.scoreB;
+        aWins = !draw && (match.scoreA ?? 0) > (match.scoreB ?? 0);
+        bWins = !draw && (match.scoreB ?? 0) > (match.scoreA ?? 0);
+      }
+    }
+
+    return (
+      <div key={match.id} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+        <div className="mb-2 flex items-center justify-between">
+          <span
+            className={[
+              "rounded-full px-2.5 py-1 text-xs font-medium capitalize",
+              completed
+                ? "bg-emerald-500/15 text-emerald-300"
+                : "bg-amber-500/15 text-amber-300",
+            ].join(" ")}
+          >
+            {match.status}
+          </span>
+          <span className="text-xs text-slate-400">
+            {match.round && !isRoundRobin ? `Block ${match.round}` : ""}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <span
+            className={[
+              "flex-1 truncate text-sm font-medium",
+              aWins ? "text-emerald-400 font-bold" : "text-white",
+            ].join(" ")}
+          >
+            {match.teamA?.name ?? "TBD"}
+          </span>
+
+          {completed ? (
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isClassic && match.bodyCountA != null && (
+                <span className="text-[11px] leading-none text-slate-400 tabular-nums">
+                  ({match.bodyCountA})
+                </span>
+              )}
+              <span
+                className={[
+                  "w-9 h-9 flex items-center justify-center rounded-full text-white text-sm font-bold tabular-nums",
+                  aWins ? "bg-emerald-500" : draw ? "bg-slate-500" : "bg-red-500",
+                ].join(" ")}
+              >
+                {match.scoreA}
+              </span>
+
+              <span className="text-slate-500 text-xs">:</span>
+
+              <span
+                className={[
+                  "w-9 h-9 flex items-center justify-center rounded-full text-white text-sm font-bold tabular-nums",
+                  bWins ? "bg-emerald-500" : draw ? "bg-slate-500" : "bg-red-500",
+                ].join(" ")}
+              >
+                {match.scoreB}
+              </span>
+              {isClassic && match.bodyCountB != null && (
+                <span className="text-[11px] leading-none text-slate-400 tabular-nums">
+                  ({match.bodyCountB})
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="shrink-0 text-xs font-medium text-slate-500 px-2">vs</span>
+          )}
+
+          <span
+            className={[
+              "flex-1 truncate text-right text-sm font-medium",
+              bWins ? "text-emerald-400 font-bold" : "text-white",
+            ].join(" ")}
+          >
+            {match.teamB?.name ?? "TBD"}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <section className="space-y-4">
@@ -239,11 +364,14 @@ export default function PublicGroupStage({
                   <th className="px-3 py-3 text-left font-medium">#</th>
                   <th className="px-3 py-3 text-left font-medium">Team</th>
                   <th className="px-3 py-3 text-right font-medium">P</th>
-                  <th className="px-3 py-3 text-right font-medium">W</th>
+                  <th className="px-3 py-3 text-right font-medium text-emerald-400/80">W</th>
                   <th className="px-3 py-3 text-right font-medium">D</th>
-                  <th className="px-3 py-3 text-right font-medium">L</th>
+                  <th className="px-3 py-3 text-right font-medium text-red-400/80">L</th>
                   <th className="px-3 py-3 text-right font-medium">GD</th>
-                  <th className="px-3 py-3 text-right font-medium">PTS</th>
+                  {isClassic && (
+                    <th className="px-3 py-3 text-right font-medium text-sky-400/80">BC</th>
+                  )}
+                  <th className="px-3 py-3 text-right font-medium text-amber-400/80">PTS</th>
                 </tr>
               </thead>
               <tbody>
@@ -252,13 +380,18 @@ export default function PublicGroupStage({
                     <td className="px-3 py-3 text-slate-400">{index + 1}</td>
                     <td className="px-3 py-3 font-medium">{row.teamName}</td>
                     <td className="px-3 py-3 text-right text-slate-300">{row.played}</td>
-                    <td className="px-3 py-3 text-right">{row.wins}</td>
-                    <td className="px-3 py-3 text-right">{row.draws}</td>
-                    <td className="px-3 py-3 text-right">{row.losses}</td>
+                    <td className="px-3 py-3 text-right font-semibold text-emerald-400">{row.wins}</td>
+                    <td className="px-3 py-3 text-right text-slate-300">{row.draws}</td>
+                    <td className="px-3 py-3 text-right font-semibold text-red-400">{row.losses}</td>
                     <td className="px-3 py-3 text-right">
                       {row.gd > 0 ? `+${row.gd}` : row.gd}
                     </td>
-                    <td className="px-3 py-3 text-right font-semibold text-white">
+                    {isClassic && (
+                      <td className="px-3 py-3 text-right text-sky-400 tabular-nums">
+                        {row.bodyCount}
+                      </td>
+                    )}
+                    <td className="px-3 py-3 text-right font-semibold text-amber-400">
                       {row.points}
                     </td>
                   </tr>
@@ -268,110 +401,25 @@ export default function PublicGroupStage({
           </div>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {activeMatches.map((match) => {
-            const completed =
-              match.status === "completed" && match.scoreA !== null && match.scoreB !== null;
-
-            let aWins = false;
-            let bWins = false;
-            let draw = false;
-
-            if (completed) {
-              if (isClassic) {
-                const result = getClassicMatchResult(
-                  match.scoreA ?? null,
-                  match.scoreB ?? null,
-                  match.bodyCountA ?? null,
-                  match.bodyCountB ?? null
-                );
-                aWins = result.winner === "A";
-                bWins = result.winner === "B";
-                draw = result.winner === "draw";
-              } else {
-                draw = match.scoreA === match.scoreB;
-                aWins = !draw && (match.scoreA ?? 0) > (match.scoreB ?? 0);
-                bWins = !draw && (match.scoreB ?? 0) > (match.scoreA ?? 0);
-              }
-            }
-
-            return (
-              <div key={match.id} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <span
-                    className={[
-                      "rounded-full px-2.5 py-1 text-xs font-medium capitalize",
-                      completed
-                        ? "bg-emerald-500/15 text-emerald-300"
-                        : "bg-amber-500/15 text-amber-300",
-                    ].join(" ")}
-                  >
-                    {match.status}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    {match.round && isRoundRobin ? `Block ${match.round}` : ""}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span
-                    className={[
-                      "flex-1 truncate text-sm font-medium",
-                      aWins ? "text-emerald-400 font-bold" : "text-white",
-                    ].join(" ")}
-                  >
-                    {match.teamA?.name ?? "TBD"}
-                  </span>
-
-                  {completed ? (
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {isClassic && match.bodyCountA != null && (
-                        <span className="text-[11px] leading-none text-slate-400 tabular-nums">
-                          ({match.bodyCountA})
-                        </span>
-                      )}
-                      <span
-                        className={[
-                          "w-9 h-9 flex items-center justify-center rounded-full text-white text-sm font-bold tabular-nums",
-                          aWins ? "bg-emerald-500" : draw ? "bg-slate-500" : "bg-red-500",
-                        ].join(" ")}
-                      >
-                        {match.scoreA}
-                      </span>
-
-                      <span className="text-slate-500 text-xs">:</span>
-
-                      <span
-                        className={[
-                          "w-9 h-9 flex items-center justify-center rounded-full text-white text-sm font-bold tabular-nums",
-                          bWins ? "bg-emerald-500" : draw ? "bg-slate-500" : "bg-red-500",
-                        ].join(" ")}
-                      >
-                        {match.scoreB}
-                      </span>
-                      {isClassic && match.bodyCountB != null && (
-                        <span className="text-[11px] leading-none text-slate-400 tabular-nums">
-                          ({match.bodyCountB})
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="shrink-0 text-xs font-medium text-slate-500 px-2">vs</span>
-                  )}
-
-                  <span
-                    className={[
-                      "flex-1 truncate text-right text-sm font-medium",
-                      bWins ? "text-emerald-400 font-bold" : "text-white",
-                    ].join(" ")}
-                  >
-                    {match.teamB?.name ?? "TBD"}
-                  </span>
+        {isRoundRobin ? (
+          <div className="mt-4 space-y-6">
+            {roundKeys.map((round) => (
+              <div key={round} className="space-y-3">
+                <h4 className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                  <span>{round === 0 ? "Unassigned" : `Block ${round}`}</span>
+                  <span className="h-px flex-1 bg-white/10" />
+                </h4>
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  {matchesByRound[round].map((match) => renderMatchCard(match))}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {activeMatches.map((match) => renderMatchCard(match))}
+          </div>
+        )}
       </div>
     </section>
   );
