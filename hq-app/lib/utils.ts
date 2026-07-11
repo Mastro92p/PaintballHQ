@@ -187,8 +187,8 @@ export function getClassicMatchResult(
 
   return {
     winner,
-    pointsA: basePointsA + aliveA,
-    pointsB: basePointsB + aliveB,
+    pointsA: basePointsA ,
+    pointsB: basePointsB ,
     bodyCountA: aliveA,
     bodyCountB: aliveB,
   };
