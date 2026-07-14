@@ -22,6 +22,7 @@ export type StandingRow = {
   ga: number;
   gd: number;
   points: number;
+  bodyCount?: number;
   groupRank?: number;
   overallRank?: number;
 };

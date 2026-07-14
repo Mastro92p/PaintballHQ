@@ -37,7 +37,7 @@ export default function ManageTeamsPage() {
     if (!data) return [];
     return data.filter((t) =>
       t.name.toLowerCase().includes(search.toLowerCase())
-    );
+    ).sort((a, b) => a.name.localeCompare(b.name));
   }, [data, search]);
 
   function openCreate() {

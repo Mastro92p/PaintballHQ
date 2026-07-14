@@ -73,36 +73,35 @@ model Match {
   id           Int        @id @default(autoincrement())
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   tournamentId Int
-  teamA        Team?       @relation("TeamA", fields: [teamAId], references: [id])
+  teamA        Team?      @relation("TeamA", fields: [teamAId], references: [id])
   teamAId      Int?
-  teamB        Team?       @relation("TeamB", fields: [teamBId], references: [id])
+  teamB        Team?      @relation("TeamB", fields: [teamBId], references: [id])
   teamBId      Int?
   scoreA       Int?
   scoreB       Int?
-  round        Int        @default(1)
+  round        Int?
+  label        String?
   phase        String     @default("group")
-  // "group" | "round_of_32" | "round_of_16" | "quarter_final" | "semi_final" | "third_place" | "final"
   group        String?
   field        String?
 
-  nextMatchId    Int?
-  nextMatch      Match?  @relation("MatchProgression", fields: [nextMatchId], references: [id])
-  prevMatches    Match[] @relation("MatchProgression")
+  nextMatchId      Int?
+  nextMatch        Match?  @relation("MatchProgression", fields: [nextMatchId], references: [id])
+  prevMatches      Match[] @relation("MatchProgression")
 
   loserNextMatchId Int?
   loserNextSlot    String?
 
-  bracketOrder   Int?
-  nextMatchOrder Int?
-  nextSlot       String?
+  bracketOrder     Int?
+  nextMatchOrder   Int?
+  nextSlot         String?
 
-  status       String     @default("pending")
-  manualOverride Boolean  @default(false)
-  createdAt    DateTime   @default(now())
+  status           String   @default("pending")
+  manualOverride   Boolean  @default(false)
+  createdAt        DateTime @default(now())
 
-  bodyCountA Int?
-  bodyCountB Int?
-
+  bodyCountA       Int?
+  bodyCountB       Int?
 }
 
 model User {

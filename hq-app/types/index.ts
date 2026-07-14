@@ -15,6 +15,7 @@ export interface Tournament {
   type:           string;
   teamsToAdvance: number;
   leagueId:       number | null;
+  //division for the tournament
 }
 
 export interface Team {
@@ -24,6 +25,7 @@ export interface Team {
   logoUrl: string | null;
   createdAt: Date
   tournaments?: TournamentTeam[]
+  //add division
 }
 
 export interface TournamentTeam {
@@ -59,6 +61,7 @@ export interface Match {
   loserNextSlot?: string | null
 
   manualOverride?: boolean
+  label?: string | null
 
   bodyCountA?: number | null;
   bodyCountB?: number | null;
@@ -115,19 +118,21 @@ export interface CreateMatchBody {
   scoreB?: number
   bodyCountA?: number
   bodyCountB?: number
-  round?: number
-  field?: string
+  round?: number | null
+  label?: string | null
+  field?: string | null
 }
 
 export type UpdateMatchBody = {
-  teamAId?: number;
-  teamBId?: number;
-  scoreA?:  number | null;
-  scoreB?:  number | null;
-  bodyCountA?: number | null;
-  bodyCountB?: number | null;
-  round?:   number;
-  field?:   string | null;
+  teamAId?: number
+  teamBId?: number
+  scoreA?: number | null
+  scoreB?: number | null
+  bodyCountA?: number | null
+  bodyCountB?: number | null
+  round?: number | null
+  label?: string | null
+  field?: string | null
 }
 
 export interface Standing {

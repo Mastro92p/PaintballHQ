@@ -1030,6 +1030,7 @@ export const MatchScalarFieldEnum = {
   scoreA: 'scoreA',
   scoreB: 'scoreB',
   round: 'round',
+  label: 'label',
   phase: 'phase',
   group: 'group',
   field: 'field',

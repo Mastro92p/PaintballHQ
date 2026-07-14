@@ -45,10 +45,11 @@ function renderGoalDiff(value: number) {
 
 
 function applyClassicScoring(rows: StandingRow[], matches: Match[]): StandingRow[] {
-  const overrides: Record<number, { wins: number; draws: number; losses: number; points: number }> = {};
+  const overrides: Record<number, { wins: number; draws: number; losses: number; points: number; bodyCount: number }> = {};
+
 
   rows.forEach((row) => {
-    overrides[row.teamId] = { wins: 0, draws: 0, losses: 0, points: 0 };
+    overrides[row.teamId] = { wins: 0, draws: 0, losses: 0, points: 0, bodyCount: 0 };
   });
 
   matches.forEach((match) => {
@@ -74,6 +75,8 @@ function applyClassicScoring(rows: StandingRow[], matches: Match[]): StandingRow
 
     overrides[aId].points += result.pointsA;
     overrides[bId].points += result.pointsB;
+    overrides[aId].bodyCount += result.bodyCountA;
+    overrides[bId].bodyCount += result.bodyCountB;
 
     if (result.winner === "A") {
       overrides[aId].wins += 1;
@@ -93,6 +96,7 @@ function applyClassicScoring(rows: StandingRow[], matches: Match[]): StandingRow
     draws: overrides[row.teamId].draws,
     losses: overrides[row.teamId].losses,
     points: overrides[row.teamId].points,
+    bodyCount: overrides[row.teamId].bodyCount,
   }));
 
   merged.sort(
@@ -117,12 +121,14 @@ function StandingsTable({
   showOverallRank = true,
   qualifiersPerGroup = 0,
   wildCardIds = new Set<number>(),
+  showBodyCount = false,
 }: {
   rows: StandingRow[];
   showGroupRank?: boolean;
   showOverallRank?: boolean;
   qualifiersPerGroup?: number;
   wildCardIds?: Set<number>;
+  showBodyCount?: boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
@@ -144,6 +150,9 @@ function StandingsTable({
               <th className="px-3 py-3 text-right font-medium">GF</th>
               <th className="px-3 py-3 text-right font-medium">GA</th>
               <th className="px-3 py-3 text-right font-medium">GD</th>
+              {showBodyCount && (
+                <th className="px-3 py-3 text-right font-medium text-sky-400">BC</th>
+              )}
               <th className="px-4 py-3 text-right font-medium">PTS</th>
             </tr>
           </thead>
@@ -193,6 +202,11 @@ function StandingsTable({
                 <td className="px-3 py-3 text-right">{row.gf}</td>
                 <td className="px-3 py-3 text-right">{row.ga}</td>
                 <td className="px-3 py-3 text-right">{renderGoalDiff(row.gd)}</td>
+                {showBodyCount && (
+                  <td className="px-3 py-3 text-right text-sky-400">
+                    {row.bodyCount ?? 0}
+                  </td>
+                )}
                 <td className="px-4 py-3 text-right font-semibold text-amber-300">
                   {row.points}
                 </td>
@@ -230,7 +244,11 @@ export function PublicStandingsTable({
         </div>
 
 
-        <StandingsTable rows={standings} showOverallRank />
+        <StandingsTable
+          rows={standings}
+          showOverallRank
+          showBodyCount={tournamentType === "round_robin_classic"}
+        />
 
 
         <p className="text-xs text-slate-500">

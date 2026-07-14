@@ -247,12 +247,21 @@ export default function ManageTournamentDetailPage({
 
   function validateMatchForm(form: MatchForm): MatchFormErrors {
     const errors: MatchFormErrors = {};
+
     if (!form.teamAId) errors.teamAId = "Team A is required";
     if (!form.teamBId) errors.teamBId = "Team B is required";
-    if (form.teamAId && form.teamBId && form.teamAId === form.teamBId)
+
+    if (form.teamAId && form.teamBId && form.teamAId === form.teamBId) {
       errors.teamBId = "Team B must be different from Team A";
-    if (!form.round || parseInt(form.round, 10) < 1)
-      errors.round = "Round must be at least 1";
+    }
+
+    if (form.round.trim() !== "") {
+      const round = parseInt(form.round, 10);
+      if (Number.isNaN(round) || round < 1) {
+        errors.round = "Round must be at least 1";
+      }
+    }
+
     return errors;
   }
 
@@ -265,17 +274,18 @@ export default function ManageTournamentDetailPage({
 
     setMatchSaving(true);
 
-    const body: CreateMatchBody = {
-      tournamentId: parseInt(id, 10),
-      teamAId: parseInt(matchForm.teamAId, 10),
-      teamBId: parseInt(matchForm.teamBId, 10),
-      round: matchForm.round ? parseInt(matchForm.round, 10) : 1,
-      field: matchForm.field || undefined,
-      scoreA: matchForm.scoreA !== "" ? parseInt(matchForm.scoreA, 10) : undefined,
-      scoreB: matchForm.scoreB !== "" ? parseInt(matchForm.scoreB, 10) : undefined,
-      bodyCountA: matchForm.bodyCountA !== "" ? parseInt(matchForm.bodyCountA, 10) : undefined,
-      bodyCountB: matchForm.bodyCountB !== "" ? parseInt(matchForm.bodyCountB, 10) : undefined,
-    };
+  const body: CreateMatchBody = {
+    tournamentId: parseInt(id, 10),
+    teamAId: parseInt(matchForm.teamAId, 10),
+    teamBId: parseInt(matchForm.teamBId, 10),
+    round: matchForm.round.trim() !== "" ? parseInt(matchForm.round, 10) : null,
+    label: matchForm.label.trim() || null,
+    field: matchForm.field.trim() || null,
+    scoreA: matchForm.scoreA !== "" ? parseInt(matchForm.scoreA, 10) : undefined,
+    scoreB: matchForm.scoreB !== "" ? parseInt(matchForm.scoreB, 10) : undefined,
+    bodyCountA: matchForm.bodyCountA !== "" ? parseInt(matchForm.bodyCountA, 10) : undefined,
+    bodyCountB: matchForm.bodyCountB !== "" ? parseInt(matchForm.bodyCountB, 10) : undefined,
+  };
 
     await fetch("/api/matches", {
       method: "POST",
@@ -300,17 +310,25 @@ export default function ManageTournamentDetailPage({
       scoreB: m.scoreB !== null ? String(m.scoreB) : "",
       bodyCountA: m.bodyCountA != null ? String(m.bodyCountA) : "",
       bodyCountB: m.bodyCountB != null ? String(m.bodyCountB) : "",
-      round: String(m.round ?? 1),
+      round: m.round != null ? String(m.round) : "",
+      label: m.label ?? "",
       field: m.field ?? "",
     });
   }
 
   async function handleEditMatch() {
     const editOnlyErrors: MatchFormErrors = {};
-    if (!editForm.round || parseInt(editForm.round, 10) < 1)
-      editOnlyErrors.round = "Round must be at least 1";
-    if (editForm.teamAId && editForm.teamBId && editForm.teamAId === editForm.teamBId)
+
+    if (editForm.round.trim() !== "") {
+      const round = parseInt(editForm.round, 10);
+      if (Number.isNaN(round) || round < 1) {
+        editOnlyErrors.round = "Round must be at least 1";
+      }
+    }
+
+    if (editForm.teamAId && editForm.teamBId && editForm.teamAId === editForm.teamBId) {
       editOnlyErrors.teamBId = "Team B must be different from Team A";
+    }
 
     if (Object.keys(editOnlyErrors).length > 0) {
       setEditErrors(editOnlyErrors);
@@ -331,8 +349,9 @@ export default function ManageTournamentDetailPage({
         scoreB: editForm.scoreB !== "" ? parseInt(editForm.scoreB, 10) : null,
         bodyCountA: editForm.bodyCountA !== "" ? parseInt(editForm.bodyCountA, 10) : null,
         bodyCountB: editForm.bodyCountB !== "" ? parseInt(editForm.bodyCountB, 10) : null,
-        round: parseInt(editForm.round, 10),
-        field: editForm.field || null,
+        round: editForm.round.trim() !== "" ? parseInt(editForm.round, 10) : null,
+        label: editForm.label.trim() || null,
+        field: editForm.field.trim() || null,
       }),
     });
 

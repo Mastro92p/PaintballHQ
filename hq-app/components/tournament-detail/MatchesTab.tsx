@@ -117,36 +117,71 @@ function getStandings(teams: Team[], matches: Match[], isClassic: boolean): Stan
   return isClassic ? computeClassicStandings(teams, matches) : computeStandardStandings(teams, matches);
 }
 
+
+function getRoundHeading(round: number, matches: Match[]) {
+  const labels = Array.from(
+    new Set(
+      matches
+        .map((m) => m.label?.trim())
+        .filter((label): label is string => Boolean(label))
+    )
+  );
+
+  const base = round === 0 ? "Unassigned" : `Round ${round}`;
+
+  if (labels.length === 1) {
+    return `${base} · ${labels[0]}`;
+  }
+
+  return base;
+}
+
+
 function StandingsTable({ rows, isClassic }: { rows: StandingRow[]; isClassic: boolean }) {
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="rounded-xl border border-[#22314d] bg-[#0f1b34] overflow-hidden">
       <table className="w-full text-xs">
-        <thead className="bg-gray-50 dark:bg-gray-800 text-gray-400 uppercase tracking-wide">
+        <thead className="bg-white/5 text-gray-400 uppercase tracking-wide">
           <tr>
-            <th className="px-3 py-2 text-left w-6">#</th>
-            <th className="px-3 py-2 text-left">Team</th>
-            <th className="px-3 py-2 text-center w-8">W</th>
-            <th className="px-3 py-2 text-center w-8">D</th>
-            <th className="px-3 py-2 text-center w-8">L</th>
-            <th className="px-3 py-2 text-center w-14">{isClassic ? "Bodies" : "GD"}</th>
-            <th className="px-3 py-2 text-center w-10 font-bold text-gray-600 dark:text-gray-300">Pts</th>
+            <th className="px-3 py-3 text-left w-6">#</th>
+            <th className="px-3 py-3 text-left">Team</th>
+            <th className="px-3 py-3 text-center w-8">W</th>
+            <th className="px-3 py-3 text-center w-8">D</th>
+            <th className="px-3 py-3 text-center w-8">L</th>
+            <th className="px-3 py-3 text-center w-14">{isClassic ? "Bodies" : "GD"}</th>
+            <th className="px-3 py-3 text-center w-10 font-bold text-amber-400">Pts</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+
+        <tbody className="divide-y divide-[#22314d]">
           {rows.map((row, idx) => (
             <tr
               key={row.teamId}
-              className={`bg-white dark:bg-gray-900 ${idx === 0 ? "border-l-2 border-l-teal-500" : ""}`}
+              className={`bg-transparent ${idx === 0 ? "border-l-2 border-l-teal-400" : ""}`}
             >
-              <td className="px-3 py-2 text-gray-400 tabular-nums">{idx + 1}</td>
-              <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">{row.teamName}</td>
-              <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{row.w}</td>
-              <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{row.d}</td>
-              <td className="px-3 py-2 text-center tabular-nums text-gray-600 dark:text-gray-400">{row.l}</td>
-              <td className="px-3 py-2 text-center tabular-nums text-gray-500">
+              <td className="px-3 py-3 text-gray-400 tabular-nums">{idx + 1}</td>
+
+              <td className="px-3 py-3 font-medium text-gray-100">
+                {row.teamName}
+              </td>
+
+              <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
+                {row.w}
+              </td>
+
+              <td className="px-3 py-3 text-center tabular-nums text-gray-300">
+                {row.d}
+              </td>
+
+              <td className="px-3 py-3 text-center tabular-nums font-semibold text-rose-400">
+                {row.l}
+              </td>
+
+              <td className="px-3 py-3 text-center tabular-nums text-gray-400">
                 {isClassic ? row.bodyCount : row.gd > 0 ? `+${row.gd}` : row.gd}
               </td>
-              <td className="px-3 py-2 text-center tabular-nums font-bold text-gray-900 dark:text-gray-100">
+
+              <td className="px-3 py-3 text-center tabular-nums font-bold text-amber-400">
                 {row.pts}
               </td>
             </tr>
@@ -360,7 +395,7 @@ export function MatchesTab({
             .map(([round, rMatches]) => (
               <div key={round} className="space-y-3">
                 <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-3">
-                  <span>{Number(round) === 0 ? "Unassigned" : `Round ${round}`}</span>
+                  <span>{getRoundHeading(Number(round), rMatches)}</span>
                   <span className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">

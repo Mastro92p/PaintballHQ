@@ -7,21 +7,28 @@ export const MAX_BODIES = 3;
 export const MIN_BODIES = -3;
 
 export type MatchForm = {
-  teamAId: string;
-  teamBId: string;
-  scoreA: string;
-  scoreB: string;
-  bodyCountA: string;
-  bodyCountB: string;
-  round: string;
-  field: string;
-};
+  teamAId: string
+  teamBId: string
+  scoreA: string
+  scoreB: string
+  bodyCountA: string
+  bodyCountB: string
+  round: string
+  label: string
+  field: string
+}
 
 export type MatchFormErrors = {
-  teamAId?: string;
-  teamBId?: string;
-  round?: string;
-};
+  teamAId?: string
+  teamBId?: string
+  scoreA?: string
+  scoreB?: string
+  bodyCountA?: string
+  bodyCountB?: string
+  round?: string
+  label?: string
+  field?: string
+}
 
 export const emptyMatchForm: MatchForm = {
   teamAId: "",
@@ -30,9 +37,10 @@ export const emptyMatchForm: MatchForm = {
   scoreB: "",
   bodyCountA: "",
   bodyCountB: "",
-  round: "1",
+  round: "",
+  label: "",
   field: "",
-};
+}
 
 type Team = {
   id: number;
@@ -238,10 +246,34 @@ export default function MatchModal({
 
         <div className="border-t border-gray-100 dark:border-gray-700" />
 
+        <div className="space-y-4">
+        <div className="space-y-1">
+          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
+            Label{" "}
+            <span className="text-gray-400 font-normal normal-case tracking-normal">
+              (optional)
+            </span>
+          </label>
+          <input
+            type="text"
+            value={form.label}
+            onChange={(e) => {
+              setForm({ ...form, label: e.target.value });
+              if (errors.label) setErrors((p) => ({ ...p, label: undefined }));
+            }}
+            className={inputCls(!!errors.label)}
+            placeholder="e.g. Final, Quarter Final, Round of 32"
+          />
+          {errors.label && <p className="text-xs text-red-500">{errors.label}</p>}
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-              Round <span className="text-red-400">*</span>
+              Round{" "}
+              <span className="text-gray-400 font-normal normal-case tracking-normal">
+                (optional)
+              </span>
             </label>
             <input
               type="number"
@@ -252,6 +284,7 @@ export default function MatchModal({
                 if (errors.round) setErrors((p) => ({ ...p, round: undefined }));
               }}
               className={inputCls(!!errors.round)}
+              placeholder="e.g. 1"
             />
             {errors.round && <p className="text-xs text-red-500">{errors.round}</p>}
           </div>
@@ -272,6 +305,7 @@ export default function MatchModal({
             />
           </div>
         </div>
+      </div>
 
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="secondary" type="button" onClick={onClose}>

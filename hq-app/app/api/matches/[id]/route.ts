@@ -25,54 +25,67 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-
-    
     const { id } = await params
     const matchId = Number(id)
-    const body = await req.json()
-
-    const {
-      scoreA,
-      scoreB,
-      bodyCountA,
-      bodyCountB,
-      status,
-      teamAId,
-      teamBId,
-      round,
-    } = body
+    const body: UpdateMatchBody & { status?: string } = await req.json()
 
     const existingMatch = await prisma.match.findUnique({
       where: { id: matchId },
     })
 
     if (!existingMatch) {
-      return Response.json({ error: "Match not found" }, { status: 404 })
+      return Response.json({ error: 'Match not found' }, { status: 404 })
     }
+
+    const nextTeamAId = body.teamAId ?? existingMatch.teamAId
+    const nextTeamBId = body.teamBId ?? existingMatch.teamBId
+
+    if (
+      nextTeamAId != null &&
+      nextTeamBId != null &&
+      nextTeamAId === nextTeamBId
+    ) {
+      return apiError('A team cannot play against itself')
+    }
+
+    if (body.round != null && body.round < 1) {
+      return apiError('Round must be at least 1')
+    }
+
+    const nextScoreA =
+      body.scoreA !== undefined ? body.scoreA : existingMatch.scoreA
+    const nextScoreB =
+      body.scoreB !== undefined ? body.scoreB : existingMatch.scoreB
 
     const updatedMatch = await prisma.match.update({
       where: { id: matchId },
       data: {
-        scoreA,
-        scoreB,
-        bodyCountA,
-        bodyCountB,
-        status: status || deriveMatchStatus(scoreA, scoreB),
-        teamAId,
-        teamBId,
-        round,
+        teamAId: body.teamAId,
+        teamBId: body.teamBId,
+        scoreA: body.scoreA,
+        scoreB: body.scoreB,
+        bodyCountA: body.bodyCountA,
+        bodyCountB: body.bodyCountB,
+        round: body.round,
+        label:
+          body.label !== undefined
+            ? body.label?.trim() || null
+            : undefined,
+        field:
+          body.field !== undefined
+            ? body.field?.trim() || null
+            : undefined,
+        status: body.status || deriveMatchStatus(nextScoreA ?? undefined, nextScoreB ?? undefined),
       },
     })
 
-    //const isCompleted = updatedMatch.status === "completed"
     const isKnockoutPhase =
-      updatedMatch.phase === "round_of_32" ||
-      updatedMatch.phase === "round_of_16" ||
-      updatedMatch.phase === "quarter_final" ||
-      updatedMatch.phase === "semi_final" ||
-      updatedMatch.phase === "final"
+      updatedMatch.phase === 'round_of_32' ||
+      updatedMatch.phase === 'round_of_16' ||
+      updatedMatch.phase === 'quarter_final' ||
+      updatedMatch.phase === 'semi_final' ||
+      updatedMatch.phase === 'final'
 
-      //(!isCompleted || !isKnockoutPhase)
     if (!isKnockoutPhase) {
       return Response.json(updatedMatch)
     }
@@ -90,7 +103,7 @@ export async function PATCH(
       return Response.json(updatedMatch)
     }
 
-    if (updatedMatch.phase === "final") {
+    if (updatedMatch.phase === 'final') {
       return Response.json(updatedMatch)
     }
 
@@ -104,7 +117,6 @@ export async function PATCH(
         ? updatedMatch.teamBId
         : updatedMatch.teamAId
 
-    // Advance winner to next bracket match
     if (updatedMatch.nextMatchId && updatedMatch.nextSlot) {
       const targetMatch = await prisma.match.findUnique({
         where: { id: updatedMatch.nextMatchId },
@@ -118,7 +130,6 @@ export async function PATCH(
       }
     }
 
-    // Advance loser to third-place match (semifinals only, when enabled)
     if (updatedMatch.loserNextMatchId && updatedMatch.loserNextSlot) {
       const loserTargetMatch = await prisma.match.findUnique({
         where: { id: updatedMatch.loserNextMatchId },
@@ -133,12 +144,11 @@ export async function PATCH(
     }
 
     return Response.json(updatedMatch)
-
-      } catch (error) {
-        console.error("Error updating match:", error)
-        return Response.json({ error: "Failed to update match" }, { status: 500 })
-      }
-    }
+  } catch (error) {
+    console.error('Error updating match:', error)
+    return Response.json({ error: 'Failed to update match' }, { status: 500 })
+  }
+}
 
 export async function DELETE(
   _req: Request,

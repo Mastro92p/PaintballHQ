@@ -14,6 +14,25 @@ type PublicGroupStageProps = {
 
 const ROUND_ROBIN_TYPES = ["round_robin", "round_robin_classic"];
 
+function getPublicRoundHeading(round: number, matches: Match[]) {
+  const labels = Array.from(
+    new Set(
+      matches
+        .map((m) => m.label?.trim())
+        .filter((label): label is string => Boolean(label))
+    )
+  );
+
+  const base = round === 0 ? "Unassigned" : `Block ${round}`;
+
+  if (labels.length === 1) {
+    return `${base} · ${labels[0]}`;
+  }
+
+  return base;
+}
+
+
 export default function PublicGroupStage({
   matches,
   isGroupAndBracket,
@@ -175,6 +194,7 @@ const groupStandings = useMemo(() => {
       .map((row) => ({ ...row, gd: row.gf - row.ga }))
       .sort((a, b) =>
         b.points - a.points ||
+        (isClassic ? b.bodyCount - a.bodyCount : 0) ||
         b.gd - a.gd ||
         b.gf - a.gf ||
         a.teamName.localeCompare(b.teamName)
@@ -398,7 +418,7 @@ const groupStandings = useMemo(() => {
                   <th className="px-3 py-3 text-right font-medium text-emerald-400/80">W</th>
                   <th className="px-3 py-3 text-right font-medium">D</th>
                   <th className="px-3 py-3 text-right font-medium text-red-400/80">L</th>
-                  <th className="px-3 py-3 text-right font-medium">GD</th>
+
                   {isClassic && (
                     <th className="px-3 py-3 text-right font-medium text-sky-400/80">BC</th>
                   )}
@@ -430,9 +450,7 @@ const groupStandings = useMemo(() => {
                     <td className="px-3 py-3 text-right font-semibold text-emerald-400">{row.wins}</td>
                     <td className="px-3 py-3 text-right text-slate-300">{row.draws}</td>
                     <td className="px-3 py-3 text-right font-semibold text-red-400">{row.losses}</td>
-                    <td className="px-3 py-3 text-right">
-                      {row.gd > 0 ? `+${row.gd}` : row.gd}
-                    </td>
+
                     {isClassic && (
                       <td className="px-3 py-3 text-right text-sky-400 tabular-nums">
                         {row.bodyCount}
@@ -453,7 +471,7 @@ const groupStandings = useMemo(() => {
             {roundKeys.map((round) => (
               <div key={round} className="space-y-3">
                 <h4 className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
-                  <span>{round === 0 ? "Unassigned" : `Block ${round}`}</span>
+                  <span>{getPublicRoundHeading(round, matchesByRound[round])}</span>
                   <span className="h-px flex-1 bg-white/10" />
                 </h4>
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

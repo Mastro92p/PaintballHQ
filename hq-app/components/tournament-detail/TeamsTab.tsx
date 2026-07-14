@@ -25,6 +25,16 @@ export function TeamsTab({
         Team Enrollment
       </h2>
 
+      {pendingEnrollChanges && (
+        <div className="sticky top-4 z-10 flex items-center justify-between p-3 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 text-sm">
+          <span className="text-teal-700 dark:text-teal-400">Unsaved enrollment changes</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={onReset}>Reset</Button>
+            <Button size="sm" loading={bulkSaving} onClick={onSave}>Save Changes</Button>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: "0.75rem", alignItems: "start" }}>
         {/* Available */}
         <div>
@@ -101,15 +111,7 @@ export function TeamsTab({
         </div>
       </div>
 
-      {pendingEnrollChanges && (
-        <div className="flex items-center justify-between p-3 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 text-sm">
-          <span className="text-teal-700 dark:text-teal-400">Unsaved enrollment changes</span>
-          <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={onReset}>Reset</Button>
-            <Button size="sm" loading={bulkSaving} onClick={onSave}>Save Changes</Button>
-          </div>
-        </div>
-      )}
+
     </section>
   );
 }
