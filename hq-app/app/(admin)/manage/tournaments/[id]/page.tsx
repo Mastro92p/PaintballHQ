@@ -44,6 +44,46 @@ export default function ManageTournamentDetailPage({
   const [localAvailable, setLocalAvailable] = useState<Team[]>([]);
   const [localEnrolled, setLocalEnrolled] = useState<Team[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
+  const [activeGroupTab, setActiveGroupTab] = useState<string>("A");
+
+  const [resettingGroups, setResettingGroups] = useState(false);
+
+  // ── Manual group assignment state ─────────────────────────
+  const [assigningTeamId, setAssigningTeamId] = useState<number | null>(null);
+
+  const teamGroups = useMemo(() => {
+    if (!data) return {};
+    return Object.fromEntries(
+      data.teams.map((t) => [t.teamId, t.group ?? null])
+    );
+  }, [data]);
+
+  async function handleResetGroups() {
+    if (!confirm("Delete all group stage matches and clear team group assignments? This cannot be undone.")) return;
+    setResettingGroups(true);
+    await fetch(`/api/tournaments/${id}/generate-groups`, { method: "DELETE" });
+    setResettingGroups(false);
+    refetch();
+  }
+
+  async function handleAssignGroup(teamId: number, group: string | null) {
+    setAssigningTeamId(teamId);
+    try {
+      const res = await fetch(`/api/tournaments/${id}/teams/group`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, group }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error ?? "Failed to assign group");
+      }
+      await refetch();
+    } finally {
+      setAssigningTeamId(null);
+    }
+  }
+
 
   useEffect(() => {
     if (!data || !allTeams) return;
@@ -56,6 +96,8 @@ export default function ManageTournamentDetailPage({
     () => new Set(data?.teams.map((t) => t.teamId) ?? []),
     [data]
   );
+
+
 
   const pendingEnrollChanges = useMemo(() => {
     const currentIds = new Set(localEnrolled.map((t) => t.id));
@@ -243,7 +285,23 @@ export default function ManageTournamentDetailPage({
 
   const isGroupAndBracket = data?.type === "group_and_bracket";
   const isClassic = data?.type === "round_robin_classic";
-  const canAddMatch = data?.type === "round_robin" || data?.type === "round_robin_classic";
+  const canAddMatch =
+    data?.type === "round_robin" ||
+    data?.type === "round_robin_classic" ||
+    (data?.type === "group_and_bracket" && data?.managementMode === "manual");
+
+
+  const modalTeams = useMemo(() => {
+    if (!isGroupAndBracket) return enrolledTeams;
+    return enrolledTeams.filter((t) => teamGroups[t.id] === activeGroupTab);
+  }, [isGroupAndBracket, enrolledTeams, teamGroups, activeGroupTab]);
+
+
+  const editModalTeams = useMemo(() => {
+    if (!isGroupAndBracket || !editingMatch) return enrolledTeams;
+    const g = editingMatch.group ?? activeGroupTab;
+    return enrolledTeams.filter((t) => teamGroups[t.id] === g);
+  }, [isGroupAndBracket, editingMatch, enrolledTeams, teamGroups, activeGroupTab]);
 
   function validateMatchForm(form: MatchForm): MatchFormErrors {
     const errors: MatchFormErrors = {};
@@ -274,18 +332,20 @@ export default function ManageTournamentDetailPage({
 
     setMatchSaving(true);
 
-  const body: CreateMatchBody = {
-    tournamentId: parseInt(id, 10),
-    teamAId: parseInt(matchForm.teamAId, 10),
-    teamBId: parseInt(matchForm.teamBId, 10),
-    round: matchForm.round.trim() !== "" ? parseInt(matchForm.round, 10) : null,
-    label: matchForm.label.trim() || null,
-    field: matchForm.field.trim() || null,
-    scoreA: matchForm.scoreA !== "" ? parseInt(matchForm.scoreA, 10) : undefined,
-    scoreB: matchForm.scoreB !== "" ? parseInt(matchForm.scoreB, 10) : undefined,
-    bodyCountA: matchForm.bodyCountA !== "" ? parseInt(matchForm.bodyCountA, 10) : undefined,
-    bodyCountB: matchForm.bodyCountB !== "" ? parseInt(matchForm.bodyCountB, 10) : undefined,
-  };
+    const body: CreateMatchBody = {
+      tournamentId: parseInt(id, 10),
+      teamAId: parseInt(matchForm.teamAId, 10),
+      teamBId: parseInt(matchForm.teamBId, 10),
+      round: matchForm.round.trim() !== "" ? parseInt(matchForm.round, 10) : null,
+      label: matchForm.label.trim() || null,
+      field: matchForm.field.trim() || null,
+      scoreA: matchForm.scoreA !== "" ? parseInt(matchForm.scoreA, 10) : undefined,
+      scoreB: matchForm.scoreB !== "" ? parseInt(matchForm.scoreB, 10) : undefined,
+      bodyCountA: matchForm.bodyCountA !== "" ? parseInt(matchForm.bodyCountA, 10) : undefined,
+      bodyCountB: matchForm.bodyCountB !== "" ? parseInt(matchForm.bodyCountB, 10) : undefined,
+      phase: isGroupAndBracket ? "group" : undefined,
+      group: isGroupAndBracket ? activeGroupTab : undefined,
+    };
 
     await fetch("/api/matches", {
       method: "POST",
@@ -533,15 +593,23 @@ export default function ManageTournamentDetailPage({
           isClassic={isClassic}
           canAddMatch={canAddMatch}
           hasGroupMatches={hasGroupMatches}
+          managementMode={data.managementMode ?? "auto"}
+          formatConfig={data.formatConfig ?? null}
+          teamGroups={teamGroups}
+          assigningTeamId={assigningTeamId}
           generatingGroups={generatingGroups}
+          resettingGroups={resettingGroups}
           groupsError={groupsError}
           deletingMatch={deletingMatch}
           onGenerateGroups={handleGenerateGroups}
-          onOpenAddMatch={() => {
+          onResetGroups={handleResetGroups}
+          onOpenAddMatch={(group) => {
             setMatchForm(emptyMatchForm);
             setMatchErrors({});
+            if (group) setActiveGroupTab(group);
             setMatchModalOpen(true);
           }}
+          onAssignGroup={handleAssignGroup}
           onEditMatch={openEditMatch}
           onDeleteMatch={handleDeleteMatch}
         />
@@ -583,7 +651,7 @@ export default function ManageTournamentDetailPage({
         loading={matchSaving}
         isClassic={isClassic}
         requireTeams
-        teams={enrolledTeams}
+        teams={modalTeams}
         form={matchForm}
         errors={matchErrors}
         setForm={setMatchForm}
@@ -601,7 +669,7 @@ export default function ManageTournamentDetailPage({
         submitLabel="Save Changes"
         loading={editSaving}
         isClassic={isClassic}
-        teams={enrolledTeams}
+        teams={editModalTeams}
         form={editForm}
         errors={editErrors}
         setForm={setEditForm}

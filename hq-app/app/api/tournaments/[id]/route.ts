@@ -69,6 +69,7 @@ export async function PATCH(
         ...(body.location && { location: body.location.trim() }),
         ...(body.status && { status: body.status }),
         ...(body.type && { type: body.type }),
+        ...(body.managementMode && { managementMode: body.managementMode }),   // NEW
         ...(body.formatConfig !== undefined && { formatConfig: body.formatConfig ?? null }),
         ...(body.teamsToAdvance && { teamsToAdvance: body.teamsToAdvance }),
         ...(body.leagueId !== undefined && { leagueId: body.leagueId ?? null }),

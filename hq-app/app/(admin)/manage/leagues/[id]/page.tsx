@@ -11,8 +11,13 @@ import type { League, Team, Tournament } from "@/types";
 
 type EnrolledTeam = { teamId: number; team: Team };
 
+type TournamentWithDivision = Tournament & {
+  divisionId?: number | null;
+  division?: { id: number; name: string } | null;
+};
+
 type LeagueDetail = League & {
-  tournaments: Tournament[];
+  tournaments: TournamentWithDivision[];
   teams: EnrolledTeam[];
 };
 
@@ -29,6 +34,9 @@ type LeagueFormState = {
   description: string;
   logoUrl: string;
 };
+
+
+
 
 export default function ManageLeagueDetailPage({
   params,
@@ -47,6 +55,18 @@ export default function ManageLeagueDetailPage({
   const [infoForm, setInfoForm]     = useState<LeagueFormState>({ name: "", description: "", logoUrl: "" });
   const [infoSaving, setInfoSaving] = useState(false);
   const [infoEditing, setInfoEditing] = useState(false);
+
+
+  const assignedDivisions = useMemo(() => {
+    if (!data?.tournaments) return [];
+    const map: Record<number, string> = {};
+    data.tournaments.forEach((t) => {
+      if (t.division) map[t.division.id] = t.division.name;
+    });
+    return Object.entries(map)
+      .map(([id, name]) => ({ id: Number(id), name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [data]);
 
   useEffect(() => {
     if (!data) return;
@@ -395,22 +415,40 @@ export default function ManageLeagueDetailPage({
         <section className="space-y-4 max-w-md">
           {!infoEditing ? (
             <>
-              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <div className="text-sm divide-y divide-gray-100 dark:divide-gray-700">
-                  {[
-                    { label: "Name",         value: data.name },
-                    { label: "Description",  value: data.description ?? "—" },
-                    { label: "Logo URL",     value: data.logoUrl ?? "—" },
-                    { label: "Tournaments",  value: data.tournaments.length },
-                    { label: "Teams",        value: data.teams.length },
-                  ].map((row) => (
-                    <div key={row.label} className="flex items-center justify-between py-2.5">
-                      <span className="text-gray-500 dark:text-gray-400">{row.label}</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">{row.value}</span>
-                    </div>
-                  ))}
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
+              <div className="text-sm divide-y divide-gray-100 dark:divide-gray-700">
+                {[
+                  { label: "Name",         value: data.name },
+                  { label: "Description",  value: data.description ?? "—" },
+                  { label: "Logo URL",     value: data.logoUrl ?? "—" },
+                  { label: "Tournaments",  value: data.tournaments.length },
+                  { label: "Teams",        value: data.teams.length },
+                ].map((row) => (
+                  <div key={row.label} className="flex items-center justify-between py-2.5">
+                    <span className="text-gray-500 dark:text-gray-400">{row.label}</span>
+                    <span className="font-medium text-gray-900 dark:text-gray-100">{row.value}</span>
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-gray-500 dark:text-gray-400">Divisions</span>
+                  <div className="flex flex-wrap gap-1.5 justify-end max-w-[240px]">
+                    {assignedDivisions.length === 0 ? (
+                      <span className="font-medium text-gray-900 dark:text-gray-100">—</span>
+                    ) : (
+                      assignedDivisions.map((d) => (
+                        <span
+                          key={d.id}
+                          className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800"
+                        >
+                          {d.name}
+                        </span>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
+            </div>
               <Button variant="secondary" size="sm" onClick={() => setInfoEditing(true)}>
                 Edit Info
               </Button>

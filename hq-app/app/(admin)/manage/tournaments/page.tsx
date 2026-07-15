@@ -14,6 +14,7 @@ import type {
   FormatConfig,
   Division,
 } from "@/types";
+import { GroupStageSettingsFields } from "@/components/tournament-detail/GroupStageSettingsFields";
 
 const STATUS_OPTIONS = ["upcoming", "active", "completed"] as const;
 
@@ -45,6 +46,7 @@ type FormState = {
   status: string;
   type: string;
   divisionId: string;
+  managementMode: "auto" | "manual";   // NEW
   groupCount: string;
   teamsPerGroup: string;
   qualifiersPerGroup: string;
@@ -62,6 +64,7 @@ const emptyForm: FormState = {
   status: "upcoming",
   type: "round_robin",
   divisionId: "",
+  managementMode: "auto",   // NEW
   groupCount: "2",
   teamsPerGroup: "4",
   qualifiersPerGroup: "2",
@@ -108,7 +111,6 @@ export default function ManageTournamentsPage() {
 
   function openEdit(t: Tournament) {
     setEditing(t);
-
     const fc = (t.formatConfig ?? {}) as Partial<FormatConfig>;
 
     setForm({
@@ -118,6 +120,7 @@ export default function ManageTournamentsPage() {
       status: t.status ?? "upcoming",
       type: t.type ?? "round_robin",
       divisionId: t.divisionId != null ? String(t.divisionId) : "",
+      managementMode: t.managementMode ?? "auto",   // NEW
       groupCount: String(fc.groupCount ?? 2),
       teamsPerGroup: String(fc.teamsPerGroup ?? 4),
       qualifiersPerGroup: String(fc.qualifiersPerGroup ?? 2),
@@ -180,26 +183,29 @@ export default function ManageTournamentsPage() {
 
     const isKnockout = form.type === "bracket" || form.type === "group_and_bracket";
 
-    const body: CreateTournamentBody | UpdateTournamentBody = {
-      name: form.name,
-      date: form.date,
-      location: form.location,
-      status: form.status as Tournament["status"],
-      type: form.type,
-      divisionId: form.divisionId ? Number(form.divisionId) : null,
-      ...(isKnockout && {
-        formatConfig: {
-          ...(form.type === "group_and_bracket" && {
-            groupCount: parseInt(form.groupCount || "0", 10),
-            teamsPerGroup: parseInt(form.teamsPerGroup || "0", 10),
-            qualifiersPerGroup: parseInt(form.qualifiersPerGroup || "0", 10),
-            wildCardCount: parseInt(form.wildCardCount || "0", 10),
-            bracketSeedingRule: form.bracketSeedingRule,
-          }),
-          thirdPlaceMatch: form.thirdPlaceMatch,
-        },
-      }),
-    };
+  const body: CreateTournamentBody | UpdateTournamentBody = {
+    name: form.name,
+    date: form.date,
+    location: form.location,
+    status: form.status as Tournament["status"],
+    type: form.type,
+    divisionId: form.divisionId ? Number(form.divisionId) : null,
+    ...(form.type === "group_and_bracket" && {
+      managementMode: form.managementMode,   // NEW
+    }),
+    ...(isKnockout && {
+      formatConfig: {
+        ...(form.type === "group_and_bracket" && {
+          groupCount: parseInt(form.groupCount || "0", 10),
+          teamsPerGroup: parseInt(form.teamsPerGroup || "0", 10),
+          qualifiersPerGroup: parseInt(form.qualifiersPerGroup || "0", 10),
+          wildCardCount: parseInt(form.wildCardCount || "0", 10),
+          bracketSeedingRule: form.bracketSeedingRule,
+        }),
+        thirdPlaceMatch: form.thirdPlaceMatch,
+      },
+    }),
+  };
 
     try {
       if (editing) {
@@ -502,122 +508,12 @@ export default function ManageTournamentsPage() {
           </div>
 
           {form.type === "group_and_bracket" && (
-            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
-                Group Stage Settings
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Number of groups <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="2"
-                    max="8"
-                    value={form.groupCount ?? ""}
-                    onChange={(e) => setField("groupCount", e.target.value)}
-                    className={inputCls("groupCount")}
-                    placeholder="2"
-                  />
-                  {formErrors.groupCount && (
-                    <p className="text-xs text-red-500">{formErrors.groupCount}</p>
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Teams per group <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="2"
-                    max="10"
-                    value={form.teamsPerGroup ?? ""}
-                    onChange={(e) => setField("teamsPerGroup", e.target.value)}
-                    className={inputCls("teamsPerGroup")}
-                    placeholder="4"
-                  />
-                  {formErrors.teamsPerGroup && (
-                    <p className="text-xs text-red-500">{formErrors.teamsPerGroup}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Qualifiers per group <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={form.qualifiersPerGroup ?? ""}
-                  onChange={(e) => setField("qualifiersPerGroup", e.target.value)}
-                  className={inputCls("qualifiersPerGroup")}
-                  placeholder="2"
-                />
-                {formErrors.qualifiersPerGroup && (
-                  <p className="text-xs text-red-500">{formErrors.qualifiersPerGroup}</p>
-                )}
-                <p className="text-xs text-gray-400">
-                  Top N teams from each group advance to the bracket
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Wild cards
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={form.wildCardCount ?? ""}
-                  onChange={(e) => setField("wildCardCount", e.target.value)}
-                  className={inputCls("wildCardCount")}
-                  placeholder="2"
-                />
-                {formErrors.wildCardCount && (
-                  <p className="text-xs text-red-500">{formErrors.wildCardCount}</p>
-                )}
-                <p className="text-xs text-gray-400">
-                  Extra best-performing teams across all groups that also advance
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Bracket seeding
-                </label>
-                <select
-                  value={form.bracketSeedingRule ?? "crossover"}
-                  onChange={(e) =>
-                    setField(
-                      "bracketSeedingRule",
-                      e.target.value as FormatConfig["bracketSeedingRule"]
-                    )
-                  }
-                  className={inputCls("bracketSeedingRule")}
-                >
-                  {SEEDING_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-400">
-                  How group winners are matched up in the first knockout round
-                </p>
-              </div>
-
-              <div className="rounded-md bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 px-3 py-2 text-xs text-teal-700 dark:text-teal-300">
-                {groupCount} groups × {teamsPerGroup} teams ={" "}
-                <strong>{groupCount * teamsPerGroup} total teams</strong>
-                {" · "}
-                <strong>{groupCount * qualifiersPerGroup + wildCardCount} advance</strong>
-                {" "}to the bracket
-              </div>
-            </div>
+            <GroupStageSettingsFields
+              form={form}
+              errors={formErrors}
+              setField={setField}
+              inputCls={inputCls}
+            />
           )}
 
           {(form.type === "bracket" || form.type === "group_and_bracket") && (

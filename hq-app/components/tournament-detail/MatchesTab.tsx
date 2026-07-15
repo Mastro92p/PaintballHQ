@@ -2,11 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
-import type { Match, Team } from "@/types";
+import type { FormatConfig, Match, Team } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { GroupMatchCard } from "@/components/tournament-detail/GroupMatchCard";
 import { getClassicMatchResult, calcStandings } from "@/lib/utils";
+
+import { GroupStandingsTable, type StandingRow } from "@/components/tournament-detail/GroupStandingsTable";
+import { GroupTeamPanel } from "@/components/tournament-detail/GroupTeamPanel";
+
 
 type Props = {
   matches: Match[];
@@ -15,27 +19,23 @@ type Props = {
   hasGroupMatches: boolean;
   isClassic: boolean;
   canAddMatch: boolean;
+  managementMode: "auto" | "manual";           // NEW
+  formatConfig: FormatConfig | null;             // NEW
+  teamGroups: Record<number, string | null>;     // NEW — teamId -> group label
+  assigningTeamId: number | null;                // NEW — loading state for assignment
   generatingGroups: boolean;
   groupsError: string | null;
   deletingMatch: number | null;
   onGenerateGroups: () => void;
-  onOpenAddMatch: () => void;
+  onOpenAddMatch: (group?: string) => void;       // CHANGED — now takes optional group
+  onAssignGroup: (teamId: number, group: string | null) => void; // NEW
   onEditMatch: (m: Match) => void;
   onDeleteMatch: (id: number) => void;
+  resettingGroups: boolean; 
+  onResetGroups: () => void;
 };
 
-type StandingRow = {
-  teamId: number;
-  teamName: string;
-  w: number;
-  d: number;
-  l: number;
-  gf: number;
-  ga: number;
-  gd: number;
-  pts: number;
-  bodyCount: number;
-};
+
 
 // Classic scoring — body count bonus points, via getClassicMatchResult.
 // Only meaningful for isClassic tournaments; keep this logic local since
@@ -137,73 +137,25 @@ function getRoundHeading(round: number, matches: Match[]) {
 }
 
 
-function StandingsTable({ rows, isClassic }: { rows: StandingRow[]; isClassic: boolean }) {
-  return (
-    <div className="rounded-xl border border-[#22314d] bg-[#0f1b34] overflow-hidden">
-      <table className="w-full text-xs">
-        <thead className="bg-white/5 text-gray-400 uppercase tracking-wide">
-          <tr>
-            <th className="px-3 py-3 text-left w-6">#</th>
-            <th className="px-3 py-3 text-left">Team</th>
-            <th className="px-3 py-3 text-center w-8">W</th>
-            <th className="px-3 py-3 text-center w-8">D</th>
-            <th className="px-3 py-3 text-center w-8">L</th>
-            <th className="px-3 py-3 text-center w-14">{isClassic ? "Bodies" : "GD"}</th>
-            <th className="px-3 py-3 text-center w-10 font-bold text-amber-400">Pts</th>
-          </tr>
-        </thead>
-
-        <tbody className="divide-y divide-[#22314d]">
-          {rows.map((row, idx) => (
-            <tr
-              key={row.teamId}
-              className={`bg-transparent ${idx === 0 ? "border-l-2 border-l-teal-400" : ""}`}
-            >
-              <td className="px-3 py-3 text-gray-400 tabular-nums">{idx + 1}</td>
-
-              <td className="px-3 py-3 font-medium text-gray-100">
-                {row.teamName}
-              </td>
-
-              <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
-                {row.w}
-              </td>
-
-              <td className="px-3 py-3 text-center tabular-nums text-gray-300">
-                {row.d}
-              </td>
-
-              <td className="px-3 py-3 text-center tabular-nums font-semibold text-rose-400">
-                {row.l}
-              </td>
-
-              <td className="px-3 py-3 text-center tabular-nums text-gray-400">
-                {isClassic ? row.bodyCount : row.gd > 0 ? `+${row.gd}` : row.gd}
-              </td>
-
-              <td className="px-3 py-3 text-center tabular-nums font-bold text-amber-400">
-                {row.pts}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 export function MatchesTab({
   matches,
   enrolledTeams,
   isGroupAndBracket,
   isClassic,
-  hasGroupMatches,
   canAddMatch,
+  hasGroupMatches,
+  managementMode,
+  formatConfig,
+  teamGroups,
+  assigningTeamId,
   generatingGroups,
+  resettingGroups,  
   groupsError,
   deletingMatch,
   onGenerateGroups,
   onOpenAddMatch,
+  onAssignGroup,
+  onResetGroups,
   onEditMatch,
   onDeleteMatch,
 }: Props) {
@@ -228,27 +180,40 @@ export function MatchesTab({
       return acc;
     }, {});
 
-  const isEmpty =
-    groupMatches.length === 0 && !isGroupAndBracket
-      ? matches.length === 0
-      : groupMatches.length === 0;
+  // Manual mode: group tabs exist from formatConfig, independent of matches
+  const configGroupLabels = useMemo(() => {
+    if (managementMode !== "manual") return [];
+    const count = formatConfig?.groupCount ?? 0;
+    return "ABCDEFGH".slice(0, count).split("");
+  }, [managementMode, formatConfig]);
 
-  const groupLabels = useMemo(
+  const derivedGroupLabels = useMemo(
     () => Object.keys(matchesByGroup).sort((a, b) => a.localeCompare(b)),
     [matchesByGroup]
   );
+
+  const groupLabels = useMemo(() => {
+    if (managementMode === "manual") {
+      return Array.from(new Set([...configGroupLabels, ...derivedGroupLabels])).sort();
+    }
+    return derivedGroupLabels;
+  }, [managementMode, configGroupLabels, derivedGroupLabels]);
+
+  const isEmpty = isGroupAndBracket
+    ? managementMode === "manual"
+      ? groupLabels.length === 0
+      : groupMatches.length === 0
+    : matches.length === 0;
 
   const urlGroup = searchParams.get("group") ?? "";
   const [activeGroup, setActiveGroup] = useState<string>(urlGroup);
 
   useEffect(() => {
     if (!groupLabels.length) return;
-
     if (urlGroup && groupLabels.includes(urlGroup)) {
       setActiveGroup(urlGroup);
       return;
     }
-
     if (!activeGroup || !groupLabels.includes(activeGroup)) {
       setActiveGroup(groupLabels[0]);
     }
@@ -256,7 +221,6 @@ export function MatchesTab({
 
   function selectGroup(groupLabel: string) {
     setActiveGroup(groupLabel);
-
     const params = new URLSearchParams(window.location.search);
     params.set("group", groupLabel);
     window.history.replaceState({}, "", `${pathname}?${params.toString()}`);
@@ -271,9 +235,12 @@ export function MatchesTab({
     currentMatches.flatMap((m) => [m.teamAId, m.teamBId]).filter(Boolean) as number[]
   );
 
-  const currentGroupTeams = enrolledTeams.filter((t) => currentTeamIds.has(t.id));
-  const currentStandings = getStandings(currentGroupTeams, currentMatches, isClassic);
+  const currentGroupTeams =
+    managementMode === "manual"
+      ? enrolledTeams.filter((t) => teamGroups[t.id] === currentGroup)
+      : enrolledTeams.filter((t) => currentTeamIds.has(t.id));
 
+  const currentStandings = getStandings(currentGroupTeams, currentMatches, isClassic);
   const overallStandings = getStandings(enrolledTeams, matches, isClassic);
 
   return (
@@ -284,7 +251,18 @@ export function MatchesTab({
         </h2>
 
         <div className="flex items-center gap-2">
-          {isGroupAndBracket && !hasGroupMatches ? (
+          {isGroupAndBracket && (hasGroupMatches || Object.values(teamGroups).some((g) => g !== null)) && (
+            <Button
+              size="sm"
+              variant="danger"
+              loading={resettingGroups}
+              onClick={onResetGroups}
+            >
+              ↺ Reset Groups
+            </Button>
+          )}
+
+          {isGroupAndBracket && managementMode === "auto" && !hasGroupMatches ? (
             <Button
               size="sm"
               loading={generatingGroups}
@@ -297,15 +275,27 @@ export function MatchesTab({
           ) : canAddMatch ? (
             <Button
               size="sm"
-              onClick={onOpenAddMatch}
-              disabled={enrolledTeams.length < 2}
-              title={enrolledTeams.length < 2 ? "Enroll at least 2 teams first" : ""}
+              onClick={() => onOpenAddMatch(isGroupAndBracket ? currentGroup : undefined)}
+              disabled={
+                isGroupAndBracket
+                  ? currentGroupTeams.length < 2
+                  : enrolledTeams.length < 2
+              }
+              title={
+                isGroupAndBracket && currentGroupTeams.length < 2
+                  ? "Assign at least 2 teams to this group first"
+                  : enrolledTeams.length < 2
+                  ? "Enroll at least 2 teams first"
+                  : ""
+              }
             >
               + Add Match
             </Button>
           ) : null}
         </div>
       </div>
+
+      
 
       {groupsError && (
         <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
@@ -319,7 +309,9 @@ export function MatchesTab({
           <p className="font-medium">No matches yet</p>
           <p className="text-sm mt-1">
             {isGroupAndBracket
-              ? enrolledTeams.length < 4
+              ? managementMode === "manual"
+                ? "Set groupCount in format config to start building groups manually"
+                : enrolledTeams.length < 4
                 ? "Enroll at least 4 teams to generate groups"
                 : 'Click "Generate Groups" to create the group stage'
               : enrolledTeams.length < 2
@@ -335,6 +327,7 @@ export function MatchesTab({
               const played = (matchesByGroup[groupLabel] ?? []).filter(
                 (m) => m.status === "completed"
               ).length;
+              const teamCount = Object.values(teamGroups).filter((g) => g === groupLabel).length;
 
               return (
                 <button
@@ -348,7 +341,9 @@ export function MatchesTab({
                 >
                   Group {groupLabel}
                   <span className="ml-2 text-xs opacity-80">
-                    {played}/{total}
+                    {managementMode === "manual"
+                      ? `${teamCount}/${formatConfig?.teamsPerGroup ?? "?"}`
+                      : `${played}/${total}`}
                   </span>
                 </button>
               );
@@ -368,7 +363,18 @@ export function MatchesTab({
                 </span>
               </div>
 
-              <StandingsTable rows={currentStandings} isClassic={isClassic} />
+              {managementMode === "manual" && (
+                <GroupTeamPanel
+                  group={currentGroup}
+                  capacity={formatConfig?.teamsPerGroup}
+                  allTeams={enrolledTeams}
+                  teamGroups={teamGroups}
+                  assigningTeamId={assigningTeamId}
+                  onAssign={onAssignGroup}
+                />
+              )}
+
+              <GroupStandingsTable rows={currentStandings} isClassic={isClassic} />
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
                 {currentMatches
@@ -388,7 +394,7 @@ export function MatchesTab({
         </div>
       ) : (
         <div className="space-y-6">
-          <StandingsTable rows={overallStandings} isClassic={isClassic} />
+          <GroupStandingsTable rows={overallStandings} isClassic={isClassic} />
 
           {Object.entries(matchesByRound)
             .sort(([a], [b]) => Number(a) - Number(b))

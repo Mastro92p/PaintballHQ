@@ -17,6 +17,7 @@ export interface Tournament {
   leagueId:       number | null;
   divisionId:     number | null;
   division?:      Division | null;
+  managementMode: "auto" | "manual";
 }
 
 export interface Team {
@@ -35,6 +36,7 @@ export interface TournamentTeam {
   teamId: number
   tournament?: Tournament
   team?: Team
+  group?: string | null
 }
 
 export interface Match {
@@ -97,6 +99,7 @@ export interface UpdateTournamentBody {
   location?: string
   status?: string
   type?: string
+  managementMode?: "auto" | "manual"   // NEW
   teamsToAdvance?: number
   leagueId?: number | null
   divisionId?: number | string | null
@@ -127,6 +130,8 @@ export interface CreateMatchBody {
   round?: number | null
   label?: string | null
   field?: string | null
+  phase?: string
+  group?: string | null
 }
 
 export type UpdateMatchBody = {
@@ -193,6 +198,7 @@ export type FormatConfig = {
 export type EnrolledTeam = {
   teamId: number;
   team: Team;
+  group?: string | null;
 };
 
 export type TournamentDetail = Tournament & {
@@ -280,3 +286,8 @@ export type LeagueDetailResponse = Omit<League, "tournaments" | "teams"> & {
   tournaments: TournamentWithMatches[];
   teams: LeagueTeam[];
 };
+
+export interface AssignTeamGroupBody {
+  teamId: number
+  group: string | null
+}

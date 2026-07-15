@@ -32,6 +32,10 @@ export async function POST(req: Request) {
       return apiError('Round must be at least 1')
     }
 
+    if (body.phase === 'group' && !body.group) {
+      return apiError('group is required when phase is "group"')
+    }
+
     const status = deriveMatchStatus(body.scoreA, body.scoreB)
 
     const match = await prisma.match.create({
@@ -46,6 +50,8 @@ export async function POST(req: Request) {
         round: body.round ?? null,
         label: body.label?.trim() || null,
         field: body.field?.trim() || null,
+        phase: body.phase ?? 'group',
+        group: body.group ?? null,
         status,
       },
       include: { teamA: true, teamB: true },

@@ -115,3 +115,26 @@ export async function POST(
     return apiError('Failed to generate groups', 500)
   }
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id: rawId } = await params
+    const tournamentId = parseInt(rawId)
+
+    await prisma.match.deleteMany({
+      where: { tournamentId, phase: 'group' },
+    })
+
+    await prisma.tournamentTeam.updateMany({
+      where: { tournamentId },
+      data: { group: null },
+    })
+
+    return Response.json({ success: true })
+  } catch {
+    return apiError('Failed to reset group stage', 500)
+  }
+}
