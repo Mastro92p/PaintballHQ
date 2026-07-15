@@ -5,19 +5,21 @@ import { useFetch } from "@/hooks/use-fetch";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { formatDate } from "@/lib/utils";
-import type { Team, CreateTeamBody, UpdateTeamBody } from "@/types";
+import type { Team, CreateTeamBody, UpdateTeamBody, Division } from "@/types";
 
 type FormState = {
   name: string;
   contact: string;
+  divisionId: string;
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
-const emptyForm: FormState = { name: "", contact: "" };
+const emptyForm: FormState = { name: "", contact: "", divisionId: "" };
 
 export default function ManageTeamsPage() {
   const { data, loading, error, refetch } = useFetch<Team[]>("/api/teams");
+  const { data: divisions } = useFetch<Division[]>("/api/divisions");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Team | null>(null);
@@ -26,6 +28,7 @@ export default function ManageTeamsPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [divisionFilter, setDivisionFilter] = useState("all");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -35,10 +38,15 @@ export default function ManageTeamsPage() {
 
   const filtered = useMemo(() => {
     if (!data) return [];
-    return data.filter((t) =>
-      t.name.toLowerCase().includes(search.toLowerCase())
-    ).sort((a, b) => a.name.localeCompare(b.name));
-  }, [data, search]);
+    return data
+      .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
+      .filter((t) => {
+        if (divisionFilter === "all") return true;
+        if (divisionFilter === "unassigned") return t.divisionId == null;
+        return t.divisionId === Number(divisionFilter);
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [data, search, divisionFilter]);
 
   function openCreate() {
     setEditing(null);
@@ -52,7 +60,11 @@ export default function ManageTeamsPage() {
 
   function openEdit(t: Team) {
     setEditing(t);
-    setForm({ name: t.name, contact: t.contact ?? "" });
+    setForm({
+      name: t.name,
+      contact: t.contact ?? "",
+      divisionId: t.divisionId != null ? String(t.divisionId) : "",
+    });
     setFormErrors({});
     setLogoFile(null);
     setLogoPreview(t.logoUrl ?? null);
@@ -69,8 +81,6 @@ export default function ManageTeamsPage() {
     setLogoPreview(null);
     setLogoError(null);
   }
-
-  
 
   const MAX_LOGO_SIZE = 2 * 1024 * 1024;
   const MAX_LOGO_DIMENSION = 2000;
@@ -118,6 +128,7 @@ export default function ManageTeamsPage() {
     const body: CreateTeamBody | UpdateTeamBody = {
       name: form.name,
       contact: form.contact || undefined,
+      divisionId: form.divisionId ? Number(form.divisionId) : null,
     };
 
     let teamId = editing?.id ?? null;
@@ -147,14 +158,13 @@ export default function ManageTeamsPage() {
     refetch();
   }
 
-
   async function handleLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const error = await validateLogoFile(file);
-    if (error) {
-      setLogoError(error);
+    const err = await validateLogoFile(file);
+    if (err) {
+      setLogoError(err);
       return;
     }
 
@@ -188,7 +198,6 @@ export default function ManageTeamsPage() {
     refetch();
   }
 
-
   async function handleDelete(id: number) {
     if (!confirm("Delete this team?")) return;
     setDeleting(id);
@@ -198,45 +207,80 @@ export default function ManageTeamsPage() {
   }
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+      <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
+                  Teams
+                </h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Create and manage teams
+                </p>
+              </div>
+              <Button onClick={openCreate}>+ New Team</Button>
+            </div>
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Teams
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Create and manage teams
-          </p>
-        </div>
-        <Button onClick={openCreate}>+ New Team</Button>
-      </div>
+          <div className="space-y-3">
+            <input
+              type="search"
+              placeholder="Search teams..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full sm:max-w-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600"
+            />
 
-      {/* Search */}
-      <input
-        type="search"
-        placeholder="Search teams..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full sm:max-w-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600"
-      />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setDivisionFilter("all")}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                  divisionFilter === "all"
+                    ? "bg-teal-700 text-white border-teal-700"
+                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                }`}
+              >
+                All
+              </button>
 
-      {/* Loading */}
-      {loading && (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-12 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
-          ))}
-        </div>
-      )}
+              {divisions?.map((d) => (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setDivisionFilter(String(d.id))}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                    divisionFilter === String(d.id)
+                      ? "bg-teal-700 text-white border-teal-700"
+                      : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
+                >
+                  {d.name}
+                </button>
+              ))}
 
-      {/* Error */}
-      {error && (
-        <p className="text-red-500 text-sm">{error}</p>
-      )}
+              <button
+                type="button"
+                onClick={() => setDivisionFilter("unassigned")}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                  divisionFilter === "unassigned"
+                    ? "bg-teal-700 text-white border-teal-700"
+                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                }`}
+              >
+                Unassigned
+              </button>
+            </div>
+          </div>
 
-      {/* Table */}
+            {loading && (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-12 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                ))}
+              </div>
+            )}
+
+      {error && <p className="text-red-500 text-sm">{error}</p>}
+
       {!loading && !error && (
         <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
           <table className="w-full text-sm">
@@ -244,6 +288,7 @@ export default function ManageTeamsPage() {
               <tr>
                 <th className="px-4 py-3 text-left">Logo</th>
                 <th className="px-4 py-3 text-left">Team Name</th>
+                <th className="px-4 py-3 text-left">Division</th>
                 <th className="px-4 py-3 text-left">Contact</th>
                 <th className="px-4 py-3 text-left">Registered</th>
                 <th className="px-4 py-3 text-right">Actions</th>
@@ -252,7 +297,7 @@ export default function ManageTeamsPage() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
                     No teams found
                   </td>
                 </tr>
@@ -280,6 +325,9 @@ export default function ManageTeamsPage() {
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                       {t.name}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
+                      {t.division?.name ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                       {t.contact ?? "—"}
@@ -310,110 +358,123 @@ export default function ManageTeamsPage() {
         </div>
       )}
 
-      {/* Modal */}
       <Modal
         open={modalOpen}
         onClose={closeModal}
         title={editing ? "Edit Team" : "New Team"}
       >
-      <form
-        onSubmit={(e) => { e.preventDefault(); handleSave(); }}
-        className="space-y-4"
-      >
-        {/* Team Name */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Team Name <span className="text-red-500">*</span>
-          </label>
-          <input
-            value={form.name}
-            onChange={(e) => {
-              setForm({ ...form, name: e.target.value });
-              if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
-            }}
-            className={`w-full px-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white dark:bg-gray-900 ${
-              formErrors.name
-                ? "border-red-400 dark:border-red-500"
-                : "border-gray-200 dark:border-gray-700"
-            }`}
-            placeholder="e.g. Desert Eagles"
-          />
-          {formErrors.name && (
-            <p className="text-xs text-red-500">{formErrors.name}</p>
-          )}
-        </div>
+        <form
+          onSubmit={(e) => { e.preventDefault(); handleSave(); }}
+          className="space-y-4"
+        >
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Team Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              value={form.name}
+              onChange={(e) => {
+                setForm({ ...form, name: e.target.value });
+                if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
+              }}
+              className={`w-full px-4 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white dark:bg-gray-900 ${
+                formErrors.name
+                  ? "border-red-400 dark:border-red-500"
+                  : "border-gray-200 dark:border-gray-700"
+              }`}
+              placeholder="e.g. Desert Eagles"
+            />
+            {formErrors.name && (
+              <p className="text-xs text-red-500">{formErrors.name}</p>
+            )}
+          </div>
 
-        {/* Team Logo */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Team Logo <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Division <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <select
+              value={form.divisionId}
+              onChange={(e) => setForm({ ...form, divisionId: e.target.value })}
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+            >
+              <option value="">No division</option>
+              {divisions?.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
-              {logoPreview ? (
-                <img src={logoPreview} alt="Team logo preview" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-xs text-gray-400">No logo</span>
-              )}
-            </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Team Logo <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
 
-            <div className="flex-1 space-y-1">
-              <div className="flex gap-2">
-                <label className="cursor-pointer">
-                  <span className="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    {uploadingLogo ? "Uploading..." : "Choose file"}
-                  </span>
-                  <input
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    disabled={uploadingLogo}
-                    onChange={handleLogoSelect}
-                  />
-                </label>
-                {logoPreview && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    type="button"
-                    loading={removingLogo}
-                    onClick={handleRemoveLogo}
-                  >
-                    Remove
-                  </Button>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Team logo preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-xs text-gray-400">No logo</span>
                 )}
               </div>
-              <p className="text-xs text-gray-400">PNG, JPEG, or WebP. Max 2MB, 2000x2000px.</p>
-              {logoError && <p className="text-xs text-red-500">{logoError}</p>}
+
+              <div className="flex-1 space-y-1">
+                <div className="flex gap-2">
+                  <label className="cursor-pointer">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+                      {uploadingLogo ? "Uploading..." : "Choose file"}
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      disabled={uploadingLogo}
+                      onChange={handleLogoSelect}
+                    />
+                  </label>
+                  {logoPreview && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      loading={removingLogo}
+                      onClick={handleRemoveLogo}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400">PNG, JPEG, or WebP. Max 2MB, 2000x2000px.</p>
+                {logoError && <p className="text-xs text-red-500">{logoError}</p>}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Contact */}
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Contact <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <input
-            value={form.contact}
-            onChange={(e) => setForm({ ...form, contact: e.target.value })}
-            className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
-            placeholder="email or phone"
-          />
-        </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Contact <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <input
+              value={form.contact}
+              onChange={(e) => setForm({ ...form, contact: e.target.value })}
+              className="w-full px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+              placeholder="email or phone"
+            />
+          </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="secondary" type="button" onClick={closeModal}>
-            Cancel
-          </Button>
-          <Button type="submit" loading={saving}>
-            {editing ? "Save Changes" : "Create Team"}
-          </Button>
-        </div>
-      </form>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" type="button" onClick={closeModal}>
+              Cancel
+            </Button>
+            <Button type="submit" loading={saving}>
+              {editing ? "Save Changes" : "Create Team"}
+            </Button>
+          </div>
+        </form>
       </Modal>
-
     </main>
   );
 }

@@ -19,6 +19,19 @@ function IconDashboard() {
   );
 }
 
+function IconDivision() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <line x1="17.5" y1="14" x2="17.5" y2="21" />
+      <line x1="14" y1="17.5" x2="21" y2="17.5" />
+    </svg>
+  );
+}
+
+
 function IconTournament() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
@@ -122,6 +135,7 @@ const adminLinks = [
   { href: "/manage/leagues",     label: "Manage Leagues",     Icon: IconLeague },
   { href: "/manage/tournaments", label: "Manage Tournaments", Icon: IconManageTournaments },
   { href: "/manage/teams",       label: "Manage Teams",       Icon: IconManageTeams },
+  { href: "/manage/divisions",   label: "Manage Divisions",   Icon: IconDivision },
 ];
 
 export function Sidebar({ isAdmin, userEmail }: Props) {

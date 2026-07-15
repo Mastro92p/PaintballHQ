@@ -28,31 +28,48 @@ model LeagueTeam {
   @@id([leagueId, teamId])
 }
 
+
+model Division {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  teams       Team[]
+  tournaments Tournament[]
+}
+
+
 model Tournament {
-  id        Int      @id @default(autoincrement())
-  name      String
-  date      String
-  location  String
-  status    String   @default("upcoming")
-  type      String   @default("round_robin")
-  // "round_robin" | "bracket" | "group_and_bracket"
-  teamsToAdvance Int @default(4)
-  formatConfig   Json? 
-  createdAt DateTime @default(now())
+  id             Int      @id @default(autoincrement())
+  name           String
+  date           String
+  location       String
+  status         String   @default("upcoming")
+  type           String   @default("round_robin")
+  teamsToAdvance Int      @default(4)
+  formatConfig   Json?
+  createdAt      DateTime @default(now())
 
-  leagueId  Int?
-  league    League?  @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+  leagueId       Int?
+  league         League?  @relation(fields: [leagueId], references: [id], onDelete: SetNull)
 
-  teams   TournamentTeam[]
-  matches Match[]
+  divisionId     Int?
+  division       Division? @relation(fields: [divisionId], references: [id], onDelete: SetNull)
+
+  teams          TournamentTeam[]
+  matches        Match[]
 }
 
 model Team {
-  id        Int      @id @default(autoincrement())
-  name      String
-  contact   String?
-  logoUrl   String?
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  name        String
+  contact     String?
+  logoUrl     String?
+  createdAt   DateTime @default(now())
+
+  divisionId  Int?
+  division    Division? @relation(fields: [divisionId], references: [id], onDelete: SetNull)
 
   leagues     LeagueTeam[]
   tournaments TournamentTeam[]

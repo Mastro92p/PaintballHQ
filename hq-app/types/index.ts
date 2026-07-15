@@ -15,7 +15,8 @@ export interface Tournament {
   type:           string;
   teamsToAdvance: number;
   leagueId:       number | null;
-  //division for the tournament
+  divisionId:     number | null;
+  division?:      Division | null;
 }
 
 export interface Team {
@@ -25,7 +26,8 @@ export interface Team {
   logoUrl: string | null;
   createdAt: Date
   tournaments?: TournamentTeam[]
-  //add division
+  divisionId:  number | null;
+  division?:   Division | null;
 }
 
 export interface TournamentTeam {
@@ -81,9 +83,10 @@ export interface CreateTournamentBody {
   date: string
   location: string
   status?: string
-  type?: string           // ← new
-  teamsToAdvance?: number // ← new
-  leagueId?: number       // ← new
+  type?: string
+  teamsToAdvance?: number
+  leagueId?: number
+  divisionId?: number | string | null
   teamIds?: number[]
   formatConfig?: FormatConfig;
 }
@@ -93,21 +96,24 @@ export interface UpdateTournamentBody {
   date?: string
   location?: string
   status?: string
-  type?: string           // ← new
-  teamsToAdvance?: number // ← new
-  leagueId?: number | null // ← new
+  type?: string
+  teamsToAdvance?: number
+  leagueId?: number | null
+  divisionId?: number | string | null
   teamIds?: number[]
   formatConfig?: FormatConfig;
 }
 
 export interface CreateTeamBody {
-  name: string
-  contact?: string
+  name: string;
+  contact?: string;
+  divisionId?: number | string | null;
 }
 
 export interface UpdateTeamBody {
   name?: string
   contact?: string
+  divisionId?: number | string | null
 }
 
 export interface CreateMatchBody {
@@ -198,4 +204,79 @@ export type TournamentDetail = Tournament & {
   location?: string | null;
   teams: EnrolledTeam[];
   matches: Match[];
+};
+
+export type Division = {
+  id: number;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
+
+export interface CreateDivisionBody {
+  name: string;
+}
+
+export type UpdateDivisionBody = {
+  name?: string;
+  isActive?: boolean;
+};
+
+
+export type MatchDetail = {
+  id: number;
+  status: string;
+  round: number | null;
+  scoreA: number | null;
+  scoreB: number | null;
+  teamAId: number;
+  teamBId: number;
+  teamA?: { id: number; name: string };
+  teamB?: { id: number; name: string };
+  tournament?: { id: number; name: string };
+};
+
+export type TeamWithStats = Team & {
+  tournamentCount?: number;
+  totalMatches?: number;
+  wins?: number;
+  matchesA?: MatchDetail[];
+  matchesB?: MatchDetail[];
+};
+
+export type TeamDetail = Team & {
+  matchesA: MatchDetail[];
+  matchesB: MatchDetail[];
+  tournaments: { tournament: { id: number; name: string } }[];
+};
+
+
+export type LeagueTeam = {
+  teamId: number;
+  team: {
+    id: number;
+    name: string;
+    divisionId?: number | null;
+    division?: { id: number; name: string } | null;
+  } | null;
+};
+
+export type TournamentWithMatches = Tournament & {
+  divisionId?: number | null;
+  division?: { id: number; name: string } | null;
+  teams: {
+    teamId: number;
+    team: {
+      id: number;
+      name: string;
+      divisionId?: number | null;
+    } | null;
+  }[];
+  matches: Match[];
+};
+
+export type LeagueDetailResponse = Omit<League, "tournaments" | "teams"> & {
+  tournaments: TournamentWithMatches[];
+  teams: LeagueTeam[];
 };

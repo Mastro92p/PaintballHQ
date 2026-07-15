@@ -471,6 +471,9 @@ export default function ManageTournamentDetailPage({
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 capitalize">
             {(data.type ?? "round_robin").replace(/_/g, " ")}
           </span>
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+            {"Division: " + (data.division?.name ?? "Unassigned")}
+          </span>
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           📅 {formatDate(data.date)}
@@ -511,6 +514,8 @@ export default function ManageTournamentDetailPage({
           localEnrolled={localEnrolled}
           pendingEnrollChanges={pendingEnrollChanges}
           bulkSaving={bulkSaving}
+          tournamentDivisionId={data.divisionId}
+          tournamentDivisionName={data.division?.name ?? null}
           onMoveToEnrolled={moveToEnrolled}
           onMoveToAvailable={moveToAvailable}
           onEnrollAll={enrollAll}

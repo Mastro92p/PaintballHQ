@@ -12,6 +12,7 @@ import type {
   CreateTournamentBody,
   UpdateTournamentBody,
   FormatConfig,
+  Division,
 } from "@/types";
 
 const STATUS_OPTIONS = ["upcoming", "active", "completed"] as const;
@@ -43,6 +44,7 @@ type FormState = {
   location: string;
   status: string;
   type: string;
+  divisionId: string;
   groupCount: string;
   teamsPerGroup: string;
   qualifiersPerGroup: string;
@@ -59,6 +61,7 @@ const emptyForm: FormState = {
   location: "",
   status: "upcoming",
   type: "round_robin",
+  divisionId: "",
   groupCount: "2",
   teamsPerGroup: "4",
   qualifiersPerGroup: "2",
@@ -69,6 +72,7 @@ const emptyForm: FormState = {
 
 export default function ManageTournamentsPage() {
   const { data, loading, error, refetch } = useFetch<Tournament[]>("/api/tournaments");
+  const { data: divisions } = useFetch<Division[]>("/api/divisions");
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Tournament | null>(null);
@@ -77,13 +81,18 @@ export default function ManageTournamentsPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [divisionFilter, setDivisionFilter] = useState<string>("all");
 
   const filtered = useMemo(() => {
     if (!data) return [];
-    return data.filter((t) =>
-      t.name.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [data, search]);
+    return data
+      .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
+      .filter((t) => {
+        if (divisionFilter === "all") return true;
+        if (divisionFilter === "unassigned") return t.divisionId == null;
+        return t.divisionId === Number(divisionFilter);
+      });
+  }, [data, search, divisionFilter]);
 
   const groupCount = parseInt(form.groupCount || "0", 10);
   const teamsPerGroup = parseInt(form.teamsPerGroup || "0", 10);
@@ -108,6 +117,7 @@ export default function ManageTournamentsPage() {
       location: t.location ?? "",
       status: t.status ?? "upcoming",
       type: t.type ?? "round_robin",
+      divisionId: t.divisionId != null ? String(t.divisionId) : "",
       groupCount: String(fc.groupCount ?? 2),
       teamsPerGroup: String(fc.teamsPerGroup ?? 4),
       qualifiersPerGroup: String(fc.qualifiersPerGroup ?? 2),
@@ -176,6 +186,7 @@ export default function ManageTournamentsPage() {
       location: form.location,
       status: form.status as Tournament["status"],
       type: form.type,
+      divisionId: form.divisionId ? Number(form.divisionId) : null,
       ...(isKnockout && {
         formatConfig: {
           ...(form.type === "group_and_bracket" && {
@@ -259,13 +270,56 @@ export default function ManageTournamentsPage() {
         </Button>
       </div>
 
-      <input
-        type="search"
-        placeholder="Search tournaments..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full sm:max-w-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600"
-      />
+      <div className="space-y-3">
+        <input
+          type="search"
+          placeholder="Search tournaments..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full sm:max-w-sm px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-600"
+        />
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setDivisionFilter("all")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+              divisionFilter === "all"
+                ? "bg-teal-700 text-white border-teal-700"
+                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
+          >
+            All
+          </button>
+
+          {divisions?.map((d) => (
+            <button
+              key={d.id}
+              type="button"
+              onClick={() => setDivisionFilter(String(d.id))}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+                divisionFilter === String(d.id)
+                  ? "bg-teal-700 text-white border-teal-700"
+                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+              }`}
+            >
+              {d.name}
+            </button>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setDivisionFilter("unassigned")}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+              divisionFilter === "unassigned"
+                ? "bg-teal-700 text-white border-teal-700"
+                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
+          >
+            Unassigned
+          </button>
+        </div>
+      </div>
 
       {loading && (
         <div className="space-y-2">
@@ -288,6 +342,7 @@ export default function ManageTournamentsPage() {
                 <th className="px-4 py-3 text-left">Name</th>
                 <th className="px-4 py-3 text-left">Date</th>
                 <th className="px-4 py-3 text-left">Location</th>
+                <th className="px-4 py-3 text-left">Division</th>
                 <th className="px-4 py-3 text-left">Format</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
@@ -297,7 +352,7 @@ export default function ManageTournamentsPage() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
+                  <td colSpan={7} className="px-4 py-10 text-center text-gray-400">
                     No tournaments found
                   </td>
                 </tr>
@@ -315,6 +370,9 @@ export default function ManageTournamentsPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                       {t.location ?? "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
+                      {t.division?.name ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">
                       {(t.type ?? "round_robin").replace(/_/g, " ")}
@@ -406,6 +464,24 @@ export default function ManageTournamentsPage() {
             {formErrors.location && (
               <p className="text-xs text-red-500">{formErrors.location}</p>
             )}
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Division <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <select
+              value={form.divisionId}
+              onChange={(e) => setField("divisionId", e.target.value)}
+              className={inputCls("divisionId")}
+            >
+              <option value="">No division</option>
+              {divisions?.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="space-y-1">

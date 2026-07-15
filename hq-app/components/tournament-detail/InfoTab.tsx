@@ -16,6 +16,7 @@ export function InfoTab({ data }: Props) {
         <Row label="Name"     value={data.name} />
         <Row label="Date"     value={formatDate(data.date)} />
         <Row label="Location" value={data.location ?? "—"} />
+        <Row label="Division" value={data.division?.name ?? "Unassigned"} />
         <Row label="Format"   value={(data.type ?? "round_robin").replace(/_/g, " ")} />
         <Row label="Status"   value={data.status} />
         {fc && (

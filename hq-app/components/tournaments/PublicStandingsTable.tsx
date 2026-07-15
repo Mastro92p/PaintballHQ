@@ -1,4 +1,4 @@
-import { computeGroupedStandings, computeRoundRobinStandings, StandingRow, TournamentTeam,} from "@/lib/standings";
+import { computeGroupedStandings, computeRoundRobinStandings, applyClassicScoring, StandingRow, TournamentTeam } from "@/lib/standings";
 import { Match } from "@/types";
 import { getClassicMatchResult } from "@/lib/utils";
 
@@ -43,76 +43,6 @@ function renderGoalDiff(value: number) {
   return value > 0 ? `+${value}` : value;
 }
 
-
-function applyClassicScoring(rows: StandingRow[], matches: Match[]): StandingRow[] {
-  const overrides: Record<number, { wins: number; draws: number; losses: number; points: number; bodyCount: number }> = {};
-
-
-  rows.forEach((row) => {
-    overrides[row.teamId] = { wins: 0, draws: 0, losses: 0, points: 0, bodyCount: 0 };
-  });
-
-  matches.forEach((match) => {
-    const completed =
-      match.status === "completed" &&
-      match.teamAId != null &&
-      match.teamBId != null &&
-      match.scoreA != null &&
-      match.scoreB != null;
-
-    if (!completed) return;
-
-    const aId = match.teamAId!;
-    const bId = match.teamBId!;
-    if (!overrides[aId] || !overrides[bId]) return;
-
-    const result = getClassicMatchResult(
-      match.scoreA ?? null,
-      match.scoreB ?? null,
-      match.bodyCountA ?? null,
-      match.bodyCountB ?? null
-    );
-
-    overrides[aId].points += result.pointsA;
-    overrides[bId].points += result.pointsB;
-    overrides[aId].bodyCount += result.bodyCountA;
-    overrides[bId].bodyCount += result.bodyCountB;
-
-    if (result.winner === "A") {
-      overrides[aId].wins += 1;
-      overrides[bId].losses += 1;
-    } else if (result.winner === "B") {
-      overrides[bId].wins += 1;
-      overrides[aId].losses += 1;
-    } else {
-      overrides[aId].draws += 1;
-      overrides[bId].draws += 1;
-    }
-  });
-
-  const merged = rows.map((row) => ({
-    ...row,
-    wins: overrides[row.teamId].wins,
-    draws: overrides[row.teamId].draws,
-    losses: overrides[row.teamId].losses,
-    points: overrides[row.teamId].points,
-    bodyCount: overrides[row.teamId].bodyCount,
-  }));
-
-  merged.sort(
-    (x, y) =>
-      y.points - x.points ||
-      y.gd - x.gd ||
-      y.gf - x.gf ||
-      x.teamName.localeCompare(y.teamName)
-  );
-
-  merged.forEach((row, index) => {
-    row.overallRank = index + 1;
-  });
-
-  return merged;
-}
 
 
 function StandingsTable({

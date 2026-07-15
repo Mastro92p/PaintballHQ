@@ -5,19 +5,16 @@ import { useRouter } from "next/navigation";
 import { useFetch } from "@/hooks/use-fetch";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate, calcStandings } from "@/lib/utils";
-import type { League, Tournament, Match } from "@/types";
-
-type LeagueTeam = { teamId: number; team: { id: number; name: string } | null };
-
-type TournamentWithMatches = Tournament & {
-  teams: { teamId: number; team: { id: number; name: string } | null }[];
-  matches: Match[];
-};
-
-type LeagueDetailResponse = League & {
-  tournaments: TournamentWithMatches[];
-  teams: LeagueTeam[];
-};
+import type {
+  League,
+  Tournament,
+  Match,
+  LeagueTeam,
+  TournamentWithMatches,
+  LeagueDetailResponse,
+} from "@/types";
+import { computeRoundRobinStandings, applyClassicScoring, StandingRow, TournamentTeam } from "@/lib/standings";
+import LeagueStandingsTable from "@/components/leagues/LeagueStandingsTable";
 
 const statusVariant: Record<string, "default" | "success" | "warning" | "muted"> = {
   upcoming:  "warning",
@@ -32,6 +29,7 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 type Tab = "tournaments" | "standings" | "teams";
+type DivFilter = number | "all";
 
 function formatDateBlock(dateStr: string) {
   const d = new Date(dateStr);
@@ -42,6 +40,46 @@ function formatDateBlock(dateStr: string) {
   };
 }
 
+function DivisionPills({
+  divisions,
+  value,
+  onChange,
+}: {
+  divisions: { id: number; name: string }[];
+  value: DivFilter;
+  onChange: (v: DivFilter) => void;
+}) {
+  if (!divisions.length) return null;
+  return (
+    <div className="flex gap-2 flex-wrap">
+      <button
+        onClick={() => onChange("all")}
+        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+          value === "all"
+            ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
+            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+        }`}
+      >
+        All divisions
+      </button>
+      {divisions.map((d) => (
+        <button
+          key={d.id}
+          onClick={() => onChange(d.id)}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+            value === d.id
+              ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
+              : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+          }`}
+        >
+          {d.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+
 export default function LeagueDetailPage({
   params,
 }: {
@@ -50,34 +88,118 @@ export default function LeagueDetailPage({
   const { id } = use(params);
   const { data, loading, error } = useFetch<LeagueDetailResponse>(`/api/leagues/${id}`);
   const [activeTab, setActiveTab] = useState<Tab>("tournaments");
+  const [tournamentDivFilter, setTournamentDivFilter] = useState<DivFilter>("all");
+  const [teamDivFilter, setTeamDivFilter] = useState<DivFilter>("all");
+  const [standingsDivFilter, setStandingsDivFilter] = useState<DivFilter>("all");
+
   const router = useRouter();
 
-  // League-wide standings: aggregate all matches across all tournaments
-  const leagueStandings = useMemo(() => {
+  // All distinct divisions across tournaments + teams
+  const divisions = useMemo(() => {
+    if (!data) return [];
+    const map: Record<number, string> = {};
+    data.tournaments?.forEach((t) => {
+      if (t.division) map[t.division.id] = t.division.name;
+    });
+    data.teams?.forEach((lt) => {
+      if (lt.team?.division) map[lt.team.division.id] = lt.team.division.name;
+    });
+    return Object.entries(map)
+      .map(([id, name]) => ({ id: Number(id), name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [data]);
+
+  // Tournaments tab — filtered by its own local filter
+  const filteredTournaments = useMemo(() => {
+    if (!data?.tournaments) return [];
+    if (tournamentDivFilter === "all") return data.tournaments;
+    return data.tournaments.filter(
+      (t) => t.divisionId === tournamentDivFilter || t.division?.id === tournamentDivFilter
+    );
+  }, [data, tournamentDivFilter]);
+
+  // Teams tab — filtered by its own local filter
+  const filteredTeams = useMemo(() => {
+    if (!data?.teams) return [];
+    if (teamDivFilter === "all") return data.teams;
+    return data.teams.filter((lt) => lt.team?.divisionId === teamDivFilter);
+  }, [data, teamDivFilter]);
+
+
+
+  
+  // Standings tab — always grouped by division, no filter
+  const standingsByDivision = useMemo(() => {
     if (!data?.tournaments) return [];
 
-    const teamMap: Record<number, string> = {};
-    const allMatches: Match[] = [];
+    type Group = {
+      divisionId: number | null;
+      divisionName: string;
+      tournaments: TournamentWithMatches[];
+    };
+
+    const groups: Record<string, Group> = {};
 
     data.tournaments.forEach((t) => {
-      t.teams?.forEach((tt) => {
-        if (tt.team?.name) teamMap[tt.teamId] = tt.team.name;
-      });
-      t.matches?.forEach((m) => {
-        if (m.teamA?.name && m.teamAId != null) teamMap[m.teamAId] = m.teamA.name;
-        if (m.teamB?.name && m.teamBId != null) teamMap[m.teamBId] = m.teamB.name;
-        allMatches.push(m);
-      });
+      const divId = t.divisionId ?? t.division?.id ?? null;
+      const key = divId != null ? String(divId) : "unassigned";
+      if (!groups[key]) {
+        groups[key] = {
+          divisionId: divId,
+          divisionName: t.division?.name ?? "Unassigned",
+          tournaments: [],
+        };
+      }
+      groups[key].tournaments.push(t);
     });
 
-    // Also include league-level registered teams
-    data.teams?.forEach((lt) => {
-      if (lt.team?.name) teamMap[lt.teamId] = lt.team.name;
-    });
+    return Object.values(groups)
+      .sort((a, b) => a.divisionName.localeCompare(b.divisionName))
+      .map((group) => {
+        const teamsMap: Record<number, TournamentTeam> = {};
+        const allMatches: Match[] = [];
 
-    const enrolledIds = data.teams?.map((lt) => lt.teamId) ?? [];
-    return calcStandings(allMatches, teamMap, enrolledIds);
+        group.tournaments.forEach((t) => {
+          t.teams?.forEach((tt) => {
+            if (tt.team) {
+              teamsMap[tt.teamId] = { teamId: tt.teamId, team: tt.team };
+            }
+          });
+          t.matches?.forEach((m) => allMatches.push(m));
+        });
+
+        const enrolledTeams = data.teams?.filter(
+          (lt) => (lt.team?.divisionId ?? null) === group.divisionId
+        ) ?? [];
+
+        enrolledTeams.forEach((lt) => {
+          if (lt.team && !teamsMap[lt.teamId]) {
+            teamsMap[lt.teamId] = { teamId: lt.teamId, team: lt.team };
+          }
+        });
+
+        const teamsList = Object.values(teamsMap);
+        const isClassic = group.tournaments.some((t) => t.type === "round_robin_classic");
+
+        let standings = computeRoundRobinStandings(teamsList, allMatches);
+        if (isClassic) {
+          standings = applyClassicScoring(standings, allMatches);
+        }
+
+        return {
+          divisionName: group.divisionName,
+          standings,
+          showBodyCount: isClassic,
+        };
+      });
   }, [data]);
+
+
+  const visibleStandingsGroups = useMemo(() => {
+    if (standingsDivFilter === "all") return standingsByDivision;
+    const selectedName = divisions.find((d) => d.id === standingsDivFilter)?.name;
+    return standingsByDivision.filter((g) => g.divisionName === selectedName);
+  }, [standingsByDivision, standingsDivFilter, divisions]);
 
   if (loading) {
     return (
@@ -106,7 +228,7 @@ export default function LeagueDetailPage({
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "tournaments", label: "Tournaments", count: data.tournaments?.length ?? 0 },
-    { key: "standings",   label: "Standings",   count: leagueStandings.length },
+    { key: "standings",   label: "Standings",   count: standingsByDivision.length },
     { key: "teams",       label: "Teams",        count: data.teams?.length ?? 0 },
   ];
 
@@ -175,174 +297,138 @@ export default function LeagueDetailPage({
 
       {/* ── Tab: Tournaments ────────────────────────────────── */}
       {activeTab === "tournaments" && (
-        <section className="space-y-2">
-          {!data.tournaments?.length ? (
+        <section className="space-y-4">
+          <DivisionPills divisions={divisions} value={tournamentDivFilter} onChange={setTournamentDivFilter} />
+
+          {!filteredTournaments.length ? (
             <div className="text-center py-16 text-gray-400 dark:text-gray-500">
               <p className="text-4xl mb-3">🏆</p>
               <p className="text-lg font-medium">No tournaments yet</p>
             </div>
           ) : (
-            data.tournaments
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-              .map((t) => {
-                const { month, day, year } = formatDateBlock(t.date);
-                const teamCount    = t.teams?.length ?? 0;
-                const playedCount  = t.matches?.filter((m) => m.status === "completed").length ?? 0;
+            <div className="space-y-2">
+              {[...filteredTournaments]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map((t) => {
+                  const { month, day, year } = formatDateBlock(t.date);
+                  const teamCount    = t.teams?.length ?? 0;
+                  const playedCount  = t.matches?.filter((m) => m.status === "completed").length ?? 0;
 
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => router.push(`/tournaments/${t.id}`)}
-                    className="w-full text-left flex items-center gap-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors overflow-hidden group"
-                  >
-                    {/* Date block */}
-                    <div className="flex flex-col items-center justify-center w-20 shrink-0 px-3 py-4 border-r border-gray-100 dark:border-gray-800 self-stretch">
-                      <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider leading-none">{month}</span>
-                      <span className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight tabular-nums">{day}</span>
-                      <span className="text-xs text-gray-400 dark:text-gray-500 leading-none">{year}</span>
-                    </div>
-
-                    {/* Main info */}
-                    <div className="flex-1 min-w-0 px-5 py-4">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900 dark:text-gray-100 text-base">{t.name}</span>
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${
-                          t.status === "active"    ? "text-green-600 dark:text-green-400" :
-                          t.status === "upcoming"  ? "text-orange-500 dark:text-orange-400" :
-                          "text-gray-400 dark:text-gray-500"
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[t.status] ?? "bg-gray-400"}`} />
-                          {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
-                        </span>
-                        <span className="text-xs text-gray-400 dark:text-gray-500 capitalize hidden sm:inline">
-                          {(t.type ?? "round_robin").replace(/_/g, " ")}
-                        </span>
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => router.push(`/tournaments/${t.id}`)}
+                      className="w-full text-left flex items-center gap-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors overflow-hidden group"
+                    >
+                      <div className="flex flex-col items-center justify-center w-20 shrink-0 px-3 py-4 border-r border-gray-100 dark:border-gray-800 self-stretch">
+                        <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider leading-none">{month}</span>
+                        <span className="text-2xl font-bold text-gray-900 dark:text-gray-100 leading-tight tabular-nums">{day}</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500 leading-none">{year}</span>
                       </div>
-                      {t.location && (
-                        <div className="hidden sm:flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                            <circle cx="12" cy="10" r="3"/>
-                          </svg>
-                          {t.location}
+
+                      <div className="flex-1 min-w-0 px-5 py-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100 text-base">{t.name}</span>
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${
+                            t.status === "active"    ? "text-green-600 dark:text-green-400" :
+                            t.status === "upcoming"  ? "text-orange-500 dark:text-orange-400" :
+                            "text-gray-400 dark:text-gray-500"
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[t.status] ?? "bg-gray-400"}`} />
+                            {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
+                          </span>
+                          {t.division && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500 hidden sm:inline">
+                              {t.division.name}
+                            </span>
+                          )}
+                          <span className="text-xs text-gray-400 dark:text-gray-500 capitalize hidden sm:inline">
+                            {(t.type ?? "round_robin").replace(/_/g, " ")}
+                          </span>
                         </div>
-                      )}
+                        {t.location && (
+                          <div className="hidden sm:flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                              <circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            {t.location}
+                          </div>
+                        )}
 
-                      {/* Mobile stats */}
-                      <div className="flex sm:hidden items-center gap-2 mt-2 flex-wrap">
-                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                          <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{teamCount}</span> teams
-                        </span>
-                        <span className="text-gray-300 dark:text-gray-700">·</span>
-                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                          <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{playedCount}</span> played
-                        </span>
+                        <div className="flex sm:hidden items-center gap-2 mt-2 flex-wrap">
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{teamCount}</span> teams
+                          </span>
+                          <span className="text-gray-300 dark:text-gray-700">·</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{playedCount}</span> played
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Desktop stats */}
-                    <div className="hidden sm:flex items-center gap-8 px-6 py-4 border-l border-gray-100 dark:border-gray-800 shrink-0">
-                      <div className="text-center">
-                        <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Teams</p>
-                        <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">{teamCount}</p>
+                      <div className="hidden sm:flex items-center gap-8 px-6 py-4 border-l border-gray-100 dark:border-gray-800 shrink-0">
+                        <div className="text-center">
+                          <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Teams</p>
+                          <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">{teamCount}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Played</p>
+                          <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">{playedCount}</p>
+                        </div>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Played</p>
-                        <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">{playedCount}</p>
-                      </div>
-                    </div>
 
-                    {/* Chevron */}
-                    <div className="pr-4 pl-2 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors shrink-0">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="m9 18 6-6-6-6"/>
-                      </svg>
-                    </div>
-                  </button>
-                );
-              })
+                      <div className="pr-4 pl-2 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors shrink-0">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="m9 18 6-6-6-6"/>
+                        </svg>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
           )}
         </section>
       )}
 
-      {/* ── Tab: Standings (league-wide) ─────────────────────── */}
+      {/* ── Tab: Standings (grouped by division) ─────────────── */}
       {activeTab === "standings" && (
-        <section>
-          {leagueStandings.length === 0 ? (
+        <section className="space-y-10">
+          <DivisionPills divisions={divisions} value={standingsDivFilter} onChange={setStandingsDivFilter} />
+
+          {visibleStandingsGroups.length === 0 ? (
             <div className="text-center py-12 text-gray-400 dark:text-gray-500">
               <p className="text-4xl mb-3">🏆</p>
               <p className="text-lg font-medium">No standings yet</p>
               <p className="text-sm mt-1">Standings will appear once matches are played</p>
             </div>
           ) : (
-            <>
-              <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wide">
-                    <tr>
-                      <th className="px-2 py-2 sm:px-4 sm:py-3 text-left w-8">#</th>
-                      <th className="px-2 py-2 sm:px-4 sm:py-3 text-left">Team</th>
-                      <th className="px-2 py-2 sm:px-4 sm:py-3 text-center">P</th>
-                      <th className="px-2 py-2 sm:px-4 sm:py-3 text-center font-semibold text-green-600 dark:text-green-400">W</th>
-                      <th className="px-2 py-2 sm:px-4 sm:py-3 text-center">D</th>
-                      <th className="px-2 py-2 sm:px-4 sm:py-3 text-center font-semibold text-red-500 dark:text-red-400">L</th>
-                      <th className="hidden sm:table-cell px-2 py-2 sm:px-4 sm:py-3 text-center">GF</th>
-                      <th className="hidden sm:table-cell px-2 py-2 sm:px-4 sm:py-3 text-center">GA</th>
-                      <th className="px-2 py-2 sm:px-4 sm:py-3 text-center">GD</th>
-                      <th className="px-2 py-2 sm:px-4 sm:py-3 text-center font-bold text-orange-500 dark:text-orange-400">PTS</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {leagueStandings.map((s, i) => {
-                      const medal =
-                        i === 0 ? "🥇" :
-                        i === 1 ? "🥈" :
-                        i === 2 ? "🥉" : null;
+              visibleStandingsGroups.map((group) => (
+                <div key={group.divisionName} className="space-y-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{group.divisionName}</h3>
+                  {group.standings.length === 0 ? (
+                    <p className="text-sm text-gray-400 dark:text-gray-500">No matches played yet</p>
+                  ) : (
+                    <LeagueStandingsTable standings={group.standings} showBodyCount={group.showBodyCount} />
+                  )}
+                </div>
+              ))
+          )}
 
-                      const rowBg =
-                        i === 0 ? "bg-yellow-50/60 dark:bg-yellow-900/10" :
-                        i === 1 ? "bg-gray-100/60 dark:bg-gray-700/20" :
-                        i === 2 ? "bg-orange-50/60 dark:bg-orange-900/10" :
-                        "bg-white dark:bg-gray-900";
-
-                      return (
-                        <tr key={s.teamId} className={`${rowBg} transition-colors`}>
-                          <td className="px-2 py-2 sm:px-4 sm:py-3 text-center text-base leading-none">
-                            {medal ?? <span className="text-sm tabular-nums text-gray-400">{i + 1}</span>}
-                          </td>
-                          <td className="px-2 py-2 sm:px-4 sm:py-3 font-medium text-gray-900 dark:text-gray-100 max-w-[90px] sm:max-w-none truncate">
-                            {s.teamName}
-                          </td>
-                          <td className="px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums text-gray-600 dark:text-gray-400">{s.played}</td>
-                          <td className="px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums text-green-600 dark:text-green-400 font-medium">{s.wins}</td>
-                          <td className="px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums text-gray-600 dark:text-gray-400">{s.draws}</td>
-                          <td className="px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums text-red-500 dark:text-red-400 font-medium">{s.losses}</td>
-                          <td className="hidden sm:table-cell px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums text-gray-600 dark:text-gray-400">{s.goalsFor}</td>
-                          <td className="hidden sm:table-cell px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums text-gray-600 dark:text-gray-400">{s.goalsAgainst}</td>
-                          <td className="px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums text-gray-600 dark:text-gray-400">
-                            {s.goalDiff > 0 ? `+${s.goalDiff}` : s.goalDiff}
-                          </td>
-                          <td className="px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums font-bold text-orange-500 dark:text-orange-400">
-                            {s.points}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-              <p className="mt-2 text-xs text-gray-400 dark:text-gray-500">
-                League-wide standings across all tournaments · Points: Win = 3 · Draw = 1 · Loss = 0
-              </p>
-            </>
+          {visibleStandingsGroups.length > 0 && (
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              Points: Win = 3 · Draw = 1 · Loss = 0
+            </p>
           )}
         </section>
       )}
 
       {/* ── Tab: Teams ──────────────────────────────────────── */}
       {activeTab === "teams" && (
-        <section>
-          {!data.teams?.length ? (
+        <section className="space-y-4">
+          <DivisionPills divisions={divisions} value={teamDivFilter} onChange={setTeamDivFilter} />
+
+          {!filteredTeams.length ? (
             <div className="text-center py-16 text-gray-400 dark:text-gray-500">
               <p className="text-4xl mb-3">👥</p>
               <p className="text-lg font-medium">No teams registered</p>
@@ -354,11 +440,14 @@ export default function LeagueDetailPage({
                   <tr>
                     <th className="px-4 py-3 text-left">#</th>
                     <th className="px-4 py-3 text-left">Team</th>
+                    {teamDivFilter === "all" && (
+                      <th className="px-4 py-3 text-left">Division</th>
+                    )}
                     <th className="px-4 py-3 text-center">Tournaments</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {data.teams.map((lt, i) => {
+                  {filteredTeams.map((lt, i) => {
                     const tournamentsPlayed = data.tournaments?.filter((t) =>
                       t.teams?.some((tt) => tt.teamId === lt.teamId)
                     ).length ?? 0;
@@ -369,6 +458,11 @@ export default function LeagueDetailPage({
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                           {lt.team?.name ?? "—"}
                         </td>
+                        {teamDivFilter === "all" && (
+                          <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs">
+                            {lt.team?.division?.name ?? "—"}
+                          </td>
+                        )}
                         <td className="px-4 py-3 text-center tabular-nums text-gray-600 dark:text-gray-400">
                           {tournamentsPlayed}
                         </td>

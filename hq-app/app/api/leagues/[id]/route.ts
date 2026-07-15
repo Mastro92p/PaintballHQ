@@ -14,12 +14,13 @@ export async function GET(
       include: {
         tournaments: {
           include: {
-            teams: { include: { team: true } },
+            division: true,
+            teams: { include: { team: { include: { division: true } } } },
             matches: true,
           },
           orderBy: { date: 'desc' },
         },
-        teams: { include: { team: true } },
+        teams: { include: { team: { include: { division: true } } } },
       },
     })
     if (!league) return apiError('League not found', 404)

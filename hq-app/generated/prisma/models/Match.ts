@@ -968,10 +968,6 @@ export type MatchUncheckedCreateNestedManyWithoutNextMatchInput = {
   connect?: Prisma.MatchWhereUniqueInput | Prisma.MatchWhereUniqueInput[]
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
-}
-
 export type MatchUpdateOneWithoutPrevMatchesNestedInput = {
   create?: Prisma.XOR<Prisma.MatchCreateWithoutPrevMatchesInput, Prisma.MatchUncheckedCreateWithoutPrevMatchesInput>
   connectOrCreate?: Prisma.MatchCreateOrConnectWithoutPrevMatchesInput

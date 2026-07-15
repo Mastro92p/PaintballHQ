@@ -6,6 +6,8 @@ type Props = {
   localEnrolled:        Team[];
   pendingEnrollChanges: boolean;
   bulkSaving:           boolean;
+  tournamentDivisionId:   number | null;
+  tournamentDivisionName: string | null;
   onMoveToEnrolled:     (team: Team) => void;
   onMoveToAvailable:    (team: Team) => void;
   onEnrollAll:          () => void;
@@ -16,9 +18,25 @@ type Props = {
 
 export function TeamsTab({
   localAvailable, localEnrolled, pendingEnrollChanges,
-  bulkSaving, onMoveToEnrolled, onMoveToAvailable,
+  bulkSaving, tournamentDivisionId, tournamentDivisionName,
+  onMoveToEnrolled, onMoveToAvailable,
   onEnrollAll, onRemoveAll, onReset, onSave,
 }: Props) {
+
+  const isUnrestricted =
+    tournamentDivisionId == null ||
+    tournamentDivisionName?.trim().toLowerCase() === "open";
+
+  const eligibleAvailable = isUnrestricted
+    ? localAvailable
+    : localAvailable.filter((t) => t.divisionId === tournamentDivisionId);
+
+  const hiddenCount = localAvailable.length - eligibleAvailable.length;
+
+  function enrollAllEligible() {
+    eligibleAvailable.forEach((team) => onMoveToEnrolled(team));
+  }
+
   return (
     <section className="space-y-4">
       <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
@@ -35,22 +53,30 @@ export function TeamsTab({
         </div>
       )}
 
+      {tournamentDivisionId != null && hiddenCount > 0 && (
+        <p className="text-xs text-gray-400">
+          {hiddenCount} team{hiddenCount === 1 ? "" : "s"} hidden — not in this tournament's division
+        </p>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 40px 1fr", gap: "0.75rem", alignItems: "start" }}>
         {/* Available */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Available</span>
             <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 rounded-full px-2 py-0.5 tabular-nums">
-              {localAvailable.length}
+              {eligibleAvailable.length}
             </span>
           </div>
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-            {localAvailable.length === 0 ? (
-              <div className="flex items-center justify-center py-10 text-xs text-gray-400">
-                All teams enrolled
+            {eligibleAvailable.length === 0 ? (
+              <div className="flex items-center justify-center py-10 text-xs text-gray-400 text-center px-4">
+                {localAvailable.length === 0
+                  ? "All teams enrolled"
+                  : "No teams match this tournament's division"}
               </div>
             ) : (
-              localAvailable.map((team) => (
+              eligibleAvailable.map((team) => (
                 <button
                   key={team.id}
                   onClick={() => onMoveToEnrolled(team)}
@@ -66,8 +92,8 @@ export function TeamsTab({
         {/* Arrow buttons */}
         <div className="flex flex-col gap-2 items-center pt-8">
           <button
-            onClick={onEnrollAll}
-            disabled={localAvailable.length === 0}
+            onClick={enrollAllEligible}
+            disabled={eligibleAvailable.length === 0}
             title="Enroll all"
             className="flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 hover:border-teal-500 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
@@ -110,8 +136,6 @@ export function TeamsTab({
           </div>
         </div>
       </div>
-
-
     </section>
   );
 }

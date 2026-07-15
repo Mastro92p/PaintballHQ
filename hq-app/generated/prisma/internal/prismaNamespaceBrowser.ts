@@ -53,6 +53,7 @@ export const AnyNull = runtime.AnyNull
 export const ModelName = {
   League: 'League',
   LeagueTeam: 'LeagueTeam',
+  Division: 'Division',
   Tournament: 'Tournament',
   Team: 'Team',
   TournamentTeam: 'TournamentTeam',
@@ -96,6 +97,16 @@ export const LeagueTeamScalarFieldEnum = {
 export type LeagueTeamScalarFieldEnum = (typeof LeagueTeamScalarFieldEnum)[keyof typeof LeagueTeamScalarFieldEnum]
 
 
+export const DivisionScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  isActive: 'isActive',
+  createdAt: 'createdAt'
+} as const
+
+export type DivisionScalarFieldEnum = (typeof DivisionScalarFieldEnum)[keyof typeof DivisionScalarFieldEnum]
+
+
 export const TournamentScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -106,7 +117,8 @@ export const TournamentScalarFieldEnum = {
   teamsToAdvance: 'teamsToAdvance',
   formatConfig: 'formatConfig',
   createdAt: 'createdAt',
-  leagueId: 'leagueId'
+  leagueId: 'leagueId',
+  divisionId: 'divisionId'
 } as const
 
 export type TournamentScalarFieldEnum = (typeof TournamentScalarFieldEnum)[keyof typeof TournamentScalarFieldEnum]
@@ -117,7 +129,8 @@ export const TeamScalarFieldEnum = {
   name: 'name',
   contact: 'contact',
   logoUrl: 'logoUrl',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  divisionId: 'divisionId'
 } as const
 
 export type TeamScalarFieldEnum = (typeof TeamScalarFieldEnum)[keyof typeof TeamScalarFieldEnum]

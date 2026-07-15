@@ -28,6 +28,11 @@ export type League = Prisma.LeagueModel
  */
 export type LeagueTeam = Prisma.LeagueTeamModel
 /**
+ * Model Division
+ * 
+ */
+export type Division = Prisma.DivisionModel
+/**
  * Model Tournament
  * 
  */

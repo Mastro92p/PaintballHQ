@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useFetch } from "@/hooks/use-fetch";
-import type { Tournament } from "@/types";
+import type { Tournament, Division } from "@/types";
 import { calcStandings } from "@/lib/utils";
 
 const STATUS_TABS = [
@@ -56,8 +56,10 @@ type TournamentWithDetails = Tournament & {
 
 export default function TournamentsPage() {
   const { data, loading, error } = useFetch<TournamentWithDetails[]>("/api/tournaments");
+  const { data: divisions } = useFetch<Division[]>("/api/divisions");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [divisionFilter, setDivisionFilter] = useState("all");
   const router = useRouter();
 
   const counts = useMemo(() => {
@@ -74,8 +76,13 @@ export default function TournamentsPage() {
         t.name.toLowerCase().includes(search.toLowerCase()) ||
         (t.location ?? "").toLowerCase().includes(search.toLowerCase())
       )
-      .filter((t) => status === "" || t.status === status);
-  }, [data, search, status]);
+      .filter((t) => status === "" || t.status === status)
+      .filter((t) => {
+        if (divisionFilter === "all") return true;
+        if (divisionFilter === "unassigned") return t.divisionId == null;
+        return t.divisionId === Number(divisionFilter);
+      });
+  }, [data, search, status, divisionFilter]);
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-10 space-y-6">
@@ -112,7 +119,6 @@ export default function TournamentsPage() {
         </div>
       </div>
 
-
       {/* Filter tabs */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-full sm:w-fit">
         {STATUS_TABS.map((tab) => {
@@ -128,7 +134,6 @@ export default function TournamentsPage() {
                   : "flex-[1] px-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 }`}
             >
-              {/* Label: always visible on desktop, only on active on mobile */}
               <span className={`truncate ${isActive ? "inline" : "hidden sm:inline"}`}>
                 {tab.label}
               </span>
@@ -144,6 +149,48 @@ export default function TournamentsPage() {
             </button>
           );
         })}
+      </div>
+
+      {/* Division filter tabs */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setDivisionFilter("all")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+            divisionFilter === "all"
+              ? "bg-teal-700 text-white border-teal-700"
+              : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+          }`}
+        >
+          All Divisions
+        </button>
+
+        {divisions?.map((d) => (
+          <button
+            key={d.id}
+            type="button"
+            onClick={() => setDivisionFilter(String(d.id))}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+              divisionFilter === String(d.id)
+                ? "bg-teal-700 text-white border-teal-700"
+                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+            }`}
+          >
+            {d.name}
+          </button>
+        ))}
+
+        <button
+          type="button"
+          onClick={() => setDivisionFilter("unassigned")}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
+            divisionFilter === "unassigned"
+              ? "bg-teal-700 text-white border-teal-700"
+              : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+          }`}
+        >
+          Unassigned
+        </button>
       </div>
 
       {/* Loading */}
@@ -209,6 +256,11 @@ export default function TournamentsPage() {
                           <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[t.status] ?? "bg-gray-400"}`} />
                           {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
                         </span>
+                        {t.division?.name && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                            {t.division.name}
+                          </span>
+                        )}
                       </div>
                       {t.location && (
                         <div className="hidden sm:flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400">

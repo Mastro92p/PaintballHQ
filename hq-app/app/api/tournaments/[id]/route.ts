@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db'
 import { apiError } from '@/lib/utils'
 import type { UpdateTournamentBody } from '@/types'
 
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -12,6 +13,7 @@ export async function GET(
     const tournament = await prisma.tournament.findUnique({
       where: { id },
       include: {
+        division: true,
         teams: { include: { team: true } },
         matches: {
           include: { teamA: true, teamB: true },
@@ -26,6 +28,7 @@ export async function GET(
   }
 }
 
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -34,6 +37,8 @@ export async function PATCH(
     const { id: rawId } = await params
     const id = parseInt(rawId)
     const body: UpdateTournamentBody = await req.json()
+
+
     if (body.teamIds !== undefined) {
       await prisma.tournamentTeam.deleteMany({ where: { tournamentId: id } })
       if (body.teamIds.length > 0) {
@@ -42,6 +47,20 @@ export async function PATCH(
         })
       }
     }
+
+
+    let divisionId: number | null | undefined = undefined
+    if (body.divisionId !== undefined) {
+      divisionId =
+        body.divisionId === null || body.divisionId === ''
+          ? null
+          : Number(body.divisionId)
+      if (divisionId !== null && Number.isNaN(divisionId)) {
+        return apiError('Invalid division')
+      }
+    }
+
+
     const tournament = await prisma.tournament.update({
       where: { id },
       data: {
@@ -49,18 +68,24 @@ export async function PATCH(
         ...(body.date && { date: body.date }),
         ...(body.location && { location: body.location.trim() }),
         ...(body.status && { status: body.status }),
-        ...(body.type && { type: body.type }),                          // ← new
+        ...(body.type && { type: body.type }),
         ...(body.formatConfig !== undefined && { formatConfig: body.formatConfig ?? null }),
-        ...(body.teamsToAdvance && { teamsToAdvance: body.teamsToAdvance }), // ← new
-        ...(body.leagueId !== undefined && { leagueId: body.leagueId ?? null }), // ← new
+        ...(body.teamsToAdvance && { teamsToAdvance: body.teamsToAdvance }),
+        ...(body.leagueId !== undefined && { leagueId: body.leagueId ?? null }),
+        ...(divisionId !== undefined && { divisionId }),
       },
-      include: { teams: { include: { team: true } }, matches: true },
+      include: {
+        division: true,
+        teams: { include: { team: true } },
+        matches: true,
+      },
     })
     return Response.json(tournament)
   } catch {
     return apiError('Failed to update tournament', 500)
   }
 }
+
 
 export async function DELETE(
   _req: Request,
