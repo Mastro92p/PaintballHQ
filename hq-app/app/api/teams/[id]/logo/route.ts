@@ -6,7 +6,7 @@ import { apiError } from '@/lib/utils'
 const MAX_SIZE = 2 * 1024 * 1024 // 2MB
 const MAX_DIMENSION = 2000
 const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp']
-
+// need to add a check for the file type and size before processing the image
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
