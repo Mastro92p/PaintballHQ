@@ -72,4 +72,4 @@ export async function POST(req: Request) {
     console.error('POST /api/teams failed:', error)
     return apiError('Failed to create team', 500)
   }
-}
+} // testr
