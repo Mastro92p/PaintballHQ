@@ -35,7 +35,13 @@ export async function GET() {
     return Response.json(enriched)
   } catch (error) {
     console.error('GET /api/teams failed:', error)
-    return apiError('Failed to fetch teams', 500)
+    return Response.json(
+      {
+        error: 'Failed to fetch teams',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    )
   }
 }
 
@@ -70,6 +76,12 @@ export async function POST(req: Request) {
     return Response.json(team, { status: 201 })
   } catch (error) {
     console.error('POST /api/teams failed:', error)
-    return apiError('Failed to create team', 500)
+    return Response.json(
+      {
+        error: 'Failed to create team',
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 }
+    )
   }
-} // testr
+}
