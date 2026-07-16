@@ -130,7 +130,7 @@ export async function DELETE(
 
     await prisma.tournamentTeam.updateMany({
       where: { tournamentId },
-      data: { group: null },
+      data: { groups: { set: [] } },
     })
 
     return Response.json({ success: true })

@@ -198,8 +198,14 @@ export default function ManageTournamentsPage() {
         ...(form.type === "group_and_bracket" && {
           groupCount: parseInt(form.groupCount || "0", 10),
           teamsPerGroup: parseInt(form.teamsPerGroup || "0", 10),
-          qualifiersPerGroup: parseInt(form.qualifiersPerGroup || "0", 10),
-          wildCardCount: parseInt(form.wildCardCount || "0", 10),
+          qualifiersPerGroup:
+            form.managementMode === "manual"
+              ? 2
+              : parseInt(form.qualifiersPerGroup || "0", 10),
+          wildCardCount:
+            form.managementMode === "manual"
+              ? 0
+              : parseInt(form.wildCardCount || "0", 10),
           bracketSeedingRule: form.bracketSeedingRule,
         }),
         thirdPlaceMatch: form.thirdPlaceMatch,
@@ -516,7 +522,8 @@ export default function ManageTournamentsPage() {
             />
           )}
 
-          {(form.type === "bracket" || form.type === "group_and_bracket") && (
+          {(form.type === "bracket" ||
+            (form.type === "group_and_bracket" && form.managementMode === "auto")) && (
             <div className="flex items-center justify-between rounded-lg border border-gray-200 dark:border-gray-700 p-4">
               <div className="space-y-0.5">
                 <label

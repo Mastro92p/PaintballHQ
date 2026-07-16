@@ -36,7 +36,7 @@ export interface TournamentTeam {
   teamId: number
   tournament?: Tournament
   team?: Team
-  group?: string | null
+  groups?: string[];
 }
 
 export interface Match {
@@ -189,6 +189,7 @@ export interface League {
 export type FormatConfig = {
   groupCount?:         number;
   teamsPerGroup?:      number;
+  groups?:             string[];   // NEW — manual mode's custom, ordered group names
   qualifiersPerGroup?: number;
   wildCardCount?: number;
   bracketSeedingRule?: "crossover" | "sequential";

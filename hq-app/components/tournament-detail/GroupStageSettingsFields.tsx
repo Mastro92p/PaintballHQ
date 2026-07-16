@@ -73,112 +73,123 @@ export function GroupStageSettingsFields<F extends GroupFormFields>({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Number of groups <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            min="2"
-            max="8"
-            value={form.groupCount ?? ""}
-            onChange={(e) => setField("groupCount", e.target.value as F["groupCount"])}
-            className={inputCls("groupCount")}
-            placeholder="2"
-          />
-          {errors.groupCount && <p className="text-xs text-red-500">{errors.groupCount}</p>}
+      {form.managementMode === "auto" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Number of groups <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              min="2"
+              max="8"
+              value={form.groupCount ?? ""}
+              onChange={(e) => setField("groupCount", e.target.value as F["groupCount"])}
+              className={inputCls("groupCount")}
+              placeholder="2"
+            />
+            {errors.groupCount && <p className="text-xs text-red-500">{errors.groupCount}</p>}
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Teams per group <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              min="2"
+              max="10"
+              value={form.teamsPerGroup ?? ""}
+              onChange={(e) => setField("teamsPerGroup", e.target.value as F["teamsPerGroup"])}
+              className={inputCls("teamsPerGroup")}
+              placeholder="4"
+            />
+            {errors.teamsPerGroup && (
+              <p className="text-xs text-red-500">{errors.teamsPerGroup}</p>
+            )}
+          </div>
         </div>
+      )}
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Teams per group <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            min="2"
-            max="10"
-            value={form.teamsPerGroup ?? ""}
-            onChange={(e) => setField("teamsPerGroup", e.target.value as F["teamsPerGroup"])}
-            className={inputCls("teamsPerGroup")}
-            placeholder="4"
-          />
-          {errors.teamsPerGroup && (
-            <p className="text-xs text-red-500">{errors.teamsPerGroup}</p>
-          )}
+      {form.managementMode === "auto" && (
+        <>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Qualifiers per group <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={form.qualifiersPerGroup ?? ""}
+              onChange={(e) => setField("qualifiersPerGroup", e.target.value as F["qualifiersPerGroup"])}
+              className={inputCls("qualifiersPerGroup")}
+              placeholder="2"
+            />
+            {errors.qualifiersPerGroup && (
+              <p className="text-xs text-red-500">{errors.qualifiersPerGroup}</p>
+            )}
+            <p className="text-xs text-gray-400">
+              Top N teams from each group advance to the bracket
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Wild cards
+            </label>
+            <input
+              type="number"
+              min="0"
+              value={form.wildCardCount ?? ""}
+              onChange={(e) => setField("wildCardCount", e.target.value as F["wildCardCount"])}
+              className={inputCls("wildCardCount")}
+              placeholder="2"
+            />
+            {errors.wildCardCount && <p className="text-xs text-red-500">{errors.wildCardCount}</p>}
+            <p className="text-xs text-gray-400">
+              Extra best-performing teams across all groups that also advance
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Bracket seeding
+            </label>
+            <select
+              value={form.bracketSeedingRule ?? "crossover"}
+              onChange={(e) =>
+                setField("bracketSeedingRule", e.target.value as F["bracketSeedingRule"])
+              }
+              className={inputCls("bracketSeedingRule")}
+            >
+              {SEEDING_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-400">
+              How group winners are matched up in the first knockout round
+            </p>
+          </div>
+        </>
+      )}
+
+      {form.managementMode === "manual" && (
+        <div className="rounded-md bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs text-gray-500 dark:text-gray-400">
+          Groups will be created and named manually from the tournament&apos;s Matches tab after saving. Advancement and bracket matches are also built manually — no automated qualifier rules apply.
         </div>
-      </div>
+      )}
 
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Qualifiers per group <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="number"
-          min="1"
-          value={form.qualifiersPerGroup ?? ""}
-          onChange={(e) => setField("qualifiersPerGroup", e.target.value as F["qualifiersPerGroup"])}
-          className={inputCls("qualifiersPerGroup")}
-          placeholder="2"
-        />
-        {errors.qualifiersPerGroup && (
-          <p className="text-xs text-red-500">{errors.qualifiersPerGroup}</p>
-        )}
-        <p className="text-xs text-gray-400">
-          Top N teams from each group advance to the bracket
-        </p>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Wild cards
-        </label>
-        <input
-          type="number"
-          min="0"
-          value={form.wildCardCount ?? ""}
-          onChange={(e) => setField("wildCardCount", e.target.value as F["wildCardCount"])}
-          className={inputCls("wildCardCount")}
-          placeholder="2"
-        />
-        {errors.wildCardCount && <p className="text-xs text-red-500">{errors.wildCardCount}</p>}
-        <p className="text-xs text-gray-400">
-          Extra best-performing teams across all groups that also advance
-        </p>
-      </div>
-
-      <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Bracket seeding
-        </label>
-        <select
-          value={form.bracketSeedingRule ?? "crossover"}
-          onChange={(e) =>
-            setField(
-              "bracketSeedingRule",
-              e.target.value as F["bracketSeedingRule"]
-            )
-          }
-          className={inputCls("bracketSeedingRule")}
-        >
-          {SEEDING_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-400">
-          How group winners are matched up in the first knockout round
-        </p>
-      </div>
-
-      <div className="rounded-md bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 px-3 py-2 text-xs text-teal-700 dark:text-teal-300">
-        {groupCount} groups × {teamsPerGroup} teams ={" "}
-        <strong>{groupCount * teamsPerGroup} total teams</strong>
-        {" · "}
-        <strong>{groupCount * qualifiersPerGroup + wildCardCount} advance</strong> to the
-        bracket
-      </div>
+      {form.managementMode === "auto" && (
+        <div className="rounded-md bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 px-3 py-2 text-xs text-teal-700 dark:text-teal-300">
+          {groupCount} groups × {teamsPerGroup} teams ={" "}
+          <strong>{groupCount * teamsPerGroup} total teams</strong>
+          {" · "}
+          <strong>{groupCount * qualifiersPerGroup + wildCardCount} advance</strong> to the
+          bracket
+        </div>
+      )}
     </div>
   );
 }

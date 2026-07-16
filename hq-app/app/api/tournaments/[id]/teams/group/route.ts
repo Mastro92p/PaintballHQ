@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db'
 import { apiError } from '@/lib/utils'
-import type { FormatConfig, AssignTeamGroupBody } from '@/types'
+import type { FormatConfig } from '@/types'
 
 export async function PATCH(
   req: Request,
@@ -9,7 +9,7 @@ export async function PATCH(
   try {
     const { id: rawId } = await params
     const tournamentId = parseInt(rawId)
-    const body: AssignTeamGroupBody = await req.json()
+    const body = await req.json()
 
     if (!body.teamId) return apiError('teamId is required')
 
@@ -29,24 +29,20 @@ export async function PATCH(
     const enrolled = tournament.teams.find((t) => t.teamId === body.teamId)
     if (!enrolled) return apiError('Team is not enrolled in this tournament', 400)
 
-    // ── Validate group label & capacity ─────────────────────────
-    if (body.group !== null) {
-      const fc = (tournament.formatConfig ?? {}) as FormatConfig
-      const groupLabels = 'ABCDEFGH'.slice(0, fc.groupCount ?? 0).split('')
+    const fc = (tournament.formatConfig ?? {}) as FormatConfig
+    const groupLabels = fc.groups ?? []
 
-      if (!groupLabels.includes(body.group)) {
-        return apiError(`Invalid group. Must be one of: ${groupLabels.join(', ')}`, 400)
-      }
+    const nextGroups = Array.isArray(body.groups) ? body.groups : []
 
-      if (fc.teamsPerGroup != null) {
-        const currentCount = tournament.teams.filter(
-          (t) => t.group === body.group && t.teamId !== body.teamId
-        ).length
+    const invalidGroups = nextGroups.filter(
+      (group: string) => !groupLabels.includes(group)
+    )
 
-        if (currentCount >= fc.teamsPerGroup) {
-          return apiError(`Group ${body.group} is full (${fc.teamsPerGroup} teams max)`, 400)
-        }
-      }
+    if (invalidGroups.length > 0) {
+      return apiError(
+        `Invalid group(s): ${invalidGroups.join(', ')}. Must be one of: ${groupLabels.join(', ')}`,
+        400
+      )
     }
 
     const updated = await prisma.tournamentTeam.update({
@@ -56,7 +52,9 @@ export async function PATCH(
           teamId: body.teamId,
         },
       },
-      data: { group: body.group },
+      data: {
+        groups: nextGroups,
+      },
     })
 
     return Response.json(updated)

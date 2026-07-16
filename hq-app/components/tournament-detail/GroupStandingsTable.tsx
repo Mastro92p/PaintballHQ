@@ -24,37 +24,55 @@ export function GroupStandingsTable({ rows, isClassic }: Props) {
           <tr>
             <th className="px-3 py-3 text-left w-6">#</th>
             <th className="px-3 py-3 text-left">Team</th>
+            <th className="px-3 py-3 text-center w-8">P</th>
             <th className="px-3 py-3 text-center w-8">W</th>
             <th className="px-3 py-3 text-center w-8">D</th>
             <th className="px-3 py-3 text-center w-8">L</th>
-            <th className="px-3 py-3 text-center w-14">{isClassic ? "Bodies" : "GD"}</th>
+            <th className="px-3 py-3 text-center w-10">GF</th>
+            <th className="px-3 py-3 text-center w-10">GA</th>
+            <th className="px-3 py-3 text-center w-12">GD</th>
+            {isClassic && (
+              <th className="px-3 py-3 text-center w-14">Bodies</th>
+            )}
             <th className="px-3 py-3 text-center w-10 font-bold text-amber-400">Pts</th>
           </tr>
         </thead>
 
         <tbody className="divide-y divide-[#22314d]">
-          {rows.map((row, idx) => (
-            <tr
-              key={row.teamId}
-              className={`bg-transparent ${idx === 0 ? "border-l-2 border-l-teal-400" : ""}`}
-            >
-              <td className="px-3 py-3 text-gray-400 tabular-nums">{idx + 1}</td>
-              <td className="px-3 py-3 font-medium text-gray-100">{row.teamName}</td>
-              <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
-                {row.w}
-              </td>
-              <td className="px-3 py-3 text-center tabular-nums text-gray-300">{row.d}</td>
-              <td className="px-3 py-3 text-center tabular-nums font-semibold text-rose-400">
-                {row.l}
-              </td>
-              <td className="px-3 py-3 text-center tabular-nums text-gray-400">
-                {isClassic ? row.bodyCount : row.gd > 0 ? `+${row.gd}` : row.gd}
-              </td>
-              <td className="px-3 py-3 text-center tabular-nums font-bold text-amber-400">
-                {row.pts}
-              </td>
-            </tr>
-          ))}
+          {rows.map((row, idx) => {
+            const played = row.w + row.d + row.l;
+
+            return (
+              <tr
+                key={row.teamId}
+                className={`bg-transparent ${idx === 0 ? "border-l-2 border-l-teal-400" : ""}`}
+              >
+                <td className="px-3 py-3 text-gray-400 tabular-nums">{idx + 1}</td>
+                <td className="px-3 py-3 font-medium text-gray-100">{row.teamName}</td>
+                <td className="px-3 py-3 text-center tabular-nums text-gray-300">{played}</td>
+                <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
+                  {row.w}
+                </td>
+                <td className="px-3 py-3 text-center tabular-nums text-gray-300">{row.d}</td>
+                <td className="px-3 py-3 text-center tabular-nums font-semibold text-rose-400">
+                  {row.l}
+                </td>
+                <td className="px-3 py-3 text-center tabular-nums text-gray-300">{row.gf}</td>
+                <td className="px-3 py-3 text-center tabular-nums text-gray-300">{row.ga}</td>
+                <td className="px-3 py-3 text-center tabular-nums text-gray-400">
+                  {row.gd > 0 ? `+${row.gd}` : row.gd}
+                </td>
+                {isClassic && (
+                  <td className="px-3 py-3 text-center tabular-nums text-gray-400">
+                    {row.bodyCount}
+                  </td>
+                )}
+                <td className="px-3 py-3 text-center tabular-nums font-bold text-amber-400">
+                  {row.pts}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

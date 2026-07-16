@@ -51,10 +51,10 @@ export default function ManageTournamentDetailPage({
   // ── Manual group assignment state ─────────────────────────
   const [assigningTeamId, setAssigningTeamId] = useState<number | null>(null);
 
-  const teamGroups = useMemo(() => {
+  const teamGroups = useMemo<Record<number, string[]>>(() => {
     if (!data) return {};
     return Object.fromEntries(
-      data.teams.map((t) => [t.teamId, t.group ?? null])
+      data.teams.map((t) => [t.teamId, t.groups ?? []])
     );
   }, [data]);
 
@@ -66,23 +66,34 @@ export default function ManageTournamentDetailPage({
     refetch();
   }
 
-  async function handleAssignGroup(teamId: number, group: string | null) {
-    setAssigningTeamId(teamId);
-    try {
-      const res = await fetch(`/api/tournaments/${id}/teams/group`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teamId, group }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        alert(body.error ?? "Failed to assign group");
-      }
-      await refetch();
-    } finally {
-      setAssigningTeamId(null);
+async function handleAssignGroup(teamId: number, group: string | null) {
+  setAssigningTeamId(teamId);
+  try {
+    const currentGroups = teamGroups[teamId] ?? [];
+
+    const nextGroups =
+      group === null
+        ? currentGroups
+        : currentGroups.includes(group)
+        ? currentGroups.filter((g) => g !== group)
+        : [...currentGroups, group];
+
+    const res = await fetch(`/api/tournaments/${id}/teams/group`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teamId, groups: nextGroups }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(body.error ?? "Failed to assign group");
     }
+
+    await refetch();
+  } finally {
+    setAssigningTeamId(null);
   }
+}
 
 
   useEffect(() => {
@@ -215,6 +226,42 @@ export default function ManageTournamentDetailPage({
   const [generatingBracket, setGeneratingBracket] = useState(false);
   const [bracketError, setBracketError] = useState<string | null>(null);
   const [resettingBracket, setResettingBracket] = useState(false);
+  const [savingGroups, setSavingGroups] = useState(false);
+
+
+
+  async function handleAddGroup(name: string) {
+    setSavingGroups(true);
+    await fetch(`/api/tournaments/${id}/groups`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "add", name }),
+    });
+    setSavingGroups(false);
+    refetch();
+  }
+
+  async function handleRenameGroup(oldName: string, newName: string) {
+    setSavingGroups(true);
+    await fetch(`/api/tournaments/${id}/groups`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "rename", oldName, newName }),
+    });
+    setSavingGroups(false);
+    refetch();
+  }
+
+  async function handleDeleteGroup(name: string) {
+    setSavingGroups(true);
+    await fetch(`/api/tournaments/${id}/groups`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", name }),
+    });
+    setSavingGroups(false);
+    refetch();
+  }
 
   async function handleResetBracket() {
     if (!confirm("Delete the entire bracket? This cannot be undone.")) return;
@@ -293,14 +340,14 @@ export default function ManageTournamentDetailPage({
 
   const modalTeams = useMemo(() => {
     if (!isGroupAndBracket) return enrolledTeams;
-    return enrolledTeams.filter((t) => teamGroups[t.id] === activeGroupTab);
+    return enrolledTeams.filter((t) => (teamGroups[t.id] ?? []).includes(activeGroupTab));
   }, [isGroupAndBracket, enrolledTeams, teamGroups, activeGroupTab]);
 
 
   const editModalTeams = useMemo(() => {
     if (!isGroupAndBracket || !editingMatch) return enrolledTeams;
     const g = editingMatch.group ?? activeGroupTab;
-    return enrolledTeams.filter((t) => teamGroups[t.id] === g);
+    return enrolledTeams.filter((t) => (teamGroups[t.id] ?? []).includes(g));
   }, [isGroupAndBracket, editingMatch, enrolledTeams, teamGroups, activeGroupTab]);
 
   function validateMatchForm(form: MatchForm): MatchFormErrors {
@@ -599,10 +646,14 @@ export default function ManageTournamentDetailPage({
           assigningTeamId={assigningTeamId}
           generatingGroups={generatingGroups}
           resettingGroups={resettingGroups}
+          savingGroups={savingGroups}
           groupsError={groupsError}
           deletingMatch={deletingMatch}
           onGenerateGroups={handleGenerateGroups}
           onResetGroups={handleResetGroups}
+          onAddGroup={handleAddGroup}
+          onRenameGroup={handleRenameGroup}
+          onDeleteGroup={handleDeleteGroup}
           onOpenAddMatch={(group) => {
             setMatchForm(emptyMatchForm);
             setMatchErrors({});

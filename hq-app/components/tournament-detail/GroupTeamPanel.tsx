@@ -4,7 +4,7 @@ type Props = {
   group: string;
   capacity?: number;
   allTeams: Team[];
-  teamGroups: Record<number, string | null>;
+  teamGroups: Record<number, string[]>;   // teamId -> array of group labels
   assigningTeamId: number | null;
   onAssign: (teamId: number, group: string | null) => void;
 };
@@ -17,8 +17,8 @@ export function GroupTeamPanel({
   assigningTeamId,
   onAssign,
 }: Props) {
-  const assigned = allTeams.filter((t) => teamGroups[t.id] === group);
-  const unassigned = allTeams.filter((t) => !teamGroups[t.id]);
+  const assigned = allTeams.filter((t) => (teamGroups[t.id] ?? []).includes(group));
+  const availableToAdd = allTeams.filter((t) => !(teamGroups[t.id] ?? []).includes(group));
   const isFull = capacity != null && assigned.length >= capacity;
 
   return (
@@ -51,7 +51,7 @@ export function GroupTeamPanel({
             >
               {t.name}
               <button
-                onClick={() => onAssign(t.id, null)}
+                onClick={() => onAssign(t.id, group)}
                 disabled={assigningTeamId === t.id}
                 className="hover:text-red-500 transition-colors"
                 title="Remove from group"
@@ -63,7 +63,7 @@ export function GroupTeamPanel({
         )}
       </div>
 
-      {!isFull && unassigned.length > 0 && (
+      {!isFull && availableToAdd.length > 0 && (
         <select
           value=""
           disabled={assigningTeamId !== null}
@@ -74,7 +74,7 @@ export function GroupTeamPanel({
           className="w-full sm:w-64 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#22314d] bg-white dark:bg-[#0a1428] text-sm text-gray-900 dark:text-gray-200"
         >
           <option value="">+ Add team to Group {group}...</option>
-          {unassigned.map((t) => (
+          {availableToAdd.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
             </option>

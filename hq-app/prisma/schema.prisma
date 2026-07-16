@@ -84,7 +84,7 @@ model TournamentTeam {
   tournamentId Int
   team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId       Int
-  group String?
+  groups       String[] @default([])
 
   @@id([tournamentId, teamId])
 }

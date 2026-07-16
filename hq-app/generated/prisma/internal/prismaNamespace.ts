@@ -1105,7 +1105,7 @@ export type TeamScalarFieldEnum = (typeof TeamScalarFieldEnum)[keyof typeof Team
 export const TournamentTeamScalarFieldEnum = {
   tournamentId: 'tournamentId',
   teamId: 'teamId',
-  group: 'group'
+  groups: 'groups'
 } as const
 
 export type TournamentTeamScalarFieldEnum = (typeof TournamentTeamScalarFieldEnum)[keyof typeof TournamentTeamScalarFieldEnum]
