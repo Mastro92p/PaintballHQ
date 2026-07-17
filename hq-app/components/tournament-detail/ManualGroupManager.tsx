@@ -79,15 +79,7 @@ export function ManualGroupManager({
               ✎
             </button>
             <button
-              onClick={() => {
-                if (
-                  confirm(
-                    `Delete group "${group.name}"? This will delete its matches and unassign its teams.`
-                  )
-                ) {
-                  onDeleteGroup(group.id);
-                }
-              }}
+              onClick={() => onDeleteGroup(group.id)}
               className="text-gray-400 hover:text-red-500"
               title="Delete group"
             >

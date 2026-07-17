@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/utils";
 import type { Team, Match, CreateMatchBody } from "@/types";
 import { BracketTab } from "@/components/tournament-detail/BracketTab";
 import { InfoTab } from "@/components/tournament-detail/InfoTab";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { TournamentDetail } from "@/types";
 import MatchModal, {
   MatchForm,
@@ -49,21 +50,34 @@ export default function ManageTournamentDetailPage({
   const [resettingGroups, setResettingGroups] = useState(false);
   const [assigningTeamId, setAssigningTeamId] = useState<number | null>(null);
 
-  const teamGroups = useMemo<Record<number, number[]>>(() => {
-    if (!data) return {};
-    return Object.fromEntries(
-      data.teams.map((t) => [
-        t.teamId,
-        (t.groupLinks ?? [])
-          .map((link) => link.groupId)
-          .filter((groupId): groupId is number => typeof groupId === "number"),
-      ])
-    );
-  }, [data]);
+  const [teamGroups, setTeamGroups] = useState<Record<number, number[]>>({});
+
+  const [groupToDelete, setGroupToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState<number | null>(null);
+  const [localMatches, setLocalMatches] = useState<Match[]>([]);
+  const [matchToDelete, setMatchToDelete] = useState<Match | null>(null);
 
   const groupNameById = useMemo<Record<number, string>>(() => {
     return Object.fromEntries((localGroups ?? []).map((g) => [g.id, g.name]));
   }, [localGroups]);
+
+  useEffect(() => {
+    if (!data) {
+      setTeamGroups({});
+      return;
+    }
+
+    setTeamGroups(
+      Object.fromEntries(
+        data.teams.map((t) => [
+          t.teamId,
+          (t.groupLinks ?? [])
+            .map((link) => link.groupId)
+            .filter((groupId): groupId is number => typeof groupId === "number"),
+        ])
+      )
+    );
+  }, [data]);
 
   useEffect(() => {
     setLocalGroups(data?.groups ?? []);
@@ -76,11 +90,13 @@ export default function ManageTournamentDetailPage({
     }
 
     setActiveGroupTab((prev) =>
-      prev != null && localGroups.some((g) => g.id === prev)
-        ? prev
-        : localGroups[0].id
+      prev != null && localGroups.some((g) => g.id === prev) ? prev : localGroups[0].id
     );
   }, [localGroups]);
+
+  useEffect(() => {
+    setLocalMatches(data?.matches ?? []);
+  }, [data?.matches]);
 
   async function handleResetGroups() {
     if (
@@ -98,16 +114,22 @@ export default function ManageTournamentDetailPage({
 
   async function handleAssignGroup(teamId: number, groupId: number | null) {
     setAssigningTeamId(teamId);
+
+    const previousGroupIds = teamGroups[teamId] ?? [];
+
+    const nextGroupIds =
+      groupId === null
+        ? previousGroupIds
+        : previousGroupIds.includes(groupId)
+        ? previousGroupIds.filter((g) => g !== groupId)
+        : [...previousGroupIds, groupId];
+
+    setTeamGroups((prev) => ({
+      ...prev,
+      [teamId]: nextGroupIds,
+    }));
+
     try {
-      const currentGroupIds = teamGroups[teamId] ?? [];
-
-      const nextGroupIds =
-        groupId === null
-          ? currentGroupIds
-          : currentGroupIds.includes(groupId)
-          ? currentGroupIds.filter((g) => g !== groupId)
-          : [...currentGroupIds, groupId];
-
       const res = await fetch(`/api/tournaments/${id}/teams/group`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -116,10 +138,21 @@ export default function ManageTournamentDetailPage({
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+
+        setTeamGroups((prev) => ({
+          ...prev,
+          [teamId]: previousGroupIds,
+        }));
+
         alert(body.error ?? "Failed to assign group");
       }
-
-      await refetch();
+    } catch (error) {
+      setTeamGroups((prev) => ({
+        ...prev,
+        [teamId]: previousGroupIds,
+      }));
+      console.error(error);
+      alert("Failed to assign group");
     } finally {
       setAssigningTeamId(null);
     }
@@ -132,10 +165,11 @@ export default function ManageTournamentDetailPage({
     setLocalAvailable(allTeams.filter((t) => !enrolledIds.has(t.id)));
   }, [data, allTeams]);
 
-  const originalEnrolledIds = useMemo(
-    () => new Set(data?.teams.map((t) => t.teamId) ?? []),
-    [data]
-  );
+  const [originalEnrolledIds, setOriginalEnrolledIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    setOriginalEnrolledIds(new Set(data?.teams.map((t) => t.teamId) ?? []));
+  }, [data?.teams]);
 
   const pendingEnrollChanges = useMemo(() => {
     const currentIds = new Set(localEnrolled.map((t) => t.id));
@@ -165,10 +199,12 @@ export default function ManageTournamentDetailPage({
   }
 
   function resetEnrollChanges() {
-    if (!data || !allTeams) return;
-    const enrolledIds = new Set(data.teams.map((t) => t.teamId));
-    setLocalEnrolled(data.teams.map((t) => t.team).filter(Boolean) as Team[]);
-    setLocalAvailable(allTeams.filter((t) => !enrolledIds.has(t.id)));
+    if (!allTeams) return;
+
+    const savedIds = originalEnrolledIds;
+
+    setLocalEnrolled(allTeams.filter((t) => savedIds.has(t.id)));
+    setLocalAvailable(allTeams.filter((t) => !savedIds.has(t.id)));
   }
 
   const [editingBracketMatch, setEditingBracketMatch] = useState<Match | null>(null);
@@ -189,49 +225,107 @@ export default function ManageTournamentDetailPage({
   ) {
     setBracketEditSaving(true);
 
-    await fetch(`/api/matches/${matchId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        teamAId,
-        teamBId,
-        scoreA: null,
-        scoreB: null,
-        status: "pending",
-      }),
-    });
+    const previousMatches = localMatches;
 
-    setBracketEditSaving(false);
-    setEditingBracketMatch(null);
-    refetch();
+    setLocalMatches((prev) =>
+      prev.map((match) =>
+        match.id === matchId
+          ? {
+              ...match,
+              teamAId,
+              teamBId,
+              scoreA: null,
+              scoreB: null,
+              status: "pending",
+            }
+          : match
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/matches/${matchId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamAId,
+          teamBId,
+          scoreA: null,
+          scoreB: null,
+          status: "pending",
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to update bracket match");
+      }
+
+      if (body.match) {
+        setLocalMatches((prev) =>
+          prev.map((match) =>
+            match.id === matchId
+              ? {
+                  ...match,
+                  ...body.match,
+                }
+              : match
+          )
+        );
+      }
+
+      setEditingBracketMatch(null);
+    } catch (error) {
+      console.error(error);
+      setLocalMatches(previousMatches);
+      alert("Failed to update bracket match");
+    } finally {
+      setBracketEditSaving(false);
+    }
   }
 
   async function handleBulkSave() {
     if (!data) return;
+
     setBulkSaving(true);
+
+    const previousOriginalIds = new Set(originalEnrolledIds);
     const currentIds = new Set(localEnrolled.map((t) => t.id));
     const toAdd = localEnrolled.filter((t) => !originalEnrolledIds.has(t.id));
-    const toRemove = [...originalEnrolledIds].filter((id) => !currentIds.has(id));
+    const toRemove = [...originalEnrolledIds].filter((teamId) => !currentIds.has(teamId));
 
-    await Promise.all([
-      ...toAdd.map((t) =>
-        fetch(`/api/tournaments/${id}/teams`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teamId: t.id }),
-        })
-      ),
-      ...toRemove.map((teamId) =>
-        fetch(`/api/tournaments/${id}/teams`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teamId }),
-        })
-      ),
-    ]);
+    try {
+      const results = await Promise.all([
+        ...toAdd.map((t) =>
+          fetch(`/api/tournaments/${id}/teams`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ teamId: t.id }),
+          })
+        ),
+        ...toRemove.map((teamId) =>
+          fetch(`/api/tournaments/${id}/teams`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ teamId }),
+          })
+        ),
+      ]);
 
-    setBulkSaving(false);
-    refetch();
+      const failed = results.find((res) => !res.ok);
+
+      if (failed) {
+        throw new Error("Failed to save team changes");
+      }
+
+      setOriginalEnrolledIds(new Set(currentIds));
+    } catch (error) {
+      console.error(error);
+      setOriginalEnrolledIds(previousOriginalIds);
+      alert("Failed to save team changes");
+    } finally {
+      setBulkSaving(false);
+    }
   }
 
   const [matchModalOpen, setMatchModalOpen] = useState(false);
@@ -253,36 +347,121 @@ export default function ManageTournamentDetailPage({
   const [savingGroups, setSavingGroups] = useState(false);
 
   async function handleAddGroup(name: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName) return;
+
     setSavingGroups(true);
-    await fetch(`/api/tournaments/${id}/groups`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "add", name }),
-    });
-    setSavingGroups(false);
-    refetch();
+
+    const previousGroups = localGroups;
+    const tempId = Date.now();
+
+    const optimisticGroup = {
+      id: tempId,
+      name: trimmedName,
+      order: localGroups.length,
+    };
+
+    setLocalGroups((prev) => [...prev, optimisticGroup as (typeof prev)[number]]);
+
+    try {
+      const res = await fetch(`/api/tournaments/${id}/groups`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add", name: trimmedName }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to add group");
+      }
+
+      setLocalGroups(body.groups ?? previousGroups);
+    } catch (error) {
+      console.error(error);
+      setLocalGroups(previousGroups);
+      alert("Failed to add group");
+    } finally {
+      setSavingGroups(false);
+    }
   }
 
   async function handleRenameGroup(groupId: number, newName: string) {
+    const trimmedName = newName.trim();
+    if (!trimmedName) return;
+
     setSavingGroups(true);
-    await fetch(`/api/tournaments/${id}/groups`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "rename", groupId, newName }),
-    });
-    setSavingGroups(false);
-    refetch();
+
+    const previousGroups = localGroups;
+
+    setLocalGroups((prev) =>
+      prev.map((group) => (group.id === groupId ? { ...group, name: trimmedName } : group))
+    );
+
+    try {
+      const res = await fetch(`/api/tournaments/${id}/groups`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rename", groupId, newName: trimmedName }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to rename group");
+      }
+
+      setLocalGroups(body.groups ?? previousGroups);
+    } catch (error) {
+      console.error(error);
+      setLocalGroups(previousGroups);
+      alert("Failed to rename group");
+    } finally {
+      setSavingGroups(false);
+    }
   }
 
   async function handleDeleteGroup(groupId: number) {
+    const group = localGroups.find((g) => g.id === groupId);
+    if (!group) return;
+
+    setGroupToDelete({ id: group.id, name: group.name });
+  }
+
+  async function confirmDeleteGroup() {
+    if (!groupToDelete) return;
+
     setSavingGroups(true);
-    await fetch(`/api/tournaments/${id}/groups`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "delete", groupId }),
-    });
-    setSavingGroups(false);
-    refetch();
+    setDeletingGroup(groupToDelete.id);
+
+    const previousGroups = localGroups;
+    const deletingId = groupToDelete.id;
+
+    setLocalGroups((prev) => prev.filter((group) => group.id !== deletingId));
+    setGroupToDelete(null);
+
+    try {
+      const res = await fetch(`/api/tournaments/${id}/groups`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", groupId: deletingId }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to delete group");
+      }
+
+      setLocalGroups(body.groups ?? previousGroups);
+    } catch (error) {
+      console.error(error);
+      setLocalGroups(previousGroups);
+      alert("Failed to delete group");
+    } finally {
+      setSavingGroups(false);
+      setDeletingGroup(null);
+    }
   }
 
   async function handleReorderGroups(groupIds: number[]) {
@@ -330,17 +509,57 @@ export default function ManageTournamentDetailPage({
     const { scoreA, scoreB } = getBracketScore(matchId);
     setSavingBracketMatch(matchId);
 
-    await fetch(`/api/matches/${matchId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        scoreA: scoreA !== "" ? parseInt(scoreA, 10) : null,
-        scoreB: scoreB !== "" ? parseInt(scoreB, 10) : null,
-      }),
-    });
+    const nextScoreA = scoreA !== "" ? parseInt(scoreA, 10) : null;
+    const nextScoreB = scoreB !== "" ? parseInt(scoreB, 10) : null;
+    const previousMatches = localMatches;
 
-    setSavingBracketMatch(null);
-    refetch();
+    setLocalMatches((prev) =>
+      prev.map((match) =>
+        match.id === matchId
+          ? {
+              ...match,
+              scoreA: nextScoreA,
+              scoreB: nextScoreB,
+            }
+          : match
+      )
+    );
+
+    try {
+      const res = await fetch(`/api/matches/${matchId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scoreA: nextScoreA,
+          scoreB: nextScoreB,
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to save bracket score");
+      }
+
+      if (body.match) {
+        setLocalMatches((prev) =>
+          prev.map((match) =>
+            match.id === matchId
+              ? {
+                  ...match,
+                  ...body.match,
+                }
+              : match
+          )
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      setLocalMatches(previousMatches);
+      alert("Failed to save bracket score");
+    } finally {
+      setSavingBracketMatch(null);
+    }
   }
 
   const enrolledTeams = useMemo(() => {
@@ -349,8 +568,7 @@ export default function ManageTournamentDetailPage({
   }, [data]);
 
   const matchesByRound = useMemo(() => {
-    if (!data?.matches) return {};
-    return data.matches
+    return localMatches
       .filter((m) => m.phase === "group")
       .reduce<Record<number, Match[]>>((acc, m) => {
         const r = m.round ?? 0;
@@ -358,16 +576,16 @@ export default function ManageTournamentDetailPage({
         acc[r].push(m);
         return acc;
       }, {});
-  }, [data]);
+  }, [localMatches]);
 
   const hasBracketMatches = useMemo(
-    () => data?.matches.some((m) => m.phase && m.phase !== "group") ?? false,
-    [data]
+    () => localMatches.some((m) => m.phase && m.phase !== "group"),
+    [localMatches]
   );
 
   const hasGroupMatches = useMemo(
-    () => data?.matches.some((m) => m.phase === "group") ?? false,
-    [data]
+    () => localMatches.some((m) => m.phase === "group"),
+    [localMatches]
   );
 
   const isGroupAndBracket = data?.type === "group_and_bracket";
@@ -435,17 +653,32 @@ export default function ManageTournamentDetailPage({
       groupId: isGroupAndBracket ? activeGroupTab : undefined,
     };
 
-    await fetch("/api/matches", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const res = await fetch("/api/matches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    setMatchSaving(false);
-    setMatchModalOpen(false);
-    setMatchForm(emptyMatchForm);
-    setMatchErrors({});
-    refetch();
+      const createdMatch = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error("Failed to add match");
+      }
+
+      if (createdMatch) {
+        setLocalMatches((prev) => [...prev, createdMatch]);
+      }
+
+      setMatchModalOpen(false);
+      setMatchForm(emptyMatchForm);
+      setMatchErrors({});
+    } catch (error) {
+      console.error(error);
+      alert("Failed to add match");
+    } finally {
+      setMatchSaving(false);
+    }
   }
 
   function openEditMatch(m: Match) {
@@ -487,34 +720,134 @@ export default function ManageTournamentDetailPage({
 
     setEditSaving(true);
 
-    await fetch(`/api/matches/${editingMatch.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        teamAId: parseInt(editForm.teamAId, 10),
-        teamBId: parseInt(editForm.teamBId, 10),
-        scoreA: editForm.scoreA !== "" ? parseInt(editForm.scoreA, 10) : null,
-        scoreB: editForm.scoreB !== "" ? parseInt(editForm.scoreB, 10) : null,
-        bodyCountA: editForm.bodyCountA !== "" ? parseInt(editForm.bodyCountA, 10) : null,
-        bodyCountB: editForm.bodyCountB !== "" ? parseInt(editForm.bodyCountB, 10) : null,
-        round: editForm.round.trim() !== "" ? parseInt(editForm.round, 10) : null,
-        label: editForm.label.trim() || null,
-        field: editForm.field.trim() || null,
-      }),
-    });
+    const matchId = editingMatch.id;
+    const previousMatches = localMatches;
 
-    setEditSaving(false);
-    setEditingMatch(null);
-    setEditErrors({});
-    refetch();
+    const nextTeamAId = parseInt(editForm.teamAId, 10);
+    const nextTeamBId = parseInt(editForm.teamBId, 10);
+
+    const nextScoreA = editForm.scoreA !== "" ? parseInt(editForm.scoreA, 10) : null;
+    const nextScoreB = editForm.scoreB !== "" ? parseInt(editForm.scoreB, 10) : null;
+
+    const nextStatus = nextScoreA !== null && nextScoreB !== null ? "completed" : "pending";
+
+
+
+    const optimisticMatch = {
+      ...editingMatch,
+      teamAId: nextTeamAId,
+      teamBId: nextTeamBId,
+      teamA: enrolledTeams.find((t) => t.id === nextTeamAId) ?? null,
+      teamB: enrolledTeams.find((t) => t.id === nextTeamBId) ?? null,
+      scoreA: nextScoreA,
+      scoreB: nextScoreB,
+      bodyCountA: editForm.bodyCountA !== "" ? parseInt(editForm.bodyCountA, 10) : null,
+      bodyCountB: editForm.bodyCountB !== "" ? parseInt(editForm.bodyCountB, 10) : null,
+      round: editForm.round.trim() !== "" ? parseInt(editForm.round, 10) : null,
+      label: editForm.label.trim() || null,
+      field: editForm.field.trim() || null,
+      status: nextStatus,
+    };
+
+    setLocalMatches((prev) =>
+      prev.map((match) => (match.id === matchId ? optimisticMatch : match))
+    );
+
+    try {
+      const res = await fetch(`/api/matches/${matchId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamAId: optimisticMatch.teamAId,
+          teamBId: optimisticMatch.teamBId,
+          scoreA: optimisticMatch.scoreA,
+          scoreB: optimisticMatch.scoreB,
+          bodyCountA: optimisticMatch.bodyCountA,
+          bodyCountB: optimisticMatch.bodyCountB,
+          round: optimisticMatch.round,
+          label: optimisticMatch.label,
+          field: optimisticMatch.field,
+          status: optimisticMatch.status,
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to update match");
+      }
+
+      if (body.match) {
+            setLocalMatches((prev) =>
+              prev.map((match) =>
+                match.id === matchId
+                  ? {
+                      ...match,
+                      ...body.match,
+                      teamA:
+                        body.match.teamA ??
+                        enrolledTeams.find((t) => t.id === (body.match.teamAId ?? match.teamAId)) ??
+                        match.teamA ??
+                        null,
+                      teamB:
+                        body.match.teamB ??
+                        enrolledTeams.find((t) => t.id === (body.match.teamBId ?? match.teamBId)) ??
+                        match.teamB ??
+                        null,
+                      status:
+                        body.match.status ??
+                        ((body.match.scoreA ?? match.scoreA) != null &&
+                        (body.match.scoreB ?? match.scoreB) != null
+                          ? "completed"
+                          : "pending"),
+                    }
+                  : match
+              )
+            );
+          }
+
+      setEditingMatch(null);
+      setEditErrors({});
+    } catch (error) {
+      console.error(error);
+      setLocalMatches(previousMatches);
+      alert("Failed to update match");
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   async function handleDeleteMatch(matchId: number) {
-    if (!confirm("Delete this match?")) return;
+    const match = localMatches.find((m) => m.id === matchId);
+    if (!match) return;
+
+    setMatchToDelete(match);
+  }
+
+  async function confirmDeleteMatch() {
+    if (!matchToDelete) return;
+
+    const matchId = matchToDelete.id;
+    const previousMatches = localMatches;
+
     setDeletingMatch(matchId);
-    await fetch(`/api/matches/${matchId}`, { method: "DELETE" });
-    setDeletingMatch(null);
-    refetch();
+    setLocalMatches((prev) => prev.filter((match) => match.id !== matchId));
+    setMatchToDelete(null);
+
+    try {
+      const res = await fetch(`/api/matches/${matchId}`, { method: "DELETE" });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Failed to delete match");
+      }
+    } catch (error) {
+      console.error(error);
+      setLocalMatches(previousMatches);
+      alert("Failed to delete match");
+    } finally {
+      setDeletingMatch(null);
+    }
   }
 
   async function handleGenerateGroups() {
@@ -588,14 +921,14 @@ export default function ManageTournamentDetailPage({
     {
       key: "matches",
       label: "Matches",
-      count: data.matches.filter((m) => m.phase === "group").length,
+      count: localMatches.filter((m) => m.phase === "group").length,
     },
     ...(data.type !== "round_robin" && data.type !== "round_robin_classic"
       ? [
           {
             key: "bracket" as Tab,
             label: "Bracket",
-            count: data.matches.filter((m) => m.phase !== "group").length,
+            count: localMatches.filter((m) => m.phase !== "group").length,
           },
         ]
       : []),
@@ -613,9 +946,7 @@ export default function ManageTournamentDetailPage({
 
       <div className="space-y-1">
         <div className="flex items-center gap-3 flex-wrap">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            {data.name}
-          </h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{data.name}</h1>
           <Badge variant={statusVariant[data.status] ?? "muted"}>{data.status}</Badge>
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 capitalize">
             {(data.type ?? "round_robin").replace(/_/g, " ")}
@@ -676,7 +1007,7 @@ export default function ManageTournamentDetailPage({
 
       {activeTab === "matches" && (
         <MatchesTab
-          matches={data.matches}
+          matches={localMatches}
           enrolledTeams={enrolledTeams}
           isGroupAndBracket={isGroupAndBracket}
           isClassic={isClassic}
@@ -715,7 +1046,7 @@ export default function ManageTournamentDetailPage({
 
       {activeTab === "bracket" && (
         <BracketTab
-          matches={data.matches}
+          matches={localMatches}
           enrolledTeams={enrolledTeams}
           hasBracketMatches={hasBracketMatches}
           generatingBracket={generatingBracket}
@@ -777,6 +1108,36 @@ export default function ManageTournamentDetailPage({
           setEditErrors({});
         }}
         onSubmit={handleEditMatch}
+      />
+
+      <ConfirmModal
+        open={!!groupToDelete}
+        title={groupToDelete ? `Delete group "${groupToDelete.name}"?` : "Delete group?"}
+        description="This will delete its matches and unassign its teams."
+        confirmLabel="Delete group"
+        cancelLabel="Cancel"
+        danger
+        loading={deletingGroup != null}
+        onCancel={() => {
+          if (deletingGroup != null) return;
+          setGroupToDelete(null);
+        }}
+        onConfirm={confirmDeleteGroup}
+      />
+
+      <ConfirmModal
+        open={!!matchToDelete}
+        title="Delete match?"
+        description="This action cannot be undone."
+        confirmLabel="Delete match"
+        cancelLabel="Cancel"
+        danger
+        loading={deletingMatch != null}
+        onCancel={() => {
+          if (deletingMatch != null) return;
+          setMatchToDelete(null);
+        }}
+        onConfirm={confirmDeleteMatch}
       />
     </main>
   );
