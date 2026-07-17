@@ -406,6 +406,7 @@ export function MatchesTab({
                   allTeams={enrolledTeams}
                   teamGroups={teamGroups}
                   assigningTeamId={assigningTeamId}
+                  managementMode={managementMode}
                   onAssign={onAssignGroup}
                 />
               )}

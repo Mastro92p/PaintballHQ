@@ -17,6 +17,7 @@ import type {
 import { GroupStageSettingsFields } from "@/components/tournament-detail/GroupStageSettingsFields";
 
 const STATUS_OPTIONS = ["upcoming", "active", "completed"] as const;
+const MANUAL_UNLIMITED = 9999;
 
 const TYPE_OPTIONS = [
   { value: "round_robin", label: "Round Robin" },
@@ -76,7 +77,7 @@ const emptyForm: FormState = {
 export default function ManageTournamentsPage() {
   const { data, loading, error, refetch } = useFetch<Tournament[]>("/api/tournaments");
   const { data: divisions } = useFetch<Division[]>("/api/divisions");
-
+  
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Tournament | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -196,8 +197,15 @@ export default function ManageTournamentsPage() {
     ...(isKnockout && {
       formatConfig: {
         ...(form.type === "group_and_bracket" && {
-          groupCount: parseInt(form.groupCount || "0", 10),
-          teamsPerGroup: parseInt(form.teamsPerGroup || "0", 10),
+          groupCount:
+            form.managementMode === "manual"
+              ? MANUAL_UNLIMITED
+              : parseInt(form.groupCount || "0", 10),
+
+          teamsPerGroup:
+            form.managementMode === "manual"
+              ? MANUAL_UNLIMITED
+              : parseInt(form.teamsPerGroup || "0", 10),
           qualifiersPerGroup:
             form.managementMode === "manual"
               ? 2

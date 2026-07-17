@@ -4,6 +4,7 @@ type Props = {
   group: string;
   capacity?: number;
   allTeams: Team[];
+  managementMode: "auto" | "manual";
   teamGroups: Record<number, string[]>;   // teamId -> array of group labels
   assigningTeamId: number | null;
   onAssign: (teamId: number, group: string | null) => void;
@@ -14,6 +15,7 @@ export function GroupTeamPanel({
   capacity,
   allTeams,
   teamGroups,
+  managementMode,
   assigningTeamId,
   onAssign,
 }: Props) {
@@ -35,7 +37,7 @@ export function GroupTeamPanel({
                 : "bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400"
             }`}
           >
-            {assigned.length}/{capacity}
+            {managementMode === "manual" ? assigned.length : `${assigned.length}/${capacity}`}
           </span>
         )}
       </div>
