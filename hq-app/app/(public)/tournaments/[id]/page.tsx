@@ -71,9 +71,9 @@ export default function TournamentPublicPage({
     return data.matches
       .filter((m) => m.phase === "group")
       .reduce<Record<string, Match[]>>((acc, m) => {
-        const group = m.group ?? "Ungrouped";
-        if (!acc[group]) acc[group] = [];
-        acc[group].push(m);
+        const groupKey = m.group?.name ?? "Ungrouped";
+        if (!acc[groupKey]) acc[groupKey] = [];
+        acc[groupKey].push(m);
         return acc;
       }, {});
   }, [data]);

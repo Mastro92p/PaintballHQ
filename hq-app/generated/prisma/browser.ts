@@ -57,3 +57,13 @@ export type Match = Prisma.MatchModel
  * 
  */
 export type User = Prisma.UserModel
+/**
+ * Model TournamentGroup
+ * 
+ */
+export type TournamentGroup = Prisma.TournamentGroupModel
+/**
+ * Model TournamentTeamGroup
+ * 
+ */
+export type TournamentTeamGroup = Prisma.TournamentTeamGroupModel

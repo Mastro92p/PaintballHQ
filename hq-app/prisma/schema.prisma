@@ -28,7 +28,6 @@ model LeagueTeam {
   @@id([leagueId, teamId])
 }
 
-
 model Division {
   id          Int          @id @default(autoincrement())
   name        String       @unique
@@ -38,7 +37,6 @@ model Division {
   teams       Team[]
   tournaments Tournament[]
 }
-
 
 model Tournament {
   id             Int      @id @default(autoincrement())
@@ -51,16 +49,17 @@ model Tournament {
   formatConfig   Json?
   createdAt      DateTime @default(now())
 
-  managementMode String @default("auto") // "auto" | "manual"
+  managementMode String   @default("auto")
 
   leagueId       Int?
-  league         League?  @relation(fields: [leagueId], references: [id], onDelete: SetNull)
+  league         League?   @relation(fields: [leagueId], references: [id], onDelete: SetNull)
 
   divisionId     Int?
   division       Division? @relation(fields: [divisionId], references: [id], onDelete: SetNull)
 
   teams          TournamentTeam[]
   matches        Match[]
+  groups         TournamentGroup[]
 }
 
 model Team {
@@ -75,8 +74,8 @@ model Team {
 
   leagues     LeagueTeam[]
   tournaments TournamentTeam[]
-  matchesA    Match[]          @relation("TeamA")
-  matchesB    Match[]          @relation("TeamB")
+  matchesA    Match[]    @relation("TeamA")
+  matchesB    Match[]    @relation("TeamB")
 }
 
 model TournamentTeam {
@@ -84,7 +83,9 @@ model TournamentTeam {
   tournamentId Int
   team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId       Int
-  groups       String[] @default([])
+
+  groups       String[]   @default([])
+  groupLinks   TournamentTeamGroup[]
 
   @@id([tournamentId, teamId])
 }
@@ -102,7 +103,11 @@ model Match {
   round        Int?
   label        String?
   phase        String     @default("group")
-  group        String?
+
+  groupLegacy  String?    @map("group")
+  group        TournamentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  groupId      Int?
+
   field        String?
 
   nextMatchId      Int?
@@ -130,4 +135,29 @@ model User {
   password  String
   role      String   @default("organizer")
   createdAt DateTime @default(now())
+}
+
+model TournamentGroup {
+  id           Int        @id @default(autoincrement())
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  tournamentId Int
+  name         String
+  order        Int
+  createdAt    DateTime   @default(now())
+
+  matches      Match[]
+  teamGroups   TournamentTeamGroup[]
+
+  @@unique([tournamentId, name])
+  @@index([tournamentId, order])
+}
+
+model TournamentTeamGroup {
+  tournamentTeam TournamentTeam  @relation(fields: [tournamentId, teamId], references: [tournamentId, teamId], onDelete: Cascade)
+  tournamentId   Int
+  teamId         Int
+  group          TournamentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId        Int
+
+  @@id([tournamentId, teamId, groupId])
 }

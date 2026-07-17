@@ -10,18 +10,34 @@ export async function POST(
     const { id: rawId } = await params
     const id = parseInt(rawId)
 
-    // ── 1. Load tournament ──────────────────────────────────────────
     const tournament = await prisma.tournament.findUnique({
       where: { id },
-      include: { teams: { include: { team: true } } },
+      include: {
+        groups: {
+          orderBy: [{ order: 'asc' }, { id: 'asc' }],
+        },
+        teams: {
+          include: {
+            team: true,
+            groupLinks: {
+              include: {
+                group: true,
+              },
+            },
+          },
+        },
+      },
     })
 
-    if (!tournament)                            return apiError('Tournament not found', 404)
-    if (tournament.type !== 'group_and_bracket') return apiError('Tournament is not group_and_bracket type', 400)
-    if (!tournament.formatConfig)               return apiError('Tournament has no formatConfig', 400)
+    if (!tournament) return apiError('Tournament not found', 404)
+    if (tournament.type !== 'group_and_bracket') {
+      return apiError('Tournament is not group_and_bracket type', 400)
+    }
+    if (!tournament.formatConfig) {
+      return apiError('Tournament has no formatConfig', 400)
+    }
 
     const fc = tournament.formatConfig as FormatConfig
-
     const enrolledTeams = tournament.teams.map((tt) => tt.team)
 
     if (fc.groupCount == null || fc.teamsPerGroup == null) {
@@ -36,82 +52,124 @@ export async function POST(
       return apiError('Not enough teams enrolled (minimum 2)', 400)
     }
 
-    // ── 3. Wipe any existing group-stage matches ────────────────────
-    await prisma.match.deleteMany({
-      where: { tournamentId: id, phase: 'group' },
-    })
-
-    // ── 4. Shuffle & split teams into groups ────────────────────────
     const shuffled = [...enrolledTeams].sort(() => Math.random() - 0.5)
 
-    // Split into fc.groupCount buckets
-    const groups: (typeof enrolledTeams)[] = Array.from(
-      { length: fc.groupCount },
+    const buckets: (typeof enrolledTeams)[] = Array.from(
+      { length: groupCount },
       () => []
     )
+
     shuffled.forEach((team, i) => {
-      groups[i % groupCount].push(team)
+      buckets[i % groupCount].push(team)
     })
 
-    // ── 5. Generate round-robin matches per group ───────────────────
-    // Label groups A, B, C...
-    const groupLabels = 'ABCDEFGH'.split('')
+    const groupLabels = 'ABCDEFGH'.split('').slice(0, groupCount)
 
-    const matchesToCreate: {
-      tournamentId: number
-      teamAId:      number
-      teamBId:      number
-      phase:        string
-      group:        string
-      round:        number
-      status:       string
-    }[] = []
+    await prisma.$transaction(async (tx) => {
+      await tx.match.deleteMany({
+        where: { tournamentId: id, phase: 'group' },
+      })
 
-    for (let g = 0; g < groups.length; g++) {
-      const groupTeams = groups[g]
-      const label      = groupLabels[g]
+      await tx.tournamentTeamGroup.deleteMany({
+        where: { tournamentId: id },
+      })
 
-      // Round-robin: every team plays every other team once
-      for (let i = 0; i < groupTeams.length; i++) {
-        for (let j = i + 1; j < groupTeams.length; j++) {
-          matchesToCreate.push({
+      await tx.tournamentGroup.deleteMany({
+        where: { tournamentId: id },
+      })
+
+      const createdGroups = []
+      for (let i = 0; i < groupCount; i++) {
+        const created = await tx.tournamentGroup.create({
+          data: {
             tournamentId: id,
-            teamAId:      groupTeams[i].id,
-            teamBId:      groupTeams[j].id,
-            phase:        'group',
-            group:        label,
-            round:        1,
-            status:       'pending',
+            name: groupLabels[i] ?? `Group ${i + 1}`,
+            order: i,
+          },
+        })
+        createdGroups.push(created)
+      }
+
+      for (let g = 0; g < buckets.length; g++) {
+        const group = createdGroups[g]
+        const groupTeams = buckets[g]
+
+        for (const team of groupTeams) {
+          await tx.tournamentTeamGroup.create({
+            data: {
+              tournamentId: id,
+              teamId: team.id,
+              groupId: group.id,
+            },
           })
         }
+
+        for (let i = 0; i < groupTeams.length; i++) {
+          for (let j = i + 1; j < groupTeams.length; j++) {
+            await tx.match.create({
+              data: {
+                tournamentId: id,
+                teamAId: groupTeams[i].id,
+                teamBId: groupTeams[j].id,
+                phase: 'group',
+                groupId: group.id,
+                round: 1,
+                status: 'pending',
+              },
+            })
+          }
+        }
       }
-    }
 
-    // ── 6. Save all matches ─────────────────────────────────────────
-    await prisma.match.createMany({ data: matchesToCreate })
-
-    // ── 7. Update tournament status ─────────────────────────────────
-    await prisma.tournament.update({
-      where: { id },
-      data:  { status: 'active' },
+      await tx.tournament.update({
+        where: { id },
+        data: { status: 'active' },
+      })
     })
 
-    // ── 8. Return summary ───────────────────────────────────────────
+    const refreshedGroups = await prisma.tournamentGroup.findMany({
+      where: { tournamentId: id },
+      include: {
+        teamGroups: {
+          include: {
+            tournamentTeam: {
+              include: {
+                team: true,
+              },
+            },
+          },
+        },
+        matches: true,
+      },
+      orderBy: [{ order: 'asc' }, { id: 'asc' }],
+    })
+
+    const matchesCreated = refreshedGroups.reduce(
+      (acc, g) => acc + g.matches.length,
+      0
+    )
+
     return Response.json({
-      success:       true,
-      groups:        groups.map((teams, i) => ({
-        label:        groupLabels[i],
-        teams:        teams.map((t) => ({ id: t.id, name: t.name })),
+      success: true,
+      groups: refreshedGroups.map((group) => ({
+        id: group.id,
+        label: group.name,
+        order: group.order,
+        teams: group.teamGroups.map((tg) => ({
+          id: tg.tournamentTeam.team.id,
+          name: tg.tournamentTeam.team.name,
+        })),
       })),
-      matchesCreated: matchesToCreate.length,
-      totalTeams:     enrolledTeams.length,
-      expectedTeams:  totalExpected,
-      warning:        enrolledTeams.length !== totalExpected
-        ? `Expected ${totalExpected} teams but found ${enrolledTeams.length}. Groups were distributed evenly.`
-        : undefined,
+      matchesCreated,
+      totalTeams: enrolledTeams.length,
+      expectedTeams: totalExpected,
+      warning:
+        enrolledTeams.length !== totalExpected
+          ? `Expected ${totalExpected} teams but found ${enrolledTeams.length}. Groups were distributed evenly.`
+          : undefined,
     })
-
-  } catch {
+  } catch (error) {
+    console.error(error)
     return apiError('Failed to generate groups', 500)
   }
 }
@@ -124,14 +182,17 @@ export async function DELETE(
     const { id: rawId } = await params
     const tournamentId = parseInt(rawId)
 
-    await prisma.match.deleteMany({
-      where: { tournamentId, phase: 'group' },
-    })
-
-    await prisma.tournamentTeam.updateMany({
-      where: { tournamentId },
-      data: { groups: { set: [] } },
-    })
+    await prisma.$transaction([
+      prisma.match.deleteMany({
+        where: { tournamentId, phase: 'group' },
+      }),
+      prisma.tournamentTeamGroup.deleteMany({
+        where: { tournamentId },
+      }),
+      prisma.tournamentGroup.deleteMany({
+        where: { tournamentId },
+      }),
+    ])
 
     return Response.json({ success: true })
   } catch {

@@ -1,129 +1,167 @@
-import { prisma } from '@/lib/db'
-import { apiError } from '@/lib/utils'
-import type { FormatConfig } from '@/types'
+import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/utils";
 
 type GroupActionBody =
-  | { action: 'add'; name?: string }
-  | { action: 'rename'; oldName: string; newName?: string }
-  | { action: 'delete'; name: string }
+  | { action: "add"; name?: string }
+  | { action: "rename"; groupId: number; newName?: string }
+  | { action: "delete"; groupId: number }
+  | { action: "reorder"; groupIds: number[] };
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: rawId } = await params
-    const tournamentId = parseInt(rawId)
-    const body: GroupActionBody = await req.json()
+    const { id: rawId } = await params;
+    const tournamentId = parseInt(rawId, 10);
+    const body: GroupActionBody = await req.json();
 
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
-      include: { teams: true, matches: true },
-    })
+      include: {
+        groups: {
+          orderBy: [{ order: "asc" }, { id: "asc" }],
+        },
+      },
+    });
 
-    if (!tournament) return apiError('Tournament not found', 404)
-    if (tournament.type !== 'group_and_bracket') {
-      return apiError('Tournament is not group_and_bracket type', 400)
+    if (!tournament) return apiError("Tournament not found", 404);
+    if (tournament.type !== "group_and_bracket") {
+      return apiError("Tournament is not group_and_bracket type", 400);
     }
-    if (tournament.managementMode !== 'manual') {
-      return apiError('Group management is only available in manual mode', 400)
+    if (tournament.managementMode !== "manual") {
+      return apiError("Group management is only available in manual mode", 400);
     }
 
-    const fc = (tournament.formatConfig ?? {}) as FormatConfig
-    const groups = fc.groups ?? []
+    const groups = tournament.groups;
 
-    if (body.action === 'add') {
-      const fallback = 'ABCDEFGH'[groups.length] ?? `Group ${groups.length + 1}`
-      const name = body.name?.trim() || fallback
+    if (body.action === "add") {
+      const fallback = "ABCDEFGH"[groups.length] ?? `Group ${groups.length + 1}`;
+      const name = body.name?.trim() || fallback;
 
-      if (groups.includes(name)) {
-        return apiError('A group with this name already exists', 400)
+      if (groups.some((g) => g.name === name)) {
+        return apiError("A group with this name already exists", 400);
       }
 
-      await prisma.tournament.update({
-        where: { id: tournamentId },
-        data: { formatConfig: { ...fc, groups: [...groups, name] } },
-      })
+      const created = await prisma.tournamentGroup.create({
+        data: {
+          tournamentId,
+          name,
+          order: groups.length,
+        },
+      });
 
-      return Response.json({ success: true, groups: [...groups, name] })
+      return Response.json({
+        success: true,
+        group: created,
+        groups: [...groups, created],
+      });
     }
 
-    if (body.action === 'rename') {
-      const { oldName, newName } = body
-      const idx = groups.indexOf(oldName)
-      if (idx === -1) return apiError('Group not found', 404)
+    if (body.action === "rename") {
+      const groupId = Number(body.groupId);
+      const group = groups.find((g) => g.id === groupId);
 
-      const fallback = 'ABCDEFGH'[idx] ?? oldName
-      const finalName = newName?.trim() || fallback
+      if (!group) return apiError("Group not found", 404);
 
-      if (finalName !== oldName && groups.includes(finalName)) {
-        return apiError('A group with this name already exists', 400)
+      const fallback = "ABCDEFGH"[group.order] ?? group.name;
+      const finalName = body.newName?.trim() || fallback;
+
+      if (finalName !== group.name && groups.some((g) => g.name === finalName)) {
+        return apiError("A group with this name already exists", 400);
       }
 
-      const updatedGroups = groups.map((g) => (g === oldName ? finalName : g))
+      const updated = await prisma.tournamentGroup.update({
+        where: { id: group.id },
+        data: { name: finalName },
+      });
 
-      await prisma.$transaction([
-        prisma.tournament.update({
-          where: { id: tournamentId },
-          data: { formatConfig: { ...fc, groups: updatedGroups } },
-        }),
-        ...tournament.teams.map((tt) =>
-          prisma.tournamentTeam.update({
-            where: {
-              tournamentId_teamId: {
-                tournamentId,
-                teamId: tt.teamId,
-              },
-            },
-            data: {
-              groups: (tt.groups ?? []).map((g) => (g === oldName ? finalName : g)),
-            },
-          })
-        ),
-        prisma.match.updateMany({
-          where: { tournamentId, group: oldName },
-          data: { group: finalName },
-        }),
-      ])
+      const refreshedGroups = await prisma.tournamentGroup.findMany({
+        where: { tournamentId },
+        orderBy: [{ order: "asc" }, { id: "asc" }],
+      });
 
-      return Response.json({ success: true, groups: updatedGroups })
+      return Response.json({
+        success: true,
+        group: updated,
+        groups: refreshedGroups,
+      });
     }
 
-    if (body.action === 'delete') {
-      const { name } = body
-      if (!groups.includes(name)) return apiError('Group not found', 404)
+    if (body.action === "delete") {
+      const groupId = Number(body.groupId);
+      const group = groups.find((g) => g.id === groupId);
 
-      const updatedGroups = groups.filter((g) => g !== name)
+      if (!group) return apiError("Group not found", 404);
 
       await prisma.$transaction([
         prisma.match.deleteMany({
-          where: { tournamentId, group: name, phase: 'group' },
+          where: {
+            tournamentId,
+            groupId: group.id,
+            phase: "group",
+          },
         }),
-        ...tournament.teams.map((tt) =>
-          prisma.tournamentTeam.update({
-            where: {
-              tournamentId_teamId: {
-                tournamentId,
-                teamId: tt.teamId,
-              },
-            },
-            data: {
-              groups: (tt.groups ?? []).filter((g) => g !== name),
-            },
-          })
-        ),
-        prisma.tournament.update({
-          where: { id: tournamentId },
-          data: { formatConfig: { ...fc, groups: updatedGroups } },
+        prisma.tournamentTeamGroup.deleteMany({
+          where: {
+            groupId: group.id,
+            tournamentId,
+          },
         }),
-      ])
+        prisma.tournamentGroup.delete({
+          where: { id: group.id },
+        }),
+      ]);
 
-      return Response.json({ success: true, groups: updatedGroups })
+      const remainingGroups = await prisma.tournamentGroup.findMany({
+        where: { tournamentId },
+        orderBy: [{ order: "asc" }, { id: "asc" }],
+      });
+
+      return Response.json({
+        success: true,
+        groups: remainingGroups,
+      });
     }
 
-    return apiError('Invalid action', 400)
+
+    if (body.action === "reorder") {
+      const nextGroupIds = body.groupIds.map((id) => Number(id)).filter((id) => !Number.isNaN(id));
+
+      if (nextGroupIds.length !== groups.length) {
+        return apiError("All groups must be included in reorder payload", 400);
+      }
+
+      const validGroupIds = new Set(groups.map((g) => g.id));
+      const invalidGroupIds = nextGroupIds.filter((groupId: number) => !validGroupIds.has(groupId));
+
+      if (invalidGroupIds.length > 0) {
+        return apiError("Invalid group ids in reorder payload", 400);
+      }
+
+      await prisma.$transaction(
+        nextGroupIds.map((groupId, index) =>
+          prisma.tournamentGroup.update({
+            where: { id: groupId },
+            data: { order: index },
+          })
+        )
+      );
+
+      const reorderedGroups = await prisma.tournamentGroup.findMany({
+        where: { tournamentId },
+        orderBy: [{ order: "asc" }, { id: "asc" }],
+      });
+
+      return Response.json({
+        success: true,
+        groups: reorderedGroups,
+      });
+    }
+
+    return apiError("Invalid action", 400);
   } catch (error) {
-    console.error(error)
-    return apiError('Failed to update groups', 500)
+    console.error(error);
+    return apiError("Failed to update groups", 500);
   }
 }

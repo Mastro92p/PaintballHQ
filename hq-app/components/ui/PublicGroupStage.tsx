@@ -7,7 +7,11 @@ import { getClassicMatchResult } from "@/lib/utils";
 type PublicGroupStageProps = {
   matches: Match[];
   isGroupAndBracket: boolean;
-  tournamentType: "round_robin" | "round_robin_classic" | "group_and_bracket" | string;
+  tournamentType:
+    | "round_robin"
+    | "round_robin_classic"
+    | "group_and_bracket"
+    | string;
   hasGroupMatches: boolean;
   isRoundRobin?: boolean;
 };
@@ -32,7 +36,6 @@ function getPublicRoundHeading(round: number, matches: Match[]) {
   return base;
 }
 
-
 export default function PublicGroupStage({
   matches,
   isGroupAndBracket,
@@ -40,26 +43,45 @@ export default function PublicGroupStage({
   tournamentType,
   isRoundRobin: isRoundRobinProp,
 }: PublicGroupStageProps) {
-  const isRoundRobin = isRoundRobinProp ?? ROUND_ROBIN_TYPES.includes(tournamentType);
+  const isRoundRobin =
+    isRoundRobinProp ?? ROUND_ROBIN_TYPES.includes(tournamentType);
   const isClassic = tournamentType === "round_robin_classic";
 
   const groupMatchesByGroup = useMemo(() => {
     const groupPhaseMatches = matches.filter((m) => m.phase === "group");
 
     if (isRoundRobin) {
-      return { All: groupPhaseMatches };
+      return {
+        All: {
+          order: 0,
+          matches: groupPhaseMatches,
+        },
+      };
     }
 
-    return groupPhaseMatches.reduce<Record<string, Match[]>>((acc, m) => {
-      const group = m.group?.trim() || "Ungrouped";
-      if (!acc[group]) acc[group] = [];
-      acc[group].push(m);
+    return groupPhaseMatches.reduce<
+      Record<string, { order: number; matches: Match[] }>
+    >((acc, m) => {
+      const groupName = m.group?.name?.trim() || "Ungrouped";
+      const groupOrder = m.group?.order ?? Number.MAX_SAFE_INTEGER;
+
+      if (!acc[groupName]) {
+        acc[groupName] = {
+          order: groupOrder,
+          matches: [],
+        };
+      }
+
+      acc[groupName].matches.push(m);
       return acc;
     }, {});
   }, [matches, isRoundRobin]);
 
   const groupTabs = useMemo(
-    () => Object.keys(groupMatchesByGroup).sort((a, b) => a.localeCompare(b)),
+    () =>
+      Object.entries(groupMatchesByGroup)
+        .sort(([, a], [, b]) => a.order - b.order)
+        .map(([groupName]) => groupName),
     [groupMatchesByGroup]
   );
 
@@ -73,14 +95,15 @@ export default function PublicGroupStage({
   }, [groupTabs, activeGroup]);
 
   const activeMatches = useMemo(() => {
-    const current = activeGroup ? groupMatchesByGroup[activeGroup] ?? [] : [];
+    const current = activeGroup
+      ? groupMatchesByGroup[activeGroup]?.matches ?? []
+      : [];
+
     return [...current].sort(
       (a, b) => (a.round ?? 0) - (b.round ?? 0) || a.id - b.id
     );
   }, [activeGroup, groupMatchesByGroup]);
 
-  // Group matches by round — only meaningful for round robin (plain & classic).
-  // Group-and-bracket keeps its flat grid, unaffected by this.
   const matchesByRound = useMemo(() => {
     if (!isRoundRobin) return {};
     return activeMatches.reduce<Record<number, Match[]>>((acc, m) => {
@@ -96,39 +119,59 @@ export default function PublicGroupStage({
     [matchesByRound]
   );
 
-const groupStandings = useMemo(() => {
-  const rows: Record<number, {
-    teamId: number;
-    teamName: string;
-    teamLogoUrl: string | null;
-    played: number;
-    wins: number;
-    draws: number;
-    losses: number;
-    gf: number;
-    ga: number;
-    gd: number;
-    points: number;
-    bodyCount: number;
-  }> = {};
+  const groupStandings = useMemo(() => {
+    const rows: Record<
+      number,
+      {
+        teamId: number;
+        teamName: string;
+        teamLogoUrl: string | null;
+        played: number;
+        wins: number;
+        draws: number;
+        losses: number;
+        gf: number;
+        ga: number;
+        gd: number;
+        points: number;
+        bodyCount: number;
+      }
+    > = {};
 
-  for (const match of activeMatches) {
-    if (match.teamAId && !rows[match.teamAId]) {
-      rows[match.teamAId] = {
-        teamId: match.teamAId,
-        teamName: match.teamA?.name ?? "TBD",
-        teamLogoUrl: match.teamA?.logoUrl ?? null,
-        played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0, bodyCount: 0,
-      };
-    }
-    if (match.teamBId && !rows[match.teamBId]) {
-      rows[match.teamBId] = {
-        teamId: match.teamBId,
-        teamName: match.teamB?.name ?? "TBD",
-        teamLogoUrl: match.teamB?.logoUrl ?? null,
-        played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0, bodyCount: 0,
-      };
-    }
+    for (const match of activeMatches) {
+      if (match.teamAId && !rows[match.teamAId]) {
+        rows[match.teamAId] = {
+          teamId: match.teamAId,
+          teamName: match.teamA?.name ?? "TBD",
+          teamLogoUrl: match.teamA?.logoUrl ?? null,
+          played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          gf: 0,
+          ga: 0,
+          gd: 0,
+          points: 0,
+          bodyCount: 0,
+        };
+      }
+
+      if (match.teamBId && !rows[match.teamBId]) {
+        rows[match.teamBId] = {
+          teamId: match.teamBId,
+          teamName: match.teamB?.name ?? "TBD",
+          teamLogoUrl: match.teamB?.logoUrl ?? null,
+          played: 0,
+          wins: 0,
+          draws: 0,
+          losses: 0,
+          gf: 0,
+          ga: 0,
+          gd: 0,
+          points: 0,
+          bodyCount: 0,
+        };
+      }
 
       const completed =
         match.status === "completed" &&
@@ -192,12 +235,13 @@ const groupStandings = useMemo(() => {
 
     return Object.values(rows)
       .map((row) => ({ ...row, gd: row.gf - row.ga }))
-      .sort((a, b) =>
-        b.points - a.points ||
-        (isClassic ? b.bodyCount - a.bodyCount : 0) ||
-        b.gd - a.gd ||
-        b.gf - a.gf ||
-        a.teamName.localeCompare(b.teamName)
+      .sort(
+        (a, b) =>
+          b.points - a.points ||
+          (isClassic ? b.bodyCount - a.bodyCount : 0) ||
+          b.gd - a.gd ||
+          b.gf - a.gf ||
+          a.teamName.localeCompare(b.teamName)
       );
   }, [activeMatches, isClassic]);
 
@@ -216,11 +260,11 @@ const groupStandings = useMemo(() => {
     );
   }
 
-  // Shared match card renderer — used both in the round-grouped layout
-  // and the flat group-and-bracket grid, so styling stays identical.
   const renderMatchCard = (match: Match) => {
     const completed =
-      match.status === "completed" && match.scoreA !== null && match.scoreB !== null;
+      match.status === "completed" &&
+      match.scoreA !== null &&
+      match.scoreB !== null;
 
     let aWins = false;
     let bWins = false;
@@ -245,108 +289,121 @@ const groupStandings = useMemo(() => {
     }
 
     return (
-        <div key={match.id} className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <div className="mb-2 flex items-center justify-between">
+      <div
+        key={match.id}
+        className="rounded-xl border border-white/10 bg-white/5 px-4 py-3"
+      >
+        <div className="mb-2 flex items-center justify-between">
+          <span
+            className={[
+              "rounded-full px-2.5 py-1 text-xs font-medium capitalize",
+              completed
+                ? "bg-emerald-500/15 text-emerald-300"
+                : "bg-amber-500/15 text-amber-300",
+            ].join(" ")}
+          >
+            {match.status}
+          </span>
+          <span className="text-xs text-slate-400">
+            {match.round && !isRoundRobin ? `Block ${match.round}` : ""}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/5">
+              {match.teamA?.logoUrl ? (
+                <img
+                  src={match.teamA.logoUrl}
+                  alt={`${match.teamA?.name ?? "Team"} logo`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="text-[8px] text-slate-500">—</span>
+              )}
+            </div>
             <span
               className={[
-                "rounded-full px-2.5 py-1 text-xs font-medium capitalize",
-                completed
-                  ? "bg-emerald-500/15 text-emerald-300"
-                  : "bg-amber-500/15 text-amber-300",
+                "truncate text-sm font-medium",
+                aWins ? "font-bold text-emerald-400" : "text-white",
               ].join(" ")}
             >
-              {match.status}
-            </span>
-            <span className="text-xs text-slate-400">
-              {match.round && !isRoundRobin ? `Block ${match.round}` : ""}
+              {match.teamA?.name ?? "TBD"}
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="w-7 h-7 rounded-md border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
-                {match.teamA?.logoUrl ? (
-                  <img
-                    src={match.teamA.logoUrl}
-                    alt={`${match.teamA?.name ?? "Team"} logo`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <span className="text-[8px] text-slate-500">—</span>
-                )}
-              </div>
+          {completed ? (
+            <div className="flex shrink-0 items-center gap-1.5">
+              {isClassic && match.bodyCountA != null && (
+                <span className="text-[11px] leading-none text-slate-400 tabular-nums">
+                  ({match.bodyCountA})
+                </span>
+              )}
               <span
                 className={[
-                  "truncate text-sm font-medium",
-                  aWins ? "text-emerald-400 font-bold" : "text-white",
+                  "flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white tabular-nums",
+                  aWins
+                    ? "bg-emerald-500"
+                    : draw
+                    ? "bg-slate-500"
+                    : "bg-red-500",
                 ].join(" ")}
               >
-                {match.teamA?.name ?? "TBD"}
+                {match.scoreA}
               </span>
+
+              <span className="text-xs text-slate-500">:</span>
+
+              <span
+                className={[
+                  "flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white tabular-nums",
+                  bWins
+                    ? "bg-emerald-500"
+                    : draw
+                    ? "bg-slate-500"
+                    : "bg-red-500",
+                ].join(" ")}
+              >
+                {match.scoreB}
+              </span>
+              {isClassic && match.bodyCountB != null && (
+                <span className="text-[11px] leading-none text-slate-400 tabular-nums">
+                  ({match.bodyCountB})
+                </span>
+              )}
             </div>
+          ) : (
+            <span className="shrink-0 px-2 text-xs font-medium text-slate-500">
+              vs
+            </span>
+          )}
 
-            {completed ? (
-              <div className="flex items-center gap-1.5 shrink-0">
-                {isClassic && match.bodyCountA != null && (
-                  <span className="text-[11px] leading-none text-slate-400 tabular-nums">
-                    ({match.bodyCountA})
-                  </span>
-                )}
-                <span
-                  className={[
-                    "w-9 h-9 flex items-center justify-center rounded-full text-white text-sm font-bold tabular-nums",
-                    aWins ? "bg-emerald-500" : draw ? "bg-slate-500" : "bg-red-500",
-                  ].join(" ")}
-                >
-                  {match.scoreA}
-                </span>
-
-                <span className="text-slate-500 text-xs">:</span>
-
-                <span
-                  className={[
-                    "w-9 h-9 flex items-center justify-center rounded-full text-white text-sm font-bold tabular-nums",
-                    bWins ? "bg-emerald-500" : draw ? "bg-slate-500" : "bg-red-500",
-                  ].join(" ")}
-                >
-                  {match.scoreB}
-                </span>
-                {isClassic && match.bodyCountB != null && (
-                  <span className="text-[11px] leading-none text-slate-400 tabular-nums">
-                    ({match.bodyCountB})
-                  </span>
-                )}
-              </div>
-            ) : (
-              <span className="shrink-0 text-xs font-medium text-slate-500 px-2">vs</span>
-            )}
-
-            <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-              <span
-                className={[
-                  "truncate text-right text-sm font-medium",
-                  bWins ? "text-emerald-400 font-bold" : "text-white",
-                ].join(" ")}
-              >
-                {match.teamB?.name ?? "TBD"}
-              </span>
-              <div className="w-7 h-7 rounded-md border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
-                {match.teamB?.logoUrl ? (
-                  <img
-                    src={match.teamB.logoUrl}
-                    alt={`${match.teamB?.name ?? "Team"} logo`}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <span className="text-[8px] text-slate-500">—</span>
-                )}
-              </div>
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+            <span
+              className={[
+                "truncate text-right text-sm font-medium",
+                bWins ? "font-bold text-emerald-400" : "text-white",
+              ].join(" ")}
+            >
+              {match.teamB?.name ?? "TBD"}
+            </span>
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/5">
+              {match.teamB?.logoUrl ? (
+                <img
+                  src={match.teamB.logoUrl}
+                  alt={`${match.teamB?.name ?? "Team"} logo`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="text-[8px] text-slate-500">—</span>
+              )}
             </div>
           </div>
         </div>
-      );
+      </div>
+    );
   };
 
   return (
@@ -363,34 +420,38 @@ const groupStandings = useMemo(() => {
       </div>
 
       {!isRoundRobin && (
-        <div className="flex flex-wrap gap-1 rounded-xl bg-white/5 p-1 w-fit">
-          {groupTabs.map((group) => {
-            const isActive = activeGroup === group;
-            const count = groupMatchesByGroup[group]?.length ?? 0;
+        <div className="w-fit rounded-xl bg-white/5 p-1">
+          <div className="flex flex-wrap gap-1">
+            {groupTabs.map((group) => {
+              const isActive = activeGroup === group;
+              const count = groupMatchesByGroup[group]?.matches.length ?? 0;
 
-            return (
-              <button
-                key={group}
-                onClick={() => setActiveGroup(group)}
-                className={[
-                  "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-                  isActive
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-300 hover:text-white hover:bg-white/5",
-                ].join(" ")}
-              >
-                <span>{`Group ${group}`}</span>
-                <span
+              return (
+                <button
+                  key={group}
+                  onClick={() => setActiveGroup(group)}
                   className={[
-                    "rounded-full px-1.5 py-0.5 text-xs tabular-nums",
-                    isActive ? "bg-slate-100 text-slate-600" : "bg-white/10 text-slate-400",
+                    "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+                    isActive
+                      ? "bg-white text-slate-900 shadow-sm"
+                      : "text-slate-300 hover:bg-white/5 hover:text-white",
                   ].join(" ")}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                  <span>{`Group ${group}`}</span>
+                  <span
+                    className={[
+                      "rounded-full px-1.5 py-0.5 text-xs tabular-nums",
+                      isActive
+                        ? "bg-slate-100 text-slate-600"
+                        : "bg-white/10 text-slate-400",
+                    ].join(" ")}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -400,9 +461,14 @@ const groupStandings = useMemo(() => {
             {isRoundRobin ? "League Table" : `Group ${activeGroup}`}
           </h3>
           <span className="text-xs text-slate-400">
-            {activeMatches.filter(
-              (m) => m.status === "completed" && m.scoreA != null && m.scoreB != null
-            ).length}
+            {
+              activeMatches.filter(
+                (m) =>
+                  m.status === "completed" &&
+                  m.scoreA != null &&
+                  m.scoreB != null
+              ).length
+            }
             /{activeMatches.length} played
           </span>
         </div>
@@ -415,42 +481,59 @@ const groupStandings = useMemo(() => {
                   <th className="px-3 py-3 text-left font-medium">#</th>
                   <th className="px-3 py-3 text-left font-medium">Team</th>
                   <th className="px-3 py-3 text-right font-medium">P</th>
-                  <th className="px-3 py-3 text-right font-medium text-emerald-400/80">W</th>
+                  <th className="px-3 py-3 text-right font-medium text-emerald-400/80">
+                    W
+                  </th>
                   <th className="px-3 py-3 text-right font-medium">D</th>
-                  <th className="px-3 py-3 text-right font-medium text-red-400/80">L</th>
-
+                  <th className="px-3 py-3 text-right font-medium text-red-400/80">
+                    L
+                  </th>
                   {isClassic && (
-                    <th className="px-3 py-3 text-right font-medium text-sky-400/80">BC</th>
+                    <th className="px-3 py-3 text-right font-medium text-sky-400/80">
+                      BC
+                    </th>
                   )}
-                  <th className="px-3 py-3 text-right font-medium text-amber-400/80">PTS</th>
+                  <th className="px-3 py-3 text-right font-medium text-amber-400/80">
+                    PTS
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {groupStandings.map((row, index) => (
-                  <tr key={row.teamId} className="border-t border-white/10 text-slate-200">
+                  <tr
+                    key={row.teamId}
+                    className="border-t border-white/10 text-slate-200"
+                  >
                     <td className="px-3 py-3 text-slate-400">{index + 1}</td>
                     <td className="px-3 py-3 font-medium">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-md border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
-                        {row.teamLogoUrl ? (
-                          <img
-                            src={row.teamLogoUrl}
-                            alt={`${row.teamName} logo`}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-[8px] text-slate-500">—</span>
-                        )}
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-white/5">
+                          {row.teamLogoUrl ? (
+                            <img
+                              src={row.teamLogoUrl}
+                              alt={`${row.teamName} logo`}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-[8px] text-slate-500">—</span>
+                          )}
+                        </div>
+                        <span>{row.teamName}</span>
                       </div>
-                      <span>{row.teamName}</span>
-                    </div>
-                  </td>
-                    <td className="px-3 py-3 text-right text-slate-300">{row.played}</td>
-                    <td className="px-3 py-3 text-right font-semibold text-emerald-400">{row.wins}</td>
-                    <td className="px-3 py-3 text-right text-slate-300">{row.draws}</td>
-                    <td className="px-3 py-3 text-right font-semibold text-red-400">{row.losses}</td>
-
+                    </td>
+                    <td className="px-3 py-3 text-right text-slate-300">
+                      {row.played}
+                    </td>
+                    <td className="px-3 py-3 text-right font-semibold text-emerald-400">
+                      {row.wins}
+                    </td>
+                    <td className="px-3 py-3 text-right text-slate-300">
+                      {row.draws}
+                    </td>
+                    <td className="px-3 py-3 text-right font-semibold text-red-400">
+                      {row.losses}
+                    </td>
                     {isClassic && (
                       <td className="px-3 py-3 text-right text-sky-400 tabular-nums">
                         {row.bodyCount}

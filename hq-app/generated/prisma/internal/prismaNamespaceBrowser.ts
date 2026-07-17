@@ -58,7 +58,9 @@ export const ModelName = {
   Team: 'Team',
   TournamentTeam: 'TournamentTeam',
   Match: 'Match',
-  User: 'User'
+  User: 'User',
+  TournamentGroup: 'TournamentGroup',
+  TournamentTeamGroup: 'TournamentTeamGroup'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -156,7 +158,8 @@ export const MatchScalarFieldEnum = {
   round: 'round',
   label: 'label',
   phase: 'phase',
-  group: 'group',
+  groupLegacy: 'groupLegacy',
+  groupId: 'groupId',
   field: 'field',
   nextMatchId: 'nextMatchId',
   loserNextMatchId: 'loserNextMatchId',
@@ -183,6 +186,26 @@ export const UserScalarFieldEnum = {
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const TournamentGroupScalarFieldEnum = {
+  id: 'id',
+  tournamentId: 'tournamentId',
+  name: 'name',
+  order: 'order',
+  createdAt: 'createdAt'
+} as const
+
+export type TournamentGroupScalarFieldEnum = (typeof TournamentGroupScalarFieldEnum)[keyof typeof TournamentGroupScalarFieldEnum]
+
+
+export const TournamentTeamGroupScalarFieldEnum = {
+  tournamentId: 'tournamentId',
+  teamId: 'teamId',
+  groupId: 'groupId'
+} as const
+
+export type TournamentTeamGroupScalarFieldEnum = (typeof TournamentTeamGroupScalarFieldEnum)[keyof typeof TournamentTeamGroupScalarFieldEnum]
 
 
 export const SortOrder = {

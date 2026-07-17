@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties, Dispatch, SetStateAction } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 
@@ -7,28 +8,28 @@ export const MAX_BODIES = 3;
 export const MIN_BODIES = -3;
 
 export type MatchForm = {
-  teamAId: string
-  teamBId: string
-  scoreA: string
-  scoreB: string
-  bodyCountA: string
-  bodyCountB: string
-  round: string
-  label: string
-  field: string
-}
+  teamAId: string;
+  teamBId: string;
+  scoreA: string;
+  scoreB: string;
+  bodyCountA: string;
+  bodyCountB: string;
+  round: string;
+  label: string;
+  field: string;
+};
 
 export type MatchFormErrors = {
-  teamAId?: string
-  teamBId?: string
-  scoreA?: string
-  scoreB?: string
-  bodyCountA?: string
-  bodyCountB?: string
-  round?: string
-  label?: string
-  field?: string
-}
+  teamAId?: string;
+  teamBId?: string;
+  scoreA?: string;
+  scoreB?: string;
+  bodyCountA?: string;
+  bodyCountB?: string;
+  round?: string;
+  label?: string;
+  field?: string;
+};
 
 export const emptyMatchForm: MatchForm = {
   teamAId: "",
@@ -40,7 +41,7 @@ export const emptyMatchForm: MatchForm = {
   round: "",
   label: "",
   field: "",
-}
+};
 
 type Team = {
   id: number;
@@ -63,7 +64,7 @@ function inputCls(hasError?: boolean) {
   }`;
 }
 
-const threeColGrid: React.CSSProperties = {
+const threeColGrid: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "1fr auto 1fr",
   gap: "0.75rem",
@@ -80,8 +81,8 @@ type MatchModalProps = {
   teams: Team[];
   form: MatchForm;
   errors: MatchFormErrors;
-  setForm: React.Dispatch<React.SetStateAction<MatchForm>>;
-  setErrors: React.Dispatch<React.SetStateAction<MatchFormErrors>>;
+  setForm: Dispatch<SetStateAction<MatchForm>>;
+  setErrors: Dispatch<SetStateAction<MatchFormErrors>>;
   onClose: () => void;
   onSubmit: () => void;
 };
@@ -247,65 +248,65 @@ export default function MatchModal({
         <div className="border-t border-gray-100 dark:border-gray-700" />
 
         <div className="space-y-4">
-        <div className="space-y-1">
-          <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-            Label{" "}
-            <span className="text-gray-400 font-normal normal-case tracking-normal">
-              (optional)
-            </span>
-          </label>
-          <input
-            type="text"
-            value={form.label}
-            onChange={(e) => {
-              setForm({ ...form, label: e.target.value });
-              if (errors.label) setErrors((p) => ({ ...p, label: undefined }));
-            }}
-            className={inputCls(!!errors.label)}
-            placeholder="e.g. Final, Quarter Final, Round of 32"
-          />
-          {errors.label && <p className="text-xs text-red-500">{errors.label}</p>}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-              Round{" "}
-              <span className="text-gray-400 font-normal normal-case tracking-normal">
-                (optional)
-              </span>
-            </label>
-            <input
-              type="number"
-              min="1"
-              value={form.round}
-              onChange={(e) => {
-                setForm({ ...form, round: e.target.value });
-                if (errors.round) setErrors((p) => ({ ...p, round: undefined }));
-              }}
-              className={inputCls(!!errors.round)}
-              placeholder="e.g. 1"
-            />
-            {errors.round && <p className="text-xs text-red-500">{errors.round}</p>}
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
-              Field{" "}
+              Label{" "}
               <span className="text-gray-400 font-normal normal-case tracking-normal">
                 (optional)
               </span>
             </label>
             <input
               type="text"
-              value={form.field}
-              onChange={(e) => setForm({ ...form, field: e.target.value })}
-              className={inputCls()}
-              placeholder="e.g. Field 1"
+              value={form.label}
+              onChange={(e) => {
+                setForm({ ...form, label: e.target.value });
+                if (errors.label) setErrors((p) => ({ ...p, label: undefined }));
+              }}
+              className={inputCls(!!errors.label)}
+              placeholder="e.g. Final, Quarter Final, Round of 32"
             />
+            {errors.label && <p className="text-xs text-red-500">{errors.label}</p>}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Round{" "}
+                <span className="text-gray-400 font-normal normal-case tracking-normal">
+                  (optional)
+                </span>
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={form.round}
+                onChange={(e) => {
+                  setForm({ ...form, round: e.target.value });
+                  if (errors.round) setErrors((p) => ({ ...p, round: undefined }));
+                }}
+                className={inputCls(!!errors.round)}
+                placeholder="e.g. 1"
+              />
+              {errors.round && <p className="text-xs text-red-500">{errors.round}</p>}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
+                Field{" "}
+                <span className="text-gray-400 font-normal normal-case tracking-normal">
+                  (optional)
+                </span>
+              </label>
+              <input
+                type="text"
+                value={form.field}
+                onChange={(e) => setForm({ ...form, field: e.target.value })}
+                className={inputCls()}
+                placeholder="e.g. Field 1"
+              />
+            </div>
           </div>
         </div>
-      </div>
 
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="secondary" type="button" onClick={onClose}>

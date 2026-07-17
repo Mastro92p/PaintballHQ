@@ -125,7 +125,7 @@ function MatchCard({
             {m.status}
           </Badge>
           {m.field && <span className="text-xs text-gray-400">{m.field}</span>}
-          {m.group && <span className="text-xs text-gray-400">Group {m.group}</span>}
+          {m.group && <span className="text-xs text-gray-400">Group {m.groupId}</span>}
         </div>
 
         <div className="flex items-center gap-2">

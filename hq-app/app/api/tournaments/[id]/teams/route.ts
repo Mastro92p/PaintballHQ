@@ -18,16 +18,27 @@ export async function POST(
     const tournamentId = await getId(params);
     const { teamId } = await req.json();
 
-    if (!teamId) return Response.json({ error: "teamId is required" }, { status: 400 });
+    if (!teamId) {
+      return Response.json({ error: "teamId is required" }, { status: 400 });
+    }
 
     const enrollment = await prisma.tournamentTeam.create({
       data: { tournamentId, teamId },
-      include: { team: true },
+      include: {
+        team: true,
+        groupLinks: {
+          include: {
+            group: true,
+          },
+        },
+      },
     });
 
     return Response.json(enrollment, { status: 201 });
   } catch (e: any) {
-    if (e?.code === "P2002") return Response.json({ error: "Team already enrolled" }, { status: 409 });
+    if (e?.code === "P2002") {
+      return Response.json({ error: "Team already enrolled" }, { status: 409 });
+    }
     return Response.json({ error: "Failed to enroll team" }, { status: 500 });
   }
 }
@@ -43,7 +54,9 @@ export async function DELETE(
     const tournamentId = await getId(params);
     const { teamId } = await req.json();
 
-    if (!teamId) return Response.json({ error: "teamId is required" }, { status: 400 });
+    if (!teamId) {
+      return Response.json({ error: "teamId is required" }, { status: 400 });
+    }
 
     await prisma.tournamentTeam.delete({
       where: { tournamentId_teamId: { tournamentId, teamId } },

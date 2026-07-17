@@ -259,7 +259,7 @@ export function computeGroupedStandings(
   );
 
   for (const match of groupMatches) {
-    const group = match.group as string;
+    const group = match.group?.name ?? "Ungrouped";
 
     if (!rowsByGroup[group]) {
       rowsByGroup[group] = {};

@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/db'
 import { apiError } from '@/lib/utils'
-import type { FormatConfig } from '@/types'
 
 export async function PATCH(
   req: Request,
@@ -15,7 +14,20 @@ export async function PATCH(
 
     const tournament = await prisma.tournament.findUnique({
       where: { id: tournamentId },
-      include: { teams: true },
+      include: {
+        groups: {
+          orderBy: [{ order: 'asc' }, { id: 'asc' }],
+        },
+        teams: {
+          include: {
+            groupLinks: {
+              include: {
+                group: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!tournament) return apiError('Tournament not found', 404)
@@ -29,36 +41,63 @@ export async function PATCH(
     const enrolled = tournament.teams.find((t) => t.teamId === body.teamId)
     if (!enrolled) return apiError('Team is not enrolled in this tournament', 400)
 
-    const fc = (tournament.formatConfig ?? {}) as FormatConfig
-    const groupLabels = fc.groups ?? []
+    const nextGroupIds: number[] = Array.isArray(body.groupIds)
+      ? body.groupIds
+          .map((id: unknown) => Number(id))
+          .filter((id: number) => !Number.isNaN(id))
+      : []
 
-    const nextGroups = Array.isArray(body.groups) ? body.groups : []
+    const validGroupIds = new Set<number>(tournament.groups.map((g) => g.id))
 
-    const invalidGroups = nextGroups.filter(
-      (group: string) => !groupLabels.includes(group)
+    const invalidGroupIds = nextGroupIds.filter(
+      (groupId: number) => !validGroupIds.has(groupId)
     )
 
-    if (invalidGroups.length > 0) {
+    if (invalidGroupIds.length > 0) {
       return apiError(
-        `Invalid group(s): ${invalidGroups.join(', ')}. Must be one of: ${groupLabels.join(', ')}`,
+        `Invalid group id(s): ${invalidGroupIds.join(', ')}`,
         400
       )
     }
 
-    const updated = await prisma.tournamentTeam.update({
+    await prisma.$transaction([
+      prisma.tournamentTeamGroup.deleteMany({
+        where: {
+          tournamentId,
+          teamId: body.teamId,
+        },
+      }),
+      ...nextGroupIds.map((groupId: number) =>
+        prisma.tournamentTeamGroup.create({
+          data: {
+            tournamentId,
+            teamId: body.teamId,
+            groupId,
+          },
+        })
+      ),
+    ])
+
+    const updated = await prisma.tournamentTeam.findUnique({
       where: {
         tournamentId_teamId: {
           tournamentId,
           teamId: body.teamId,
         },
       },
-      data: {
-        groups: nextGroups,
+      include: {
+        team: true,
+        groupLinks: {
+          include: {
+            group: true,
+          },
+        },
       },
     })
 
     return Response.json(updated)
-  } catch {
+  } catch (error) {
+    console.error(error)
     return apiError('Failed to assign team to group', 500)
   }
 }

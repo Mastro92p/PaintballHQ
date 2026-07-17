@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
-import type { FormatConfig, Match, Team } from "@/types";
+import type { FormatConfig, Match, Team, TournamentGroup } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { GroupMatchCard } from "@/components/tournament-detail/GroupMatchCard";
 import { getClassicMatchResult, calcStandings } from "@/lib/utils";
@@ -13,6 +13,11 @@ import {
 import { GroupTeamPanel } from "@/components/tournament-detail/GroupTeamPanel";
 import { ManualGroupManager } from "@/components/tournament-detail/ManualGroupManager";
 
+import { DragDropProvider } from "@dnd-kit/react";
+import { useSortable, isSortable } from "@dnd-kit/react/sortable";
+import { move } from "@dnd-kit/helpers";
+
+
 type Props = {
   matches: Match[];
   enrolledTeams: Team[];
@@ -22,22 +27,27 @@ type Props = {
   canAddMatch: boolean;
   managementMode: "auto" | "manual";
   formatConfig: FormatConfig | null;
-  teamGroups: Record<number, string[]>;
+  groups: TournamentGroup[];
+  activeGroupTab: number | null;
+  setActiveGroupTab: (groupId: number | null) => void;
+  teamGroups: Record<number, number[]>;
+  groupNameById: Record<number, string>;
   assigningTeamId: number | null;
   generatingGroups: boolean;
   groupsError: string | null;
   deletingMatch: number | null;
   onGenerateGroups: () => void;
-  onOpenAddMatch: (group?: string) => void;
-  onAssignGroup: (teamId: number, group: string | null) => void;
+  onOpenAddMatch: (groupId?: number | null) => void;
+  onAssignGroup: (teamId: number, groupId: number | null) => void;
   onEditMatch: (m: Match) => void;
   onDeleteMatch: (id: number) => void;
   resettingGroups: boolean;
   onResetGroups: () => void;
   savingGroups: boolean;
   onAddGroup: (name: string) => void;
-  onRenameGroup: (oldName: string, newName: string) => void;
-  onDeleteGroup: (name: string) => void;
+  onRenameGroup: (groupId: number, newName: string) => void;
+  onDeleteGroup: (groupId: number) => void;
+  onReorderGroups: (groupIds: number[]) => void | Promise<void>;
 };
 
 function computeClassicStandings(teams: Team[], matches: Match[]): StandingRow[] {
@@ -56,7 +66,16 @@ function computeClassicStandings(teams: Team[], matches: Match[]): StandingRow[]
   > = {};
 
   for (const t of teams) {
-    table[t.id] = { team: t, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0, bodyCount: 0 };
+    table[t.id] = {
+      team: t,
+      w: 0,
+      d: 0,
+      l: 0,
+      gf: 0,
+      ga: 0,
+      pts: 0,
+      bodyCount: 0,
+    };
   }
 
   for (const m of matches) {
@@ -110,7 +129,9 @@ function computeClassicStandings(teams: Team[], matches: Match[]): StandingRow[]
       pts: r.pts,
       bodyCount: r.bodyCount,
     }))
-    .sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.bodyCount - a.bodyCount || b.gf - a.gf);
+    .sort(
+      (a, b) => b.pts - a.pts || b.gd - a.gd || b.bodyCount - a.bodyCount || b.gf - a.gf
+    );
 }
 
 function computeStandardStandings(teams: Team[], matches: Match[]): StandingRow[] {
@@ -133,7 +154,9 @@ function computeStandardStandings(teams: Team[], matches: Match[]): StandingRow[
 }
 
 function getStandings(teams: Team[], matches: Match[], isClassic: boolean): StandingRow[] {
-  return isClassic ? computeClassicStandings(teams, matches) : computeStandardStandings(teams, matches);
+  return isClassic
+    ? computeClassicStandings(teams, matches)
+    : computeStandardStandings(teams, matches);
 }
 
 function getRoundHeading(round: number, matches: Match[]) {
@@ -150,6 +173,46 @@ function getRoundHeading(round: number, matches: Match[]) {
   return base;
 }
 
+type SortableGroupTabButtonProps = {
+  group: TournamentGroup;
+  index: number;
+  selected: boolean;
+  subtitle: string;
+  onSelect: (groupId: number) => void;
+};
+
+function SortableGroupTabButton({
+  group,
+  index,
+  selected,
+  subtitle,
+  onSelect,
+}: SortableGroupTabButtonProps) {
+  const { ref, isDragging } = useSortable({
+    id: String(group.id),
+    index,
+    type: "group-tab",
+    accept: "group-tab",
+  });
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      onClick={() => onSelect(group.id)}
+      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors touch-none ${
+        selected
+          ? "bg-teal-600 text-white"
+          : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+      } ${isDragging ? "opacity-60" : ""}`}
+    >
+      {group.name}
+      <span className="ml-2 text-xs opacity-80">{subtitle}</span>
+    </button>
+  );
+}
+
+
 export function MatchesTab({
   matches,
   enrolledTeams,
@@ -159,7 +222,11 @@ export function MatchesTab({
   hasGroupMatches,
   managementMode,
   formatConfig,
+  groups,
+  activeGroupTab,
+  setActiveGroupTab,
   teamGroups,
+  groupNameById,
   assigningTeamId,
   generatingGroups,
   resettingGroups,
@@ -175,76 +242,93 @@ export function MatchesTab({
   onAddGroup,
   onRenameGroup,
   onDeleteGroup,
+  onReorderGroups,
 }: Props) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
 
-  const groupMatches = matches.filter((m) => m.phase === "group");
+    const groupMatches = matches.filter((m) => m.phase === "group");
+    const [sortableGroups, setSortableGroups] = useState(groups);
+    const [isDraggingGroups, setIsDraggingGroups] = useState(false);
 
-  const matchesByGroup = groupMatches.reduce<Record<string, Match[]>>((acc, m) => {
-    const g = m.group ?? "?";
-    if (!acc[g]) acc[g] = [];
-    acc[g].push(m);
-    return acc;
-  }, {});
-
-  const matchesByRound = matches
-    .filter((m) => m.phase === "group")
-    .reduce<Record<number, Match[]>>((acc, m) => {
-      const r = m.round ?? 0;
-      if (!acc[r]) acc[r] = [];
-      acc[r].push(m);
+    const matchesByGroup = groupMatches.reduce<Record<number, Match[]>>((acc, m) => {
+      if (m.groupId == null) return acc;
+      if (!acc[m.groupId]) acc[m.groupId] = [];
+      acc[m.groupId].push(m);
       return acc;
     }, {});
 
-  const configGroupLabels = useMemo(() => {
-    if (managementMode !== "manual") return [];
-    return formatConfig?.groups ?? [];
-  }, [managementMode, formatConfig]);
+    const matchesByRound = matches
+      .filter((m) => m.phase === "group")
+      .reduce<Record<number, Match[]>>((acc, m) => {
+        const r = m.round ?? 0;
+        if (!acc[r]) acc[r] = [];
+        acc[r].push(m);
+        return acc;
+      }, {});
 
-  const derivedGroupLabels = useMemo(
-    () => Object.keys(matchesByGroup).sort((a, b) => a.localeCompare(b)),
-    [matchesByGroup]
-  );
+    const groupIds = useMemo(() => {
+      if (managementMode === "manual") {
+        return sortableGroups.map((g) => g.id);
+      }
 
-  const groupLabels = useMemo(() => {
-    if (managementMode === "manual") {
-      return Array.from(new Set([...configGroupLabels, ...derivedGroupLabels])).sort();
-    }
-    return derivedGroupLabels;
-  }, [managementMode, configGroupLabels, derivedGroupLabels]);
+      return groups
+        .filter((g) => (matchesByGroup[g.id] ?? []).length > 0)
+        .map((g) => g.id);
+    }, [managementMode, sortableGroups, groups, matchesByGroup]);
 
-  const isEmpty = isGroupAndBracket
-    ? managementMode === "manual"
-      ? groupLabels.length === 0
-      : groupMatches.length === 0
-    : matches.length === 0;
+    const isEmpty = isGroupAndBracket
+      ? managementMode === "manual"
+        ? groupIds.length === 0
+        : groupMatches.length === 0
+      : matches.length === 0;
 
-  const urlGroup = searchParams.get("group") ?? "";
-  const [activeGroup, setActiveGroup] = useState<string>(urlGroup);
+    const urlGroupParam = searchParams.get("groupId");
+    const urlGroupId = urlGroupParam ? Number(urlGroupParam) : null;
 
-  useEffect(() => {
-    if (!groupLabels.length) return;
-    if (urlGroup && groupLabels.includes(urlGroup)) {
-      setActiveGroup(urlGroup);
-      return;
-    }
-    if (!activeGroup || !groupLabels.includes(activeGroup)) {
-      setActiveGroup(groupLabels[0]);
-    }
-  }, [urlGroup, groupLabels, activeGroup]);
+    const [activeGroup, setActiveGroup] = useState<number | null>(urlGroupId);
 
-  function selectGroup(groupLabel: string) {
-    setActiveGroup(groupLabel);
+    useEffect(() => {
+      if (!isDraggingGroups) {
+        setSortableGroups(groups);
+      }
+    }, [groups, isDraggingGroups]);
+
+    useEffect(() => {
+      if (!groupIds.length) return;
+
+      if (
+        urlGroupId != null &&
+        !Number.isNaN(urlGroupId) &&
+        groupIds.includes(urlGroupId)
+      ) {
+        setActiveGroup(urlGroupId);
+        if (setActiveGroupTab) setActiveGroupTab(urlGroupId);
+        return;
+      }
+
+    const preferred = activeGroupTab != null && groupIds.includes(activeGroupTab)
+      ? activeGroupTab
+      : activeGroup != null && groupIds.includes(activeGroup)
+      ? activeGroup
+      : groupIds[0];
+
+    setActiveGroup(preferred);
+    if (setActiveGroupTab) setActiveGroupTab(preferred);
+  }, [urlGroupId, groupIds, activeGroup, activeGroupTab, setActiveGroupTab]);
+
+  function selectGroup(groupId: number) {
+    setActiveGroup(groupId);
+    setActiveGroupTab(groupId);
     const params = new URLSearchParams(window.location.search);
-    params.set("group", groupLabel);
+    params.set("groupId", String(groupId));
     window.history.replaceState({}, "", `${pathname}?${params.toString()}`);
   }
 
   const currentGroup =
-    activeGroup && groupLabels.includes(activeGroup) ? activeGroup : groupLabels[0] || "";
+    activeGroup != null && groupIds.includes(activeGroup) ? activeGroup : groupIds[0] ?? null;
 
-  const currentMatches = currentGroup ? matchesByGroup[currentGroup] ?? [] : [];
+  const currentMatches = currentGroup != null ? matchesByGroup[currentGroup] ?? [] : [];
 
   const currentTeamIds = new Set(
     currentMatches.flatMap((m) => [m.teamAId, m.teamBId]).filter(Boolean) as number[]
@@ -252,11 +336,50 @@ export function MatchesTab({
 
   const currentGroupTeams =
     managementMode === "manual"
-      ? enrolledTeams.filter((t) => (teamGroups[t.id] ?? []).includes(currentGroup))
+      ? currentGroup == null
+        ? []
+        : enrolledTeams.filter((t) => (teamGroups[t.id] ?? []).includes(currentGroup))
       : enrolledTeams.filter((t) => currentTeamIds.has(t.id));
 
   const currentStandings = getStandings(currentGroupTeams, currentMatches, isClassic);
   const overallStandings = getStandings(enrolledTeams, matches, isClassic);
+
+  const visibleGroups =
+  managementMode === "manual"
+    ? sortableGroups.filter((group) => groupIds.includes(group.id))
+    : groups.filter((group) => groupIds.includes(group.id));
+
+
+    const handleGroupsDragStart = useCallback(() => {
+      setIsDraggingGroups(true);
+    }, []);
+
+    const handleGroupsDragEnd = useCallback(
+      async (event: any) => {
+        setIsDraggingGroups(false);
+
+        const nextGroups = move(sortableGroups, event);
+
+        if (
+          nextGroups.length === sortableGroups.length &&
+          nextGroups.every((group, index) => group.id === sortableGroups[index]?.id)
+        ) {
+          return;
+        }
+
+        setSortableGroups(nextGroups);
+
+        try {
+          await onReorderGroups(nextGroups.map((group) => group.id));
+        } catch (error) {
+          console.error(error);
+          setSortableGroups(groups);
+        }
+      },
+      [sortableGroups, groups, onReorderGroups]
+    );
+
+
 
   return (
     <section className="space-y-6">
@@ -268,7 +391,7 @@ export function MatchesTab({
         <div className="flex items-center gap-2">
           {isGroupAndBracket &&
             (hasGroupMatches ||
-              Object.values(teamGroups).some((groups) => (groups ?? []).length > 0)) && (
+              Object.values(teamGroups).some((groupIds) => (groupIds ?? []).length > 0)) && (
               <Button
                 size="sm"
                 variant="danger"
@@ -334,7 +457,7 @@ export function MatchesTab({
           {isGroupAndBracket && managementMode === "manual" && (
             <div className="mt-4 flex justify-center">
               <ManualGroupManager
-                groups={groupLabels}
+                groups={groups}
                 savingGroups={savingGroups}
                 onAddGroup={onAddGroup}
                 onRenameGroup={onRenameGroup}
@@ -347,7 +470,7 @@ export function MatchesTab({
         <div className="space-y-6">
           {managementMode === "manual" && (
             <ManualGroupManager
-              groups={groupLabels}
+              groups={groups}
               savingGroups={savingGroups}
               onAddGroup={onAddGroup}
               onRenameGroup={onRenameGroup}
@@ -355,42 +478,58 @@ export function MatchesTab({
             />
           )}
 
+        <DragDropProvider
+          onDragStart={managementMode === "manual" ? handleGroupsDragStart : undefined}
+          onDragEnd={managementMode === "manual" ? handleGroupsDragEnd : undefined}
+        >
           <div className="flex flex-wrap gap-2">
-            {groupLabels.map((groupLabel) => {
-              const total = matchesByGroup[groupLabel]?.length ?? 0;
-              const played = (matchesByGroup[groupLabel] ?? []).filter(
+            {visibleGroups.map((group, index) => {
+              const total = matchesByGroup[group.id]?.length ?? 0;
+              const played = (matchesByGroup[group.id] ?? []).filter(
                 (m) => m.status === "completed"
               ).length;
               const teamCount = enrolledTeams.filter((t) =>
-                (teamGroups[t.id] ?? []).includes(groupLabel)
+                (teamGroups[t.id] ?? []).includes(group.id)
               ).length;
 
-              return (
+              const subtitle =
+                managementMode === "manual"
+                  ? `${teamCount} team${teamCount === 1 ? "" : "s"}`
+                  : `${played}/${total}`;
+
+              return managementMode === "manual" ? (
+                <SortableGroupTabButton
+                  key={group.id}
+                  group={group}
+                  index={index}
+                  selected={currentGroup === group.id}
+                  subtitle={subtitle}
+                  onSelect={selectGroup}
+                />
+              ) : (
                 <button
-                  key={groupLabel}
-                  onClick={() => selectGroup(groupLabel)}
+                  key={group.id}
+                  type="button"
+                  onClick={() => selectGroup(group.id)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    currentGroup === groupLabel
+                    currentGroup === group.id
                       ? "bg-teal-600 text-white"
                       : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                   }`}
                 >
-                  Group {groupLabel}
-                  <span className="ml-2 text-xs opacity-80">
-                    {managementMode === "manual"
-                      ? `${teamCount} team${teamCount === 1 ? "" : "s"}`
-                      : `${played}/${total}`}
-                  </span>
+                  {group.name}
+                  <span className="ml-2 text-xs opacity-80">{subtitle}</span>
                 </button>
               );
             })}
           </div>
+        </DragDropProvider>
 
-          {currentGroup && (
+          {currentGroup != null && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  Group {currentGroup}
+                  {groupNameById[currentGroup] ?? `Group ${currentGroup}`}
                 </span>
                 <span className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
                 <span className="text-xs text-gray-400 tabular-nums">
@@ -401,7 +540,8 @@ export function MatchesTab({
 
               {managementMode === "manual" && (
                 <GroupTeamPanel
-                  group={currentGroup}
+                  groupId={currentGroup}
+                  groupName={groupNameById[currentGroup] ?? `Group ${currentGroup}`}
                   capacity={formatConfig?.teamsPerGroup}
                   allTeams={enrolledTeams}
                   teamGroups={teamGroups}

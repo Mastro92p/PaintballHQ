@@ -1,6 +1,5 @@
 import { Match } from "@/types";
 import { Badge } from "../ui/Badge";
-import { Button } from "../ui/Button";
 
 export function GroupMatchCard({
   match: m,

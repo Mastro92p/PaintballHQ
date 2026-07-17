@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { Match } from "@/generated/prisma/browser";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -22,20 +21,135 @@ const PHASE_BY_SIZE: Record<number, string> = {
   2: "final",
 };
 
+type StandingRow = {
+  teamId: number;
+  teamName: string;
+  groupId: number;
+  groupName: string;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  points: number;
+  rank?: number;
+};
+
+type GroupMatchLike = {
+  teamAId: number | null;
+  teamBId: number | null;
+  scoreA: number | null;
+  scoreB: number | null;
+  status: string;
+  groupId: number | null;
+};
+
 function nextPowerOf2(n: number): number {
   let p = 1;
   while (p < n) p *= 2;
   return p;
 }
 
-// ── DELETE — reset bracket ─────────────────────────────────────────────────
+function sortRows(a: StandingRow, b: StandingRow) {
+  return (
+    b.points - a.points ||
+    b.gd - a.gd ||
+    b.gf - a.gf ||
+    a.ga - b.ga ||
+    a.teamId - b.teamId
+  );
+}
+
+function computeGroupStandings(
+  groupId: number,
+  groupName: string,
+  matches: GroupMatchLike[],
+  teamMap: Record<number, string>
+): StandingRow[] {
+  const rows: Record<number, StandingRow> = {};
+  const teamIds = new Set<number>();
+
+  for (const m of matches) {
+    if (m.teamAId != null) teamIds.add(m.teamAId);
+    if (m.teamBId != null) teamIds.add(m.teamBId);
+  }
+
+  for (const teamId of teamIds) {
+    rows[teamId] = {
+      teamId,
+      teamName: teamMap[teamId] ?? `Team ${teamId}`,
+      groupId,
+      groupName,
+      played: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      gf: 0,
+      ga: 0,
+      gd: 0,
+      points: 0,
+    };
+  }
+
+  for (const m of matches) {
+    if (
+      m.status !== "completed" ||
+      m.teamAId == null ||
+      m.teamBId == null ||
+      m.scoreA == null ||
+      m.scoreB == null
+    ) {
+      continue;
+    }
+
+    const a = rows[m.teamAId];
+    const b = rows[m.teamBId];
+    if (!a || !b) continue;
+
+    a.played++;
+    b.played++;
+
+    a.gf += m.scoreA;
+    a.ga += m.scoreB;
+    b.gf += m.scoreB;
+    b.ga += m.scoreA;
+
+    if (m.scoreA > m.scoreB) {
+      a.wins++;
+      a.points += 3;
+      b.losses++;
+    } else if (m.scoreB > m.scoreA) {
+      b.wins++;
+      b.points += 3;
+      a.losses++;
+    } else {
+      a.draws++;
+      b.draws++;
+      a.points++;
+      b.points++;
+    }
+  }
+
+  return Object.values(rows)
+    .map((r) => ({ ...r, gd: r.gf - r.ga }))
+    .sort(sortRows)
+    .map((r, idx) => ({ ...r, rank: idx + 1 }));
+}
+
 export async function DELETE(req: NextRequest, { params }: Params) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { id } = await params;
   const tournamentId = parseInt(id, 10);
-  if (isNaN(tournamentId)) return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 });
+
+  if (isNaN(tournamentId)) {
+    return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 });
+  }
 
   await prisma.match.deleteMany({
     where: { tournamentId, NOT: { phase: "group" } },
@@ -44,107 +158,130 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   return new Response(null, { status: 204 });
 }
 
-// ── POST — generate bracket ────────────────────────────────────────────────
 export async function POST(req: NextRequest, { params }: Params) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   const { id } = await params;
   const tournamentId = parseInt(id, 10);
-  if (isNaN(tournamentId)) return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 });
+
+  if (isNaN(tournamentId)) {
+    return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 });
+  }
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
-    include: { teams: { include: { team: true } }, matches: true },
+    include: {
+      teams: {
+        include: {
+          team: true,
+          groupLinks: {
+            include: {
+              group: true,
+            },
+          },
+        },
+      },
+      groups: {
+        orderBy: [{ order: "asc" }, { id: "asc" }],
+      },
+      matches: {
+        include: {
+          group: true,
+        },
+      },
+    },
   });
 
-  if (!tournament) return NextResponse.json({ error: "Tournament not found" }, { status: 404 });
+  if (!tournament) {
+    return NextResponse.json({ error: "Tournament not found" }, { status: 404 });
+  }
+
   if (tournament.type === "round_robin") {
-    return NextResponse.json({ error: "Round robin tournaments do not have a bracket" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Round robin tournaments do not have a bracket" },
+      { status: 400 }
+    );
   }
 
   const existingBracket = tournament.matches.filter((m) => m.phase !== "group");
   if (existingBracket.length > 0) {
-    return NextResponse.json({ error: "Bracket already generated. Reset the bracket first." }, { status: 409 });
+    return NextResponse.json(
+      { error: "Bracket already generated. Reset the bracket first." },
+      { status: 409 }
+    );
   }
 
-  // ── Step 1: Determine seeded team list ────────────────────────────────────
   let seededTeamIds: number[] = [];
-  const fc = (tournament.formatConfig ?? {}) as { thirdPlaceMatch?: boolean };
+  const fc = (tournament.formatConfig ?? {}) as {
+    thirdPlaceMatch?: boolean;
+    qualifiersPerGroup?: number;
+    wildCardCount?: number;
+  };
   const wantsThirdPlace = fc.thirdPlaceMatch === true;
 
   if (tournament.type === "group_and_bracket") {
-    const fc = (tournament.formatConfig ?? {}) as {
-      qualifiersPerGroup?: number;
-      wildCardCount?: number;
-    };
-
     const qualifiersPerGroup = fc.qualifiersPerGroup ?? 2;
     const wildCardCount = fc.wildCardCount ?? 0;
 
     const groupMatches = tournament.matches.filter(
-      (m) => m.phase === "group" && m.group && m.teamAId !== null && m.teamBId !== null
-    ) as unknown as Match[];
+      (m) =>
+        m.phase === "group" &&
+        m.groupId != null &&
+        m.teamAId != null &&
+        m.teamBId != null
+    );
 
     if (groupMatches.length === 0) {
-      return NextResponse.json({ error: "No group stage matches found." }, { status: 400 });
+      return NextResponse.json(
+        { error: "No group stage matches found." },
+        { status: 400 }
+      );
     }
 
     const teamMap: Record<number, string> = {};
-    tournament.teams.forEach((tt) => { teamMap[tt.teamId] = tt.team?.name ?? `Team ${tt.teamId}`; });
+    tournament.teams.forEach((tt) => {
+      teamMap[tt.teamId] = tt.team?.name ?? `Team ${tt.teamId}`;
+    });
 
-    type StandingRow = {
-      teamId: number; teamName: string; group: string;
-      played: number; wins: number; draws: number; losses: number;
-      gf: number; ga: number; gd: number; points: number; rank?: number;
-    };
+    const matchesByGroup = groupMatches.reduce<Record<number, GroupMatchLike[]>>(
+      (acc, m) => {
+        if (m.groupId == null) return acc;
+        if (!acc[m.groupId]) acc[m.groupId] = [];
+        acc[m.groupId].push(m);
+        return acc;
+      },
+      {}
+    );
 
-    const sortRows = (a: StandingRow, b: StandingRow) =>
-      b.points - a.points || b.gd - a.gd || b.gf - a.gf || a.ga - b.ga || a.teamId - b.teamId;
+    const validGroups = tournament.groups.filter((group) => matchesByGroup[group.id]?.length > 0);
 
-    function computeGroupStandings(groupLabel: string, matches: Match[]): StandingRow[] {
-      const rows: Record<number, StandingRow> = {};
-      const teamIds = new Set<number>();
-      for (const m of matches) {
-        if (m.teamAId != null) teamIds.add(m.teamAId);
-        if (m.teamBId != null) teamIds.add(m.teamBId);
-      }
-      for (const teamId of teamIds) {
-        rows[teamId] = { teamId, teamName: teamMap[teamId] ?? `Team ${teamId}`, group: groupLabel, played: 0, wins: 0, draws: 0, losses: 0, gf: 0, ga: 0, gd: 0, points: 0 };
-      }
-      for (const m of matches) {
-        if (m.status !== "completed" || m.teamAId == null || m.teamBId == null || m.scoreA == null || m.scoreB == null) continue;
-        const a = rows[m.teamAId];
-        const b = rows[m.teamBId];
-        if (!a || !b) continue;
-        a.played++; b.played++;
-        a.gf += m.scoreA; a.ga += m.scoreB;
-        b.gf += m.scoreB; b.ga += m.scoreA;
-        if (m.scoreA > m.scoreB) { a.wins++; a.points += 3; b.losses++; }
-        else if (m.scoreB > m.scoreA) { b.wins++; b.points += 3; a.losses++; }
-        else { a.draws++; b.draws++; a.points++; b.points++; }
-      }
-      return Object.values(rows).map((r) => ({ ...r, gd: r.gf - r.ga })).sort(sortRows).map((r, idx) => ({ ...r, rank: idx + 1 }));
+    if (validGroups.length === 0) {
+      return NextResponse.json({ error: "No valid groups found." }, { status: 400 });
     }
-
-    const matchesByGroup = groupMatches.reduce<Record<string, Match[]>>((acc, m) => {
-      const g = m.group as string;
-      if (!acc[g]) acc[g] = [];
-      acc[g].push(m);
-      return acc;
-    }, {});
-
-    const groupLabels = Object.keys(matchesByGroup).sort();
-    if (groupLabels.length === 0) return NextResponse.json({ error: "No valid groups found." }, { status: 400 });
 
     const directByRank: Record<number, StandingRow[]> = {};
     const wildcardCandidates: StandingRow[] = [];
 
-    for (const groupLabel of groupLabels) {
-      const standings = computeGroupStandings(groupLabel, matchesByGroup[groupLabel]);
+    for (const group of validGroups) {
+      const standings = computeGroupStandings(
+        group.id,
+        group.name,
+        matchesByGroup[group.id] ?? [],
+        teamMap
+      );
+
       if (standings.length < qualifiersPerGroup) {
-        return NextResponse.json({ error: `Group ${groupLabel} does not have enough teams to qualify ${qualifiersPerGroup} teams.` }, { status: 400 });
+        return NextResponse.json(
+          {
+            error: `Group ${group.name} does not have enough teams to qualify ${qualifiersPerGroup} teams.`,
+          },
+          { status: 400 }
+        );
       }
+
       standings.forEach((row, idx) => {
         if (idx < qualifiersPerGroup) {
           const rank = idx + 1;
@@ -156,23 +293,38 @@ export async function POST(req: NextRequest, { params }: Params) {
       });
     }
 
-    Object.keys(directByRank).forEach((rank) => { directByRank[Number(rank)].sort(sortRows); });
+    Object.keys(directByRank).forEach((rank) => {
+      directByRank[Number(rank)].sort(sortRows);
+    });
+
     wildcardCandidates.sort(sortRows);
 
-    const directQualifiers = Object.keys(directByRank).map(Number).sort((a, b) => a - b).flatMap((rank) => directByRank[rank]);
+    const directQualifiers = Object.keys(directByRank)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .flatMap((rank) => directByRank[rank]);
+
     const wildCards = wildcardCandidates.slice(0, wildCardCount);
+
     seededTeamIds = [...directQualifiers, ...wildCards].map((r) => r.teamId);
 
-    if (seededTeamIds.length === 0) return NextResponse.json({ error: "No teams qualified for the bracket." }, { status: 400 });
+    if (seededTeamIds.length === 0) {
+      return NextResponse.json(
+        { error: "No teams qualified for the bracket." },
+        { status: 400 }
+      );
+    }
   } else {
     seededTeamIds = tournament.teams.map((tt) => tt.teamId);
   }
 
   if (seededTeamIds.length < 2) {
-    return NextResponse.json({ error: "At least 2 teams are required to generate a bracket" }, { status: 400 });
+    return NextResponse.json(
+      { error: "At least 2 teams are required to generate a bracket" },
+      { status: 400 }
+    );
   }
 
-  // ── Step 2: Build bracket with correct bye propagation ───────────────────
   const advanceCount = seededTeamIds.length;
   const bracketSize = nextPowerOf2(advanceCount);
   const byeCount = bracketSize - advanceCount;
@@ -190,7 +342,6 @@ export async function POST(req: NextRequest, { params }: Params) {
     return entry !== undefined && Number(entry[0]) <= bracketSize;
   });
 
-  // Standard recursive bracket seeding: seed 1 and 2 on opposite halves
   function buildBracketPositions(size: number): number[] {
     if (size === 2) return [1, 2];
     const half = buildBracketPositions(size / 2);
@@ -207,20 +358,13 @@ export async function POST(req: NextRequest, { params }: Params) {
     ...seededTeamIds,
     ...Array(bracketSize - advanceCount).fill(null),
   ];
-  // bracketSlots[i] = teamId or null (bye placeholder)
+
   const bracketSlots: (number | null)[] = positions.map(
     (seedNum) => paddedSeeds[seedNum - 1] ?? null
   );
 
-  // ── Pre-resolve all byes in R16 → produce QF slots ─────────────────────────
-  // Instead of running byes through the phase loop (which shifts phase labels),
-  // we resolve the first round byes ahead of time, producing:
-  //   r16Matches: the real R16 matches to create in DB
-  //   qfSlots: the 8 QF slots (bye teams already in place, R16 winners as null)
-
   let byeTeams = 0;
 
-  // Slot pairs for the first round (R16 level, bracketSize slots → bracketSize/2 pairs)
   interface SlotPair {
     teamA: number | null;
     teamB: number | null;
@@ -234,14 +378,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     });
   }
 
-  // Each pair of R16 matches feeds one QF slot
-  // pair 0+1 → QF match 0,  pair 2+3 → QF match 1, etc.
   const r16Matches: {
-      pairIndex: number;
-      teamAId: number | null;
-      teamBId: number | null;
+    pairIndex: number;
+    teamAId: number | null;
+    teamBId: number | null;
   }[] = [];
-  // qfSlots: one entry per QF match, top and bottom slot
+
   const qfSlotTop: (number | null)[] = Array(bracketSize / 4).fill(null);
   const qfSlotBot: (number | null)[] = Array(bracketSize / 4).fill(null);
 
@@ -260,17 +402,14 @@ export async function POST(req: NextRequest, { params }: Params) {
       if (isTop) qfSlotTop[qfMatchIdx] = byeTeamId;
       else qfSlotBot[qfMatchIdx] = byeTeamId;
     } else {
-      // Real R16 match — winner slot stays null (TBD)
       r16Matches.push({
         pairIndex: i,
         teamAId: teamA,
         teamBId: teamB,
       });
-      // QF slot stays null (filled when R16 winner is known)
     }
   }
 
-  // ── Build all match records ─────────────────────────────────────────────────
   const allMatchData: {
     tournamentId: number;
     teamAId: number | null;
@@ -281,9 +420,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     bracketOrder: number | null;
     nextMatchOrder: number | null;
     nextSlot: string | null;
+    groupId?: number | null;
   }[] = [];
 
-  // 1. R16 real matches (only if bracketSize === 16 and there are non-bye pairs)
   if (r16Matches.length > 0) {
     for (const m of r16Matches) {
       allMatchData.push({
@@ -296,12 +435,12 @@ export async function POST(req: NextRequest, { params }: Params) {
         bracketOrder: m.pairIndex,
         nextMatchOrder: Math.floor(m.pairIndex / 2),
         nextSlot: m.pairIndex % 2 === 0 ? "teamAId" : "teamBId",
+        groupId: null,
       });
     }
   }
 
-  // 2. QF matches — always bracketSize/4 of them
-  const qfPhase = PHASE_BY_SIZE[bracketSize / 2]; // e.g. for bracketSize=16 → "quarter_final"
+  const qfPhase = PHASE_BY_SIZE[bracketSize / 2];
   if (qfPhase) {
     for (let i = 0; i < bracketSize / 4; i++) {
       allMatchData.push({
@@ -314,15 +453,14 @@ export async function POST(req: NextRequest, { params }: Params) {
         bracketOrder: i,
         nextMatchOrder: Math.floor(i / 2),
         nextSlot: i % 2 === 0 ? "teamAId" : "teamBId",
+        groupId: null,
       });
     }
   }
 
-  // 3. Remaining later rounds (SF, Final) — all TBD
-  const laterPhases = allPhases.filter(
-    (p) => p !== firstPhase && p !== qfPhase
-  );
-  let matchCount = bracketSize / 8; // SF has bracketSize/8 matches
+  const laterPhases = allPhases.filter((p) => p !== firstPhase && p !== qfPhase);
+  let matchCount = bracketSize / 8;
+
   for (const phase of laterPhases) {
     for (let i = 0; i < matchCount; i++) {
       allMatchData.push({
@@ -335,64 +473,62 @@ export async function POST(req: NextRequest, { params }: Params) {
         bracketOrder: i,
         nextMatchOrder: phase === "final" ? null : Math.floor(i / 2),
         nextSlot: phase === "final" ? null : i % 2 === 0 ? "teamAId" : "teamBId",
+        groupId: null,
       });
     }
     matchCount = Math.max(1, Math.floor(matchCount / 2));
   }
 
-  // Pass 1: create all matches and capture their ids
-  const createdIds: Record<string, Record<number, number>> = {}
+  const createdIds: Record<string, Record<number, number>> = {};
 
   try {
     for (const matchData of allMatchData) {
-      const created = await prisma.match.create({ data: matchData as any })
-      const phase = matchData.phase
-      const order = matchData.bracketOrder ?? 0
-      if (!createdIds[phase]) createdIds[phase] = {}
-      createdIds[phase][order] = created.id
+      const created = await prisma.match.create({ data: matchData as any });
+      const phase = matchData.phase;
+      const order = matchData.bracketOrder ?? 0;
+      if (!createdIds[phase]) createdIds[phase] = {};
+      createdIds[phase][order] = created.id;
     }
   } catch (err) {
-    console.error("match create failed:", JSON.stringify(err, null, 2))
+    console.error("match create failed:", JSON.stringify(err, null, 2));
     return NextResponse.json(
       { error: "DB insert failed", detail: String(err) },
       { status: 500 }
-    )
+    );
   }
 
-  // Pass 2: wire nextMatchId on every non-final match
   const nextPhaseMap: Record<string, string> = {
     round_of_32: "round_of_16",
     round_of_16: "quarter_final",
     quarter_final: "semi_final",
     semi_final: "final",
-  }
+  };
 
   try {
     for (const matchData of allMatchData) {
-      if (matchData.phase === "final" || matchData.nextMatchOrder == null) continue
+      if (matchData.phase === "final" || matchData.nextMatchOrder == null) continue;
 
-      const nextPhase = nextPhaseMap[matchData.phase]
-      if (!nextPhase) continue
+      const nextPhase = nextPhaseMap[matchData.phase];
+      if (!nextPhase) continue;
 
-      const sourceId = createdIds[matchData.phase]?.[matchData.bracketOrder ?? 0]
-      const targetId = createdIds[nextPhase]?.[matchData.nextMatchOrder]
+      const sourceId = createdIds[matchData.phase]?.[matchData.bracketOrder ?? 0];
+      const targetId = createdIds[nextPhase]?.[matchData.nextMatchOrder];
 
-      if (!sourceId || !targetId) continue
+      if (!sourceId || !targetId) continue;
 
       await prisma.match.update({
         where: { id: sourceId },
         data: { nextMatchId: targetId },
-      })
+      });
     }
   } catch (err) {
-    console.error("nextMatchId wiring failed:", JSON.stringify(err, null, 2))
+    console.error("nextMatchId wiring failed:", JSON.stringify(err, null, 2));
     return NextResponse.json(
       { error: "DB wiring failed", detail: String(err) },
       { status: 500 }
-    )
+    );
   }
 
-  // Pass 3: optional third-place match, wired from the two semifinal losers
   let thirdPlaceCreated = false;
 
   try {
@@ -407,6 +543,7 @@ export async function POST(req: NextRequest, { params }: Params) {
           round: 1,
           status: "pending",
           bracketOrder: 0,
+          groupId: null,
         } as any,
       });
 

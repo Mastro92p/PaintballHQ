@@ -1,17 +1,19 @@
 import type { Team } from "@/types";
 
 type Props = {
-  group: string;
+  groupId: number;
+  groupName: string;
   capacity?: number;
   allTeams: Team[];
   managementMode: "auto" | "manual";
-  teamGroups: Record<number, string[]>;   // teamId -> array of group labels
+  teamGroups: Record<number, number[]>;
   assigningTeamId: number | null;
-  onAssign: (teamId: number, group: string | null) => void;
+  onAssign: (teamId: number, groupId: number | null) => void;
 };
 
 export function GroupTeamPanel({
-  group,
+  groupId,
+  groupName,
   capacity,
   allTeams,
   teamGroups,
@@ -19,15 +21,20 @@ export function GroupTeamPanel({
   assigningTeamId,
   onAssign,
 }: Props) {
-  const assigned = allTeams.filter((t) => (teamGroups[t.id] ?? []).includes(group));
-  const availableToAdd = allTeams.filter((t) => !(teamGroups[t.id] ?? []).includes(group));
-  const isFull = capacity != null && assigned.length >= capacity;
+  const assigned = allTeams.filter((t) => (teamGroups[t.id] ?? []).includes(groupId));
+  const availableToAdd = allTeams.filter(
+    (t) => !(teamGroups[t.id] ?? []).includes(groupId)
+  );
+  const isFull =
+    managementMode !== "manual" &&
+    capacity != null &&
+    assigned.length >= capacity;
 
   return (
     <div className="rounded-xl border border-gray-200 dark:border-[#22314d] bg-gray-50 dark:bg-[#0f1b34] p-4 space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-          Teams in Group {group}
+          Teams in {groupName}
         </span>
         {capacity != null && (
           <span
@@ -53,7 +60,7 @@ export function GroupTeamPanel({
             >
               {t.name}
               <button
-                onClick={() => onAssign(t.id, group)}
+                onClick={() => onAssign(t.id, groupId)}
                 disabled={assigningTeamId === t.id}
                 className="hover:text-red-500 transition-colors"
                 title="Remove from group"
@@ -71,11 +78,11 @@ export function GroupTeamPanel({
           disabled={assigningTeamId !== null}
           onChange={(e) => {
             const teamId = Number(e.target.value);
-            if (teamId) onAssign(teamId, group);
+            if (teamId) onAssign(teamId, groupId);
           }}
           className="w-full sm:w-64 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#22314d] bg-white dark:bg-[#0a1428] text-sm text-gray-900 dark:text-gray-200"
         >
-          <option value="">+ Add team to Group {group}...</option>
+          <option value="">+ Add team to {groupName}...</option>
           {availableToAdd.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}

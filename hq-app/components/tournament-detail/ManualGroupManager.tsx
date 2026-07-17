@@ -1,11 +1,13 @@
 import { useState } from "react";
+import type { TournamentGroup } from "@/types";
+
 
 type Props = {
-  groups: string[];
+  groups: TournamentGroup[];
   savingGroups: boolean;
   onAddGroup: (name: string) => void;
-  onRenameGroup: (oldName: string, newName: string) => void;
-  onDeleteGroup: (name: string) => void;
+  onRenameGroup: (groupId: number, newName: string) => void;
+  onDeleteGroup: (groupId: number) => void;
 };
 
 export function ManualGroupManager({
@@ -16,7 +18,7 @@ export function ManualGroupManager({
   onDeleteGroup,
 }: Props) {
   const [newGroupName, setNewGroupName] = useState("");
-  const [renaming, setRenaming] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
   function submitAdd() {
@@ -24,29 +26,29 @@ export function ManualGroupManager({
     setNewGroupName("");
   }
 
-  function submitRename(oldName: string) {
-    onRenameGroup(oldName, renameValue.trim());
+  function submitRename(groupId: number) {
+    onRenameGroup(groupId, renameValue.trim());
     setRenaming(null);
   }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {groups.map((g) =>
-        renaming === g ? (
-          <div key={g} className="flex items-center gap-1">
+      {groups.map((group) =>
+        renaming === group.id ? (
+          <div key={group.id} className="flex items-center gap-1">
             <input
               autoFocus
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
-              placeholder={g}
+              placeholder={group.name}
               onKeyDown={(e) => {
-                if (e.key === "Enter") submitRename(g);
+                if (e.key === "Enter") submitRename(group.id);
                 if (e.key === "Escape") setRenaming(null);
               }}
               className="px-2 py-1 rounded-md text-sm border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 w-32"
             />
             <button
-              onClick={() => submitRename(g)}
+              onClick={() => submitRename(group.id)}
               className="text-xs text-teal-600 hover:text-teal-700"
               title="Save"
             >
@@ -62,14 +64,14 @@ export function ManualGroupManager({
           </div>
         ) : (
           <span
-            key={g}
+            key={group.id}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
           >
-            {g}
+            {group.name}
             <button
               onClick={() => {
-                setRenaming(g);
-                setRenameValue(g);
+                setRenaming(group.id);
+                setRenameValue(group.name);
               }}
               className="text-gray-400 hover:text-gray-600"
               title="Rename group"
@@ -80,10 +82,10 @@ export function ManualGroupManager({
               onClick={() => {
                 if (
                   confirm(
-                    `Delete group "${g}"? This will delete its matches and unassign its teams.`
+                    `Delete group "${group.name}"? This will delete its matches and unassign its teams.`
                   )
                 ) {
-                  onDeleteGroup(g);
+                  onDeleteGroup(group.id);
                 }
               }}
               className="text-gray-400 hover:text-red-500"
@@ -102,7 +104,7 @@ export function ManualGroupManager({
           onKeyDown={(e) => {
             if (e.key === "Enter") submitAdd();
           }}
-          placeholder="New group name (optional)"
+          placeholder="Group name (optional)"
           className="px-2 py-1.5 rounded-md text-sm border border-dashed border-gray-300 dark:border-gray-600 bg-transparent w-44"
           disabled={savingGroups}
         />

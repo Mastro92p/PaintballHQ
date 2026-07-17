@@ -11,24 +11,25 @@ export interface Tournament {
   createdAt: Date
   teams?: TournamentTeam[]
   matches?: Match[]
-  formatConfig: FormatConfig | null;
-  type:           string;
-  teamsToAdvance: number;
-  leagueId:       number | null;
-  divisionId:     number | null;
-  division?:      Division | null;
-  managementMode: "auto" | "manual";
+  groups?: TournamentGroup[]
+  formatConfig: FormatConfig | null
+  type: string
+  teamsToAdvance: number
+  leagueId: number | null
+  divisionId: number | null
+  division?: Division | null
+  managementMode: 'auto' | 'manual'
 }
 
 export interface Team {
   id: number
   name: string
   contact?: string | null
-  logoUrl: string | null;
+  logoUrl: string | null
   createdAt: Date
   tournaments?: TournamentTeam[]
-  divisionId:  number | null;
-  division?:   Division | null;
+  divisionId: number | null
+  division?: Division | null
 }
 
 export interface TournamentTeam {
@@ -36,41 +37,56 @@ export interface TournamentTeam {
   teamId: number
   tournament?: Tournament
   team?: Team
-  groups?: string[];
+  groupLinks?: TournamentTeamGroup[]
 }
 
-export interface Match {
+export interface TournamentGroup {
   id: number
   tournamentId: number
-  teamAId?: number | null
-  teamBId?: number | null
-  scoreA?: number | null
-  scoreB?: number | null
-  round: number
-  field?: string | null
-  status: MatchStatus
-  createdAt: Date
+  name: string
+  order: number
   tournament?: Tournament
-  teamA?: Team | null
-  teamB?: Team | null
-  phase: string
-  group?: string | null
+  teamGroups?: TournamentTeamGroup[]
+  matches?: Match[]
+}
 
-  nextMatchId?: number | null
-  bracketOrder?: number | null
-  nextMatchOrder?: number | null
-  nextSlot?: string | null
+export interface TournamentTeamGroup {
+  tournamentId: number
+  teamId: number
+  groupId: number
+  tournament?: Tournament
+  tournamentTeam?: TournamentTeam
+  group?: TournamentGroup
+}
 
-  loserNextMatchId?: number | null
-  loserNextSlot?: string | null
-
-  manualOverride?: boolean
-  label?: string | null
-
+export type Match = {
+  id: number;
+  tournamentId: number;
+  teamAId: number | null;
+  teamBId: number | null;
+  teamA?: Team | null;
+  teamB?: Team | null;
+  scoreA: number | null;
+  scoreB: number | null;
+  round: number | null;
+  label: string | null;
+  phase: string;
+  groupId?: number | null;
+  group?: TournamentGroup | null;
+  groupLegacy?: string | null;
+  field: string | null;
+  nextMatchId?: number | null;
+  loserNextMatchId?: number | null;
+  nextSlot?: string | null;
+  loserNextSlot?: string | null;
+  bracketOrder?: number | null;
+  nextMatchOrder?: number | null;
+  status: string;
+  manualOverride?: boolean;
+  createdAt?: string;
   bodyCountA?: number | null;
   bodyCountB?: number | null;
-
-}
+};
 
 export interface User {
   id: number
@@ -90,7 +106,7 @@ export interface CreateTournamentBody {
   leagueId?: number
   divisionId?: number | string | null
   teamIds?: number[]
-  formatConfig?: FormatConfig;
+  formatConfig?: FormatConfig
 }
 
 export interface UpdateTournamentBody {
@@ -99,18 +115,18 @@ export interface UpdateTournamentBody {
   location?: string
   status?: string
   type?: string
-  managementMode?: "auto" | "manual"   // NEW
+  managementMode?: 'auto' | 'manual'
   teamsToAdvance?: number
   leagueId?: number | null
   divisionId?: number | string | null
   teamIds?: number[]
-  formatConfig?: FormatConfig;
+  formatConfig?: FormatConfig
 }
 
 export interface CreateTeamBody {
-  name: string;
-  contact?: string;
-  divisionId?: number | string | null;
+  name: string
+  contact?: string
+  divisionId?: number | string | null
 }
 
 export interface UpdateTeamBody {
@@ -119,32 +135,34 @@ export interface UpdateTeamBody {
   divisionId?: number | string | null
 }
 
-export interface CreateMatchBody {
-  tournamentId: number
-  teamAId: number
-  teamBId: number
-  scoreA?: number
-  scoreB?: number
-  bodyCountA?: number
-  bodyCountB?: number
-  round?: number | null
-  label?: string | null
-  field?: string | null
-  phase?: string
-  group?: string | null
-}
+export type CreateMatchBody = {
+  tournamentId: number;
+  teamAId: number;
+  teamBId: number;
+  scoreA?: number;
+  scoreB?: number;
+  bodyCountA?: number;
+  bodyCountB?: number;
+  round?: number | null;
+  label?: string | null;
+  field?: string | null;
+  phase?: Match["phase"];
+  groupId?: number | null;
+};
 
 export type UpdateMatchBody = {
-  teamAId?: number
-  teamBId?: number
-  scoreA?: number | null
-  scoreB?: number | null
-  bodyCountA?: number | null
-  bodyCountB?: number | null
-  round?: number | null
-  label?: string | null
-  field?: string | null
-}
+  teamAId?: number | null;
+  teamBId?: number | null;
+  scoreA?: number | null;
+  scoreB?: number | null;
+  bodyCountA?: number | null;
+  bodyCountB?: number | null;
+  round?: number | null;
+  label?: string | null;
+  field?: string | null;
+  phase?: Match["phase"];
+  groupId?: number | null;
+};
 
 export interface Standing {
   teamId: number
@@ -173,122 +191,120 @@ export interface UpdateLeagueBody {
   teamIds?: number[]
 }
 
-
 export interface League {
-  id:          number;
-  name:        string;
-  description: string | null;
-  logoUrl:     string | null;
-  createdAt:   string;
-  tournaments?: Tournament[];
-  teams?:      { teamId: number; team: Team }[];
+  id: number
+  name: string
+  description: string | null
+  logoUrl: string | null
+  createdAt: string
+  tournaments?: Tournament[]
+  teams?: { teamId: number; team: Team }[]
 }
 
-// Update Tournament type:
-
 export type FormatConfig = {
-  groupCount?:         number;
-  teamsPerGroup?:      number;
-  groups?:             string[];   // NEW — manual mode's custom, ordered group names
-  qualifiersPerGroup?: number;
-  wildCardCount?: number;
-  bracketSeedingRule?: "crossover" | "sequential";
-  thirdPlaceMatch?: boolean;
-};
+  groupCount?: number
+  teamsPerGroup?: number
+  qualifiersPerGroup?: number
+  wildCardCount?: number
+  bracketSeedingRule?: 'crossover' | 'sequential'
+  thirdPlaceMatch?: boolean
+}
 
 export type EnrolledTeam = {
-  teamId: number;
-  team: Team;
-  group?: string | null;
-};
+  teamId: number
+  team: Team
+  groupLinks?: TournamentTeamGroup[]
+}
 
 export type TournamentDetail = Tournament & {
-  id: number;
-  name: string;
-  status?: string;
-  type?: string;
-  date?: string;
-  location?: string | null;
-  teams: EnrolledTeam[];
-  matches: Match[];
-};
+  id: number
+  name: string
+  status?: string
+  type?: string
+  date?: string
+  location?: string | null
+  teams: EnrolledTeam[]
+  matches: Match[]
+  groups?: TournamentGroup[]
+}
 
 export type Division = {
-  id: number;
-  name: string;
-  isActive: boolean;
-  createdAt: string;
-};
-
+  id: number
+  name: string
+  isActive: boolean
+  createdAt: string
+}
 
 export interface CreateDivisionBody {
-  name: string;
+  name: string
 }
 
 export type UpdateDivisionBody = {
-  name?: string;
-  isActive?: boolean;
-};
-
+  name?: string
+  isActive?: boolean
+}
 
 export type MatchDetail = {
-  id: number;
-  status: string;
-  round: number | null;
-  scoreA: number | null;
-  scoreB: number | null;
-  teamAId: number;
-  teamBId: number;
-  teamA?: { id: number; name: string };
-  teamB?: { id: number; name: string };
-  tournament?: { id: number; name: string };
-};
+  id: number
+  status: string
+  round: number | null
+  scoreA: number | null
+  scoreB: number | null
+  teamAId: number
+  teamBId: number
+  groupId?: number | null
+  teamA?: { id: number; name: string }
+  teamB?: { id: number; name: string }
+  tournament?: { id: number; name: string }
+}
 
 export type TeamWithStats = Team & {
-  tournamentCount?: number;
-  totalMatches?: number;
-  wins?: number;
-  matchesA?: MatchDetail[];
-  matchesB?: MatchDetail[];
-};
+  tournamentCount?: number
+  totalMatches?: number
+  wins?: number
+  matchesA?: MatchDetail[]
+  matchesB?: MatchDetail[]
+}
 
 export type TeamDetail = Team & {
-  matchesA: MatchDetail[];
-  matchesB: MatchDetail[];
-  tournaments: { tournament: { id: number; name: string } }[];
-};
-
+  matchesA: MatchDetail[]
+  matchesB: MatchDetail[]
+  tournaments: { tournament: { id: number; name: string } }[]
+}
 
 export type LeagueTeam = {
-  teamId: number;
+  teamId: number
   team: {
-    id: number;
-    name: string;
-    divisionId?: number | null;
-    division?: { id: number; name: string } | null;
-  } | null;
-};
+    id: number
+    name: string
+    divisionId?: number | null
+    division?: { id: number; name: string } | null
+  } | null
+}
 
 export type TournamentWithMatches = Tournament & {
-  divisionId?: number | null;
-  division?: { id: number; name: string } | null;
+  divisionId?: number | null
+  division?: { id: number; name: string } | null
   teams: {
-    teamId: number;
+    teamId: number
     team: {
-      id: number;
-      name: string;
-      divisionId?: number | null;
-    } | null;
-  }[];
-  matches: Match[];
-};
+      id: number
+      name: string
+      divisionId?: number | null
+    } | null
+    groupLinks?: TournamentTeamGroup[]
+  }[]
+  matches: Match[]
+  groups?: TournamentGroup[]
+}
 
-export type LeagueDetailResponse = Omit<League, "tournaments" | "teams"> & {
-  tournaments: TournamentWithMatches[];
-  teams: LeagueTeam[];
-};
+export type LeagueDetailResponse = Omit<League, 'tournaments' | 'teams'> & {
+  tournaments: TournamentWithMatches[]
+  teams: LeagueTeam[]
+}
 
 export interface AssignTeamGroupBody {
   teamId: number
-  group: string | null
+  groupIds: number[]
 }
+

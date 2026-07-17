@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/Badge";
 import { TeamsTab } from "@/components/tournament-detail/TeamsTab";
 import { MatchesTab } from "@/components/tournament-detail/MatchesTab";
 import { formatDate } from "@/lib/utils";
-import type { Tournament, Team, Match, CreateMatchBody } from "@/types";
+import type { Team, Match, CreateMatchBody } from "@/types";
 import { BracketTab } from "@/components/tournament-detail/BracketTab";
 import { InfoTab } from "@/components/tournament-detail/InfoTab";
 import type { TournamentDetail } from "@/types";
@@ -40,61 +40,90 @@ export default function ManageTournamentDetailPage({
 
   const [activeTab, setActiveTab] = useState<Tab>("teams");
 
-  // ── Transfer list ─────────────────────────────────────────
   const [localAvailable, setLocalAvailable] = useState<Team[]>([]);
   const [localEnrolled, setLocalEnrolled] = useState<Team[]>([]);
   const [bulkSaving, setBulkSaving] = useState(false);
-  const [activeGroupTab, setActiveGroupTab] = useState<string>("A");
+  const [activeGroupTab, setActiveGroupTab] = useState<number | null>(null);
+  const [localGroups, setLocalGroups] = useState<NonNullable<TournamentDetail["groups"]>>([]);
 
   const [resettingGroups, setResettingGroups] = useState(false);
-
-  // ── Manual group assignment state ─────────────────────────
   const [assigningTeamId, setAssigningTeamId] = useState<number | null>(null);
 
-  const teamGroups = useMemo<Record<number, string[]>>(() => {
+  const teamGroups = useMemo<Record<number, number[]>>(() => {
     if (!data) return {};
     return Object.fromEntries(
-      data.teams.map((t) => [t.teamId, t.groups ?? []])
+      data.teams.map((t) => [
+        t.teamId,
+        (t.groupLinks ?? [])
+          .map((link) => link.groupId)
+          .filter((groupId): groupId is number => typeof groupId === "number"),
+      ])
     );
   }, [data]);
 
+  const groupNameById = useMemo<Record<number, string>>(() => {
+    return Object.fromEntries((localGroups ?? []).map((g) => [g.id, g.name]));
+  }, [localGroups]);
+
+  useEffect(() => {
+    setLocalGroups(data?.groups ?? []);
+  }, [data?.groups]);
+
+  useEffect(() => {
+    if (!localGroups.length) {
+      setActiveGroupTab(null);
+      return;
+    }
+
+    setActiveGroupTab((prev) =>
+      prev != null && localGroups.some((g) => g.id === prev)
+        ? prev
+        : localGroups[0].id
+    );
+  }, [localGroups]);
+
   async function handleResetGroups() {
-    if (!confirm("Delete all group stage matches and clear team group assignments? This cannot be undone.")) return;
+    if (
+      !confirm(
+        "Delete all group stage matches and clear team group assignments? This cannot be undone."
+      )
+    ) {
+      return;
+    }
     setResettingGroups(true);
     await fetch(`/api/tournaments/${id}/generate-groups`, { method: "DELETE" });
     setResettingGroups(false);
     refetch();
   }
 
-async function handleAssignGroup(teamId: number, group: string | null) {
-  setAssigningTeamId(teamId);
-  try {
-    const currentGroups = teamGroups[teamId] ?? [];
+  async function handleAssignGroup(teamId: number, groupId: number | null) {
+    setAssigningTeamId(teamId);
+    try {
+      const currentGroupIds = teamGroups[teamId] ?? [];
 
-    const nextGroups =
-      group === null
-        ? currentGroups
-        : currentGroups.includes(group)
-        ? currentGroups.filter((g) => g !== group)
-        : [...currentGroups, group];
+      const nextGroupIds =
+        groupId === null
+          ? currentGroupIds
+          : currentGroupIds.includes(groupId)
+          ? currentGroupIds.filter((g) => g !== groupId)
+          : [...currentGroupIds, groupId];
 
-    const res = await fetch(`/api/tournaments/${id}/teams/group`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamId, groups: nextGroups }),
-    });
+      const res = await fetch(`/api/tournaments/${id}/teams/group`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId, groupIds: nextGroupIds }),
+      });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      alert(body.error ?? "Failed to assign group");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        alert(body.error ?? "Failed to assign group");
+      }
+
+      await refetch();
+    } finally {
+      setAssigningTeamId(null);
     }
-
-    await refetch();
-  } finally {
-    setAssigningTeamId(null);
   }
-}
-
 
   useEffect(() => {
     if (!data || !allTeams) return;
@@ -107,8 +136,6 @@ async function handleAssignGroup(teamId: number, group: string | null) {
     () => new Set(data?.teams.map((t) => t.teamId) ?? []),
     [data]
   );
-
-
 
   const pendingEnrollChanges = useMemo(() => {
     const currentIds = new Set(localEnrolled.map((t) => t.id));
@@ -207,7 +234,6 @@ async function handleAssignGroup(teamId: number, group: string | null) {
     refetch();
   }
 
-  // ── Match state ───────────────────────────────────────────
   const [matchModalOpen, setMatchModalOpen] = useState(false);
   const [matchForm, setMatchForm] = useState<MatchForm>(emptyMatchForm);
   const [matchErrors, setMatchErrors] = useState<MatchFormErrors>({});
@@ -218,17 +244,13 @@ async function handleAssignGroup(teamId: number, group: string | null) {
   const [editSaving, setEditSaving] = useState(false);
   const [deletingMatch, setDeletingMatch] = useState<number | null>(null);
 
-  // ── Group generation state ────────────────────────────────
   const [generatingGroups, setGeneratingGroups] = useState(false);
   const [groupsError, setGroupsError] = useState<string | null>(null);
 
-  // ── Bracket state ─────────────────────────────────────────
   const [generatingBracket, setGeneratingBracket] = useState(false);
   const [bracketError, setBracketError] = useState<string | null>(null);
   const [resettingBracket, setResettingBracket] = useState(false);
   const [savingGroups, setSavingGroups] = useState(false);
-
-
 
   async function handleAddGroup(name: string) {
     setSavingGroups(true);
@@ -241,26 +263,50 @@ async function handleAssignGroup(teamId: number, group: string | null) {
     refetch();
   }
 
-  async function handleRenameGroup(oldName: string, newName: string) {
+  async function handleRenameGroup(groupId: number, newName: string) {
     setSavingGroups(true);
     await fetch(`/api/tournaments/${id}/groups`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "rename", oldName, newName }),
+      body: JSON.stringify({ action: "rename", groupId, newName }),
     });
     setSavingGroups(false);
     refetch();
   }
 
-  async function handleDeleteGroup(name: string) {
+  async function handleDeleteGroup(groupId: number) {
     setSavingGroups(true);
     await fetch(`/api/tournaments/${id}/groups`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "delete", name }),
+      body: JSON.stringify({ action: "delete", groupId }),
     });
     setSavingGroups(false);
     refetch();
+  }
+
+  async function handleReorderGroups(groupIds: number[]) {
+    setSavingGroups(true);
+
+    try {
+      const res = await fetch(`/api/tournaments/${id}/groups`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reorder", groupIds }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to reorder groups");
+      }
+
+      setLocalGroups(body.groups ?? []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setSavingGroups(false);
+    }
   }
 
   async function handleResetBracket() {
@@ -271,7 +317,6 @@ async function handleAssignGroup(teamId: number, group: string | null) {
     refetch();
   }
 
-  // ── Bracket inline score editing ──────────────────────────
   const [bracketScores, setBracketScores] = useState<
     Record<number, { scoreA: string; scoreB: string }>
   >({});
@@ -316,12 +361,7 @@ async function handleAssignGroup(teamId: number, group: string | null) {
   }, [data]);
 
   const hasBracketMatches = useMemo(
-    () =>
-      data?.matches.some(
-        (m) =>
-          m.phase &&
-          m.phase !== "group"
-      ) ?? false,
+    () => data?.matches.some((m) => m.phase && m.phase !== "group") ?? false,
     [data]
   );
 
@@ -337,16 +377,15 @@ async function handleAssignGroup(teamId: number, group: string | null) {
     data?.type === "round_robin_classic" ||
     (data?.type === "group_and_bracket" && data?.managementMode === "manual");
 
-
   const modalTeams = useMemo(() => {
-    if (!isGroupAndBracket) return enrolledTeams;
+    if (!isGroupAndBracket || activeGroupTab == null) return enrolledTeams;
     return enrolledTeams.filter((t) => (teamGroups[t.id] ?? []).includes(activeGroupTab));
   }, [isGroupAndBracket, enrolledTeams, teamGroups, activeGroupTab]);
 
-
   const editModalTeams = useMemo(() => {
     if (!isGroupAndBracket || !editingMatch) return enrolledTeams;
-    const g = editingMatch.group ?? activeGroupTab;
+    const g = editingMatch.groupId ?? activeGroupTab;
+    if (g == null) return enrolledTeams;
     return enrolledTeams.filter((t) => (teamGroups[t.id] ?? []).includes(g));
   }, [isGroupAndBracket, editingMatch, enrolledTeams, teamGroups, activeGroupTab]);
 
@@ -388,10 +427,12 @@ async function handleAssignGroup(teamId: number, group: string | null) {
       field: matchForm.field.trim() || null,
       scoreA: matchForm.scoreA !== "" ? parseInt(matchForm.scoreA, 10) : undefined,
       scoreB: matchForm.scoreB !== "" ? parseInt(matchForm.scoreB, 10) : undefined,
-      bodyCountA: matchForm.bodyCountA !== "" ? parseInt(matchForm.bodyCountA, 10) : undefined,
-      bodyCountB: matchForm.bodyCountB !== "" ? parseInt(matchForm.bodyCountB, 10) : undefined,
+      bodyCountA:
+        matchForm.bodyCountA !== "" ? parseInt(matchForm.bodyCountA, 10) : undefined,
+      bodyCountB:
+        matchForm.bodyCountB !== "" ? parseInt(matchForm.bodyCountB, 10) : undefined,
       phase: isGroupAndBracket ? "group" : undefined,
-      group: isGroupAndBracket ? activeGroupTab : undefined,
+      groupId: isGroupAndBracket ? activeGroupTab : undefined,
     };
 
     await fetch("/api/matches", {
@@ -497,15 +538,16 @@ async function handleAssignGroup(teamId: number, group: string | null) {
   }
 
   async function handleGenerateBracket() {
-
     if (!data) return;
-    
+
     if (data.type === "round_robin" || data.type === "round_robin_classic") {
       setBracketError("Bracket generation is not available for round robin tournaments");
       return;
     }
 
-    if (!confirm("Generate bracket from current standings? This cannot be undone.")) return;
+    if (!confirm("Generate bracket from current standings? This cannot be undone.")) {
+      return;
+    }
     setGeneratingBracket(true);
     setBracketError(null);
 
@@ -642,7 +684,11 @@ async function handleAssignGroup(teamId: number, group: string | null) {
           hasGroupMatches={hasGroupMatches}
           managementMode={data.managementMode ?? "auto"}
           formatConfig={data.formatConfig ?? null}
+          groups={localGroups ?? []}
+          activeGroupTab={activeGroupTab}
+          setActiveGroupTab={setActiveGroupTab}
           teamGroups={teamGroups}
+          groupNameById={groupNameById}
           assigningTeamId={assigningTeamId}
           generatingGroups={generatingGroups}
           resettingGroups={resettingGroups}
@@ -654,10 +700,11 @@ async function handleAssignGroup(teamId: number, group: string | null) {
           onAddGroup={handleAddGroup}
           onRenameGroup={handleRenameGroup}
           onDeleteGroup={handleDeleteGroup}
-          onOpenAddMatch={(group) => {
+          onReorderGroups={handleReorderGroups}
+          onOpenAddMatch={(groupId) => {
             setMatchForm(emptyMatchForm);
             setMatchErrors({});
-            if (group) setActiveGroupTab(group);
+            if (groupId != null) setActiveGroupTab(groupId);
             setMatchModalOpen(true);
           }}
           onAssignGroup={handleAssignGroup}

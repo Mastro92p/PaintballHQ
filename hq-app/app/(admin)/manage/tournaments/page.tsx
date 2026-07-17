@@ -26,28 +26,23 @@ const TYPE_OPTIONS = [
   { value: "group_and_bracket", label: "Group Stage + Bracket" },
 ] as const;
 
-const SEEDING_OPTIONS = [
-  { value: "crossover", label: "Crossover (A1 vs B2, B1 vs A2)" },
-  { value: "sequential", label: "Sequential (A1 vs B1, A2 vs B2)" },
-] as const;
-
-const statusVariant: Record<
-  string,
-  "default" | "success" | "warning" | "muted"
-> = {
+const statusVariant: Record<string, "default" | "success" | "warning" | "muted"> = {
   upcoming: "warning",
   active: "default",
   completed: "muted",
 };
 
+type TournamentType = Tournament["type"];
+type TournamentStatus = Tournament["status"];
+
 type FormState = {
   name: string;
   date: string;
   location: string;
-  status: string;
-  type: string;
+  status: TournamentStatus;
+  type: TournamentType;
   divisionId: string;
-  managementMode: "auto" | "manual";   // NEW
+  managementMode: "auto" | "manual";
   groupCount: string;
   teamsPerGroup: string;
   qualifiersPerGroup: string;
@@ -65,7 +60,7 @@ const emptyForm: FormState = {
   status: "upcoming",
   type: "round_robin",
   divisionId: "",
-  managementMode: "auto",   // NEW
+  managementMode: "auto",
   groupCount: "2",
   teamsPerGroup: "4",
   qualifiersPerGroup: "2",
@@ -77,7 +72,7 @@ const emptyForm: FormState = {
 export default function ManageTournamentsPage() {
   const { data, loading, error, refetch } = useFetch<Tournament[]>("/api/tournaments");
   const { data: divisions } = useFetch<Division[]>("/api/divisions");
-  
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Tournament | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -98,11 +93,6 @@ export default function ManageTournamentsPage() {
       });
   }, [data, search, divisionFilter]);
 
-  const groupCount = parseInt(form.groupCount || "0", 10);
-  const teamsPerGroup = parseInt(form.teamsPerGroup || "0", 10);
-  const qualifiersPerGroup = parseInt(form.qualifiersPerGroup || "0", 10);
-  const wildCardCount = parseInt(form.wildCardCount || "0", 10);
-
   function openCreate() {
     setEditing(null);
     setForm({ ...emptyForm });
@@ -121,7 +111,7 @@ export default function ManageTournamentsPage() {
       status: t.status ?? "upcoming",
       type: t.type ?? "round_robin",
       divisionId: t.divisionId != null ? String(t.divisionId) : "",
-      managementMode: t.managementMode ?? "auto",   // NEW
+      managementMode: t.managementMode ?? "auto",
       groupCount: String(fc.groupCount ?? 2),
       teamsPerGroup: String(fc.teamsPerGroup ?? 4),
       qualifiersPerGroup: String(fc.qualifiersPerGroup ?? 2),
@@ -148,7 +138,7 @@ export default function ManageTournamentsPage() {
     if (!form.date) errors.date = "Date is required";
     if (!form.location.trim()) errors.location = "Location is required";
 
-    if (form.type === "group_and_bracket") {
+    if (form.type === "group_and_bracket" && form.managementMode === "auto") {
       if (!form.groupCount || parseInt(form.groupCount, 10) < 2) {
         errors.groupCount = "At least 2 groups required";
       }
@@ -184,42 +174,41 @@ export default function ManageTournamentsPage() {
 
     const isKnockout = form.type === "bracket" || form.type === "group_and_bracket";
 
-  const body: CreateTournamentBody | UpdateTournamentBody = {
-    name: form.name,
-    date: form.date,
-    location: form.location,
-    status: form.status as Tournament["status"],
-    type: form.type,
-    divisionId: form.divisionId ? Number(form.divisionId) : null,
-    ...(form.type === "group_and_bracket" && {
-      managementMode: form.managementMode,   // NEW
-    }),
-    ...(isKnockout && {
-      formatConfig: {
-        ...(form.type === "group_and_bracket" && {
-          groupCount:
-            form.managementMode === "manual"
-              ? MANUAL_UNLIMITED
-              : parseInt(form.groupCount || "0", 10),
-
-          teamsPerGroup:
-            form.managementMode === "manual"
-              ? MANUAL_UNLIMITED
-              : parseInt(form.teamsPerGroup || "0", 10),
-          qualifiersPerGroup:
-            form.managementMode === "manual"
-              ? 2
-              : parseInt(form.qualifiersPerGroup || "0", 10),
-          wildCardCount:
-            form.managementMode === "manual"
-              ? 0
-              : parseInt(form.wildCardCount || "0", 10),
-          bracketSeedingRule: form.bracketSeedingRule,
-        }),
-        thirdPlaceMatch: form.thirdPlaceMatch,
-      },
-    }),
-  };
+    const body: CreateTournamentBody | UpdateTournamentBody = {
+      name: form.name,
+      date: form.date,
+      location: form.location,
+      status: form.status,
+      type: form.type,
+      divisionId: form.divisionId ? Number(form.divisionId) : null,
+      ...(form.type === "group_and_bracket" && {
+        managementMode: form.managementMode,
+      }),
+      ...(isKnockout && {
+        formatConfig: {
+          ...(form.type === "group_and_bracket" && {
+            groupCount:
+              form.managementMode === "manual"
+                ? MANUAL_UNLIMITED
+                : parseInt(form.groupCount || "0", 10),
+            teamsPerGroup:
+              form.managementMode === "manual"
+                ? MANUAL_UNLIMITED
+                : parseInt(form.teamsPerGroup || "0", 10),
+            qualifiersPerGroup:
+              form.managementMode === "manual"
+                ? 2
+                : parseInt(form.qualifiersPerGroup || "0", 10),
+            wildCardCount:
+              form.managementMode === "manual"
+                ? 0
+                : parseInt(form.wildCardCount || "0", 10),
+            bracketSeedingRule: form.bracketSeedingRule,
+          }),
+          thirdPlaceMatch: form.thirdPlaceMatch,
+        },
+      }),
+    };
 
     try {
       if (editing) {
@@ -439,18 +428,18 @@ export default function ManageTournamentsPage() {
         size="lg"
       >
         <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSave();
-            }}
-            className="space-y-4 pb-4"
-          >
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSave();
+          }}
+          className="space-y-4 pb-4"
+        >
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Name <span className="text-red-500">*</span>
             </label>
             <input
-              value={form.name ?? ""}
+              value={form.name}
               onChange={(e) => setField("name", e.target.value)}
               className={inputCls("name")}
               placeholder="Tournament name"
@@ -464,7 +453,7 @@ export default function ManageTournamentsPage() {
             </label>
             <input
               type="date"
-              value={form.date ?? ""}
+              value={form.date}
               onChange={(e) => setField("date", e.target.value)}
               className={inputCls("date")}
             />
@@ -476,7 +465,7 @@ export default function ManageTournamentsPage() {
               Location <span className="text-red-500">*</span>
             </label>
             <input
-              value={form.location ?? ""}
+              value={form.location}
               onChange={(e) => setField("location", e.target.value)}
               className={inputCls("location")}
               placeholder="City, Venue"
@@ -509,8 +498,8 @@ export default function ManageTournamentsPage() {
               Format
             </label>
             <select
-              value={form.type ?? ""}
-              onChange={(e) => setField("type", e.target.value)}
+              value={form.type}
+              onChange={(e) => setField("type", e.target.value as TournamentType)}
               className={inputCls("type")}
             >
               {TYPE_OPTIONS.map((o) => (
@@ -552,9 +541,7 @@ export default function ManageTournamentsPage() {
                 aria-checked={form.thirdPlaceMatch}
                 onClick={() => setField("thirdPlaceMatch", !form.thirdPlaceMatch)}
                 className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 ${
-                  form.thirdPlaceMatch
-                    ? "bg-teal-600"
-                    : "bg-gray-200 dark:bg-gray-700"
+                  form.thirdPlaceMatch ? "bg-teal-600" : "bg-gray-200 dark:bg-gray-700"
                 }`}
               >
                 <span
@@ -571,8 +558,8 @@ export default function ManageTournamentsPage() {
               Status
             </label>
             <select
-              value={form.status ?? ""}
-              onChange={(e) => setField("status", e.target.value)}
+              value={form.status}
+              onChange={(e) => setField("status", e.target.value as TournamentStatus)}
               className={inputCls("status")}
             >
               {STATUS_OPTIONS.map((s) => (
