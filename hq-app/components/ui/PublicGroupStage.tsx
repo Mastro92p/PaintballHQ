@@ -437,7 +437,7 @@ export default function PublicGroupStage({
                       : "text-slate-300 hover:bg-white/5 hover:text-white",
                   ].join(" ")}
                 >
-                  <span>{`Group ${group}`}</span>
+                  <span>{`${group}`}</span>
                   <span
                     className={[
                       "rounded-full px-1.5 py-0.5 text-xs tabular-nums",
