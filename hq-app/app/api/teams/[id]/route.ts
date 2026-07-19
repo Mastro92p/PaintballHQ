@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { apiError } from '@/lib/utils'
 import type { UpdateTeamBody } from '@/types'
@@ -9,7 +8,11 @@ export async function GET(
 ) {
   try {
     const { id: rawId } = await params
-    const id = parseInt(rawId)
+    const id = parseInt(rawId, 10)
+
+    if (Number.isNaN(id)) {
+      return apiError('Invalid team id', 400)
+    }
 
     const team = await prisma.team.findUnique({
       where: { id },
@@ -44,8 +47,22 @@ export async function PATCH(
 ) {
   try {
     const { id: rawId } = await params
-    const id = parseInt(rawId)
+    const id = parseInt(rawId, 10)
+
+    if (Number.isNaN(id)) {
+      return apiError('Invalid team id', 400)
+    }
+
     const body: UpdateTeamBody = await req.json()
+
+    const existingTeam = await prisma.team.findUnique({
+      where: { id },
+      select: { id: true },
+    })
+
+    if (!existingTeam) {
+      return apiError('Team not found', 404)
+    }
 
     let divisionId: number | null | undefined = undefined
     if (body.divisionId !== undefined) {
@@ -55,14 +72,25 @@ export async function PATCH(
           : Number(body.divisionId)
 
       if (divisionId !== null && Number.isNaN(divisionId)) {
-        return apiError('Invalid division')
+        return apiError('Invalid division', 400)
+      }
+
+      if (divisionId !== null) {
+        const divisionExists = await prisma.division.findUnique({
+          where: { id: divisionId },
+          select: { id: true },
+        })
+
+        if (!divisionExists) {
+          return apiError('Division not found', 404)
+        }
       }
     }
 
     const team = await prisma.team.update({
       where: { id },
       data: {
-        ...(body.name && { name: body.name.trim() }),
+        ...(body.name !== undefined && { name: body.name.trim() }),
         ...(body.contact !== undefined && { contact: body.contact?.trim() ?? null }),
         ...(divisionId !== undefined && { divisionId }),
       },
@@ -70,14 +98,7 @@ export async function PATCH(
     })
 
     return Response.json(team)
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2025'
-    ) {
-      return apiError('Team not found', 404)
-    }
-
+  } catch {
     return apiError('Failed to update team', 500)
   }
 }
@@ -88,18 +109,24 @@ export async function DELETE(
 ) {
   try {
     const { id: rawId } = await params
-    const id = parseInt(rawId)
+    const id = parseInt(rawId, 10)
 
-    await prisma.team.delete({ where: { id } })
-    return Response.json({ success: true })
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2025'
-    ) {
+    if (Number.isNaN(id)) {
+      return apiError('Invalid team id', 400)
+    }
+
+    const existingTeam = await prisma.team.findUnique({
+      where: { id },
+      select: { id: true },
+    })
+
+    if (!existingTeam) {
       return apiError('Team not found', 404)
     }
 
+    await prisma.team.delete({ where: { id } })
+    return Response.json({ success: true })
+  } catch {
     return apiError('Failed to delete team', 500)
   }
 }
