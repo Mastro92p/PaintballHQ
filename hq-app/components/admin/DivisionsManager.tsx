@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
+import { handleMissingEntity } from "@/lib/handle-missing-entity";
 
 interface Division {
   id: number;
@@ -17,6 +18,7 @@ export default function DivisionsManager() {
 
   async function loadDivisions() {
     setLoading(true);
+
     try {
       const res = await fetch("/api/divisions");
       if (!res.ok) throw new Error("Failed to load divisions");
@@ -33,9 +35,8 @@ export default function DivisionsManager() {
     loadDivisions();
   }, []);
 
-  async function handleCreate(e: FormEvent<HTMLFormElement>) {
+  async function handleCreate(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
-    console.log("handleCreate fired", newName);
 
     const name = newName.trim();
     if (!name) {
@@ -54,14 +55,15 @@ export default function DivisionsManager() {
       });
 
       const data = await res.json().catch(() => ({}));
-      console.log("create response", res.status, data);
 
       if (!res.ok) {
         throw new Error(data?.error || `Request failed (${res.status})`);
       }
 
+      const created: Division = data?.division ?? data;
+
+      setDivisions((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
       setNewName("");
-      await loadDivisions();
     } catch (err) {
       console.error("create failed", err);
       setError(err instanceof Error ? err.message : "Failed to create division");
@@ -72,29 +74,77 @@ export default function DivisionsManager() {
 
   async function toggleActive(division: Division) {
     setError(null);
+
+    const previous = divisions;
+    const optimistic = divisions.map((d) =>
+      d.id === division.id ? { ...d, isActive: !d.isActive } : d
+    );
+
+    setDivisions(optimistic);
+
     try {
       const res = await fetch(`/api/divisions/${division.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !division.isActive }),
       });
+
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Failed to update division");
-      await loadDivisions();
+
+      if (
+          await handleMissingEntity(res, {
+            entityName: "division",
+            action: "update",
+            reload: loadDivisions,
+          })
+        ) {
+          return;
+        }
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to update division");
+      }
+
+      const updated: Division = data?.division ?? data;
+
+      setDivisions((prev) =>
+        prev.map((d) => (d.id === division.id ? { ...d, ...updated } : d))
+      );
     } catch (err) {
+      setDivisions(previous);
       setError(err instanceof Error ? err.message : "Failed to update division");
     }
   }
 
   async function handleDelete(division: Division) {
     if (!confirm(`Delete "${division.name}"?`)) return;
+
     setError(null);
+
+    const previous = divisions;
+    setDivisions((prev) => prev.filter((d) => d.id !== division.id));
+
     try {
       const res = await fetch(`/api/divisions/${division.id}`, { method: "DELETE" });
+
+      const handledMissing = await handleMissingEntity(res, {
+        entityName: "division",
+        action: "delete",
+        reload: loadDivisions,
+        notify: (message) => setError(message),
+      });
+
+      if (handledMissing) {
+        return;
+      }
+
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Failed to delete division");
-      await loadDivisions();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to delete division");
+      }
     } catch (err) {
+      setDivisions(previous);
       setError(err instanceof Error ? err.message : "Failed to delete division");
     }
   }
@@ -142,23 +192,43 @@ export default function DivisionsManager() {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={3} className="px-4 py-6 text-center text-slate-500">Loading...</td></tr>
+              <tr>
+                <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
+                  Loading...
+                </td>
+              </tr>
             ) : divisions.length === 0 ? (
-              <tr><td colSpan={3} className="px-4 py-6 text-center text-slate-500">No divisions yet.</td></tr>
+              <tr>
+                <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
+                  No divisions yet.
+                </td>
+              </tr>
             ) : (
               divisions.map((d) => (
                 <tr key={d.id} className="border-t border-white/10 text-slate-200">
                   <td className="px-4 py-3 font-medium text-white">{d.name}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-1 text-xs ${d.isActive ? "bg-emerald-500/10 text-emerald-300" : "bg-slate-500/10 text-slate-400"}`}>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs ${
+                        d.isActive
+                          ? "bg-emerald-500/10 text-emerald-300"
+                          : "bg-slate-500/10 text-slate-400"
+                      }`}
+                    >
                       {d.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    <button onClick={() => toggleActive(d)} className="text-xs text-amber-300 hover:underline">
+                    <button
+                      onClick={() => toggleActive(d)}
+                      className="text-xs text-amber-300 hover:underline"
+                    >
                       {d.isActive ? "Deactivate" : "Activate"}
                     </button>
-                    <button onClick={() => handleDelete(d)} className="text-xs text-rose-400 hover:underline">
+                    <button
+                      onClick={() => handleDelete(d)}
+                      className="text-xs text-rose-400 hover:underline"
+                    >
                       Delete
                     </button>
                   </td>

@@ -61,6 +61,14 @@ export async function DELETE(
     const { id: rawId } = await params;
     const id = Number(rawId);
 
+    const existingDivision = await prisma.division.findUnique({
+      where: { id },
+    });
+
+    if (!existingDivision) {
+      return apiError("Division not found", 404);
+    }
+
     const [teamCount, tournamentCount] = await Promise.all([
       prisma.team.count({ where: { divisionId: id } }),
       prisma.tournament.count({ where: { divisionId: id } }),
@@ -68,7 +76,8 @@ export async function DELETE(
 
     if (teamCount > 0 || tournamentCount > 0) {
       return apiError(
-        "Cannot delete a division still assigned to teams or tournaments. Deactivate it instead."
+        "Cannot delete a division still assigned to teams or tournaments. Deactivate it instead.",
+        409
       );
     }
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useFetch } from "@/hooks/use-fetch";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import Link from "next/link";
 import type { League, CreateLeagueBody, UpdateLeagueBody } from "@/types";
+import { handleMissingEntity } from "@/lib/handle-missing-entity";
 
 type FormState = {
   name: string;
@@ -18,7 +19,7 @@ type FormErrors = Partial<Record<keyof FormState, string>>;
 const emptyForm: FormState = { name: "", description: "", logoUrl: "" };
 
 export default function ManageLeaguesPage() {
-  const { data, loading, error, refetch } = useFetch<League[]>("/api/leagues");
+  const { data, loading, error } = useFetch<League[]>("/api/leagues");
 
   const [modalOpen, setModalOpen]     = useState(false);
   const [editing, setEditing]         = useState<League | null>(null);
@@ -27,13 +28,18 @@ export default function ManageLeaguesPage() {
   const [saving, setSaving]           = useState(false);
   const [deleting, setDeleting]       = useState<number | null>(null);
   const [search, setSearch]           = useState("");
+  const [localLeagues, setLocalLeagues] = useState<League[]>([]);
+
+  useEffect(() => {
+    if (!data) return;
+    setLocalLeagues((prev) => (prev.length === 0 ? data : prev));
+  }, [data]);
 
   const filtered = useMemo(() => {
-    if (!data) return [];
-    return data.filter((l) =>
+    return localLeagues.filter((l) =>
       l.name.toLowerCase().includes(search.toLowerCase())
     );
-  }, [data, search]);
+  }, [localLeagues, search]);
 
   function openCreate() {
     setEditing(null);
@@ -53,6 +59,14 @@ export default function ManageLeaguesPage() {
     setModalOpen(true);
   }
 
+  async function reloadLeagues() {
+    const res = await fetch("/api/leagues");
+    if (!res.ok) throw new Error("Failed to reload leagues");
+
+    const fresh: League[] = await res.json();
+    setLocalLeagues(fresh);
+  }
+
   function closeModal() {
     setModalOpen(false);
     setEditing(null);
@@ -69,36 +83,120 @@ export default function ManageLeaguesPage() {
 
   async function handleSave() {
     if (!validate()) return;
+
     setSaving(true);
+
     const body: CreateLeagueBody | UpdateLeagueBody = {
-      name:        form.name,
+      name: form.name,
       description: form.description || undefined,
-      logoUrl:     form.logoUrl || undefined,
+      logoUrl: form.logoUrl || undefined,
     };
-    if (editing) {
-      await fetch(`/api/leagues/${editing.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-    } else {
-      await fetch("/api/leagues", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+
+    try {
+      let savedLeague: League;
+
+      if (editing) {
+        const res = await fetch(`/api/leagues/${editing.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const result = await res.json().catch(() => null);
+
+        if (
+          await handleMissingEntity(res, {
+            entityName: "league",
+            action: "update",
+            reload: reloadLeagues,
+            onMissing: closeModal,
+          })
+        ) {
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(result?.error ?? "Failed to update league");
+        }
+
+        savedLeague = {
+          ...editing,
+          ...(result?.league ?? result ?? {}),
+          ...body,
+        } as League;
+
+        setLocalLeagues((prev) =>
+          prev.map((l) => (l.id === savedLeague.id ? savedLeague : l))
+        );
+      } else {
+        const res = await fetch("/api/leagues", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        const result = await res.json().catch(() => null);
+
+        if (
+          await handleMissingEntity(res, {
+            entityName: "league",
+            action: "update",
+            reload: reloadLeagues,
+            onMissing: closeModal,
+          })
+        ) {
+          return;
+        }
+
+        if (!res.ok) {
+          throw new Error(result?.error ?? "Failed to create league");
+        }
+
+        savedLeague = {
+          ...(result?.league ?? result),
+          ...body,
+        } as League;
+
+        setLocalLeagues((prev) => [...prev, savedLeague]);
+      }
+
+      closeModal();
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    closeModal();
-    refetch();
   }
 
   async function handleDelete(id: number) {
     if (!confirm("Delete this league? All associated tournaments will be unlinked.")) return;
+
+    const previous = localLeagues;
     setDeleting(id);
-    await fetch(`/api/leagues/${id}`, { method: "DELETE" });
-    setDeleting(null);
-    refetch();
+    setLocalLeagues((prev) => prev.filter((l) => l.id !== id));
+
+    try {
+      const res = await fetch(`/api/leagues/${id}`, { method: "DELETE" });
+
+      if (
+        await handleMissingEntity(res, {
+          entityName: "league",
+          action: "delete",
+          reload: reloadLeagues,
+        })
+      ) {
+        return;
+      }
+
+      const result = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(result?.error ?? "Failed to delete league");
+      }
+    } catch (err) {
+      console.error(err);
+      setLocalLeagues(previous);
+    } finally {
+      setDeleting(null);
+    }
   }
 
   function inputCls(field: keyof FormState) {

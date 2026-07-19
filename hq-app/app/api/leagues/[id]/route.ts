@@ -38,6 +38,19 @@ export async function PATCH(
     const { id: rawId } = await params
     const id = parseInt(rawId)
     const body: UpdateLeagueBody = await req.json()
+
+    if (body.name !== undefined && !body.name.trim()) {
+      return apiError("League name is required");
+    }
+
+    const existingLeague = await prisma.league.findUnique({
+      where: { id },
+    });
+
+    if (!existingLeague) {
+      return apiError("League not found", 404);
+    }
+
     if (body.teamIds !== undefined) {
       await prisma.leagueTeam.deleteMany({ where: { leagueId: id } })
       if (body.teamIds.length > 0) {
@@ -46,21 +59,30 @@ export async function PATCH(
         })
       }
     }
+
     const league = await prisma.league.update({
       where: { id },
       data: {
-        ...(body.name && { name: body.name.trim() }),
+        ...(body.name !== undefined && { name: body.name.trim() }),
         ...(body.description !== undefined && { description: body.description?.trim() ?? null }),
         ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl?.trim() ?? null }),
       },
       include: {
-        tournaments: true,
-        teams: { include: { team: true } },
+        tournaments: {
+          include: {
+            division: true,
+            teams: { include: { team: { include: { division: true } } } },
+            matches: true,
+          },
+          orderBy: { date: "desc" },
+        },
+        teams: { include: { team: { include: { division: true } } } },
       },
     })
+
     return Response.json(league)
   } catch {
-    return apiError('Failed to update league', 500)
+    return apiError("Failed to update league", 500)
   }
 }
 
@@ -71,9 +93,18 @@ export async function DELETE(
   try {
     const { id: rawId } = await params
     const id = parseInt(rawId)
+
+    const existingLeague = await prisma.league.findUnique({
+      where: { id },
+    });
+
+    if (!existingLeague) {
+      return apiError("League not found", 404);
+    }
+
     await prisma.league.delete({ where: { id } })
     return Response.json({ success: true })
   } catch {
-    return apiError('Failed to delete league', 500)
+    return apiError("Failed to delete league", 500)
   }
 }

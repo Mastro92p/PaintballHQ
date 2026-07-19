@@ -1,25 +1,44 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useFetch } from "@/hooks/use-fetch";
 import { Button } from "@/components/ui/Button";
 import TeamFormModal from "@/components/teams/TeamFormModal";
 import { formatDate } from "@/lib/utils";
 import type { Team, Division } from "@/types";
 
+function hydrateTeam(team: Team, divisions?: Division[] | null): Team {
+  const division =
+    team.divisionId != null
+      ? divisions?.find((d) => d.id === team.divisionId) ?? team.division ?? null
+      : null;
+
+  return {
+    ...team,
+    division,
+    contact: team.contact ?? null,
+    logoUrl: team.logoUrl ?? null,
+  };
+}
+
 export default function ManageTeamsPage() {
-  const { data, loading, error, refetch } = useFetch<Team[]>("/api/teams");
+  const { data, loading, error } = useFetch<Team[]>("/api/teams");
   const { data: divisions } = useFetch<Division[]>("/api/divisions");
 
+  const [localTeams, setLocalTeams] = useState<Team[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Team | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [divisionFilter, setDivisionFilter] = useState("all");
+  
+
+  useEffect(() => {
+    setLocalTeams((data ?? []).map((team) => hydrateTeam(team, divisions)));
+  }, [data, divisions]);
 
   const filtered = useMemo(() => {
-    if (!data) return [];
-    return data
+    return localTeams
       .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
       .filter((t) => {
         if (divisionFilter === "all") return true;
@@ -27,7 +46,7 @@ export default function ManageTeamsPage() {
         return t.divisionId === Number(divisionFilter);
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [data, search, divisionFilter]);
+  }, [localTeams, search, divisionFilter]);
 
   function openCreate() {
     setEditing(null);
@@ -46,10 +65,35 @@ export default function ManageTeamsPage() {
 
   async function handleDelete(id: number) {
     if (!confirm("Delete this team?")) return;
+
+    const previous = localTeams;
     setDeleting(id);
-    await fetch(`/api/teams/${id}`, { method: "DELETE" });
-    setDeleting(null);
-    refetch();
+    setLocalTeams((prev) => prev.filter((t) => t.id !== id));
+
+    try {
+      const res = await fetch(`/api/teams/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete team");
+    } catch (error) {
+      console.error(error);
+      setLocalTeams(previous);
+      alert("Failed to delete team");
+    } finally {
+      setDeleting(null);
+    }
+  }
+
+  function handleSaved(team: Team, mode: "create" | "edit") {
+    const hydrated = hydrateTeam(team, divisions);
+
+    setLocalTeams((prev) => {
+      if (mode === "create") {
+        return [hydrated, ...prev];
+      }
+
+      return prev.map((t) => (t.id === hydrated.id ? hydrated : t));
+    });
+
+    closeModal();
   }
 
   return (
@@ -209,7 +253,7 @@ export default function ManageTeamsPage() {
         editing={editing}
         divisions={divisions}
         onClose={closeModal}
-        onSaved={refetch}
+        onSaved={handleSaved}
       />
     </main>
   );

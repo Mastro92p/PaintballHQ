@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useFetch } from "@/hooks/use-fetch";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { formatDate } from "@/lib/utils";
+import { handleMissingEntity } from "@/lib/handle-missing-entity";
 import Link from "next/link";
 import type {
   Tournament,
@@ -69,8 +70,27 @@ const emptyForm: FormState = {
   thirdPlaceMatch: false,
 };
 
+
+function hydrateTournament(
+  tournament: Tournament,
+  divisions?: Division[] | null
+): Tournament {
+  return {
+    ...tournament,
+    division:
+      tournament.divisionId != null
+        ? divisions?.find((d) => d.id === tournament.divisionId) ??
+          tournament.division ??
+          null
+        : null,
+    location: tournament.location ?? null,
+    formatConfig: tournament.formatConfig ?? null,
+  };
+}
+
+
 export default function ManageTournamentsPage() {
-  const { data, loading, error, refetch } = useFetch<Tournament[]>("/api/tournaments");
+  const { data, loading, error } = useFetch<Tournament[]>("/api/tournaments");
   const { data: divisions } = useFetch<Division[]>("/api/divisions");
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -81,17 +101,25 @@ export default function ManageTournamentsPage() {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [divisionFilter, setDivisionFilter] = useState<string>("all");
+  const [localTournaments, setLocalTournaments] = useState<Tournament[]>([]);
 
   const filtered = useMemo(() => {
-    if (!data) return [];
-    return data
+    return localTournaments
       .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
       .filter((t) => {
         if (divisionFilter === "all") return true;
         if (divisionFilter === "unassigned") return t.divisionId == null;
         return t.divisionId === Number(divisionFilter);
       });
-  }, [data, search, divisionFilter]);
+  }, [localTournaments, search, divisionFilter]);
+
+  useEffect(() => {
+    if (!data) return;
+    setLocalTournaments((prev) =>
+      prev.length === 0 ? data.map((t) => hydrateTournament(t, divisions)) : prev
+    );
+  }, [data, divisions]);
+
 
   function openCreate() {
     setEditing(null);
@@ -167,6 +195,14 @@ export default function ManageTournamentsPage() {
     return Object.keys(errors).length === 0;
   }
 
+  async function reloadTournaments() {
+    const res = await fetch("/api/tournaments");
+    if (!res.ok) throw new Error("Failed to reload tournaments");
+
+    const fresh: Tournament[] = await res.json();
+    setLocalTournaments(fresh.map((t) => hydrateTournament(t, divisions)));
+  }
+
   async function handleSave() {
     if (!validate()) return;
 
@@ -211,22 +247,68 @@ export default function ManageTournamentsPage() {
     };
 
     try {
+      let savedTournament: Tournament;
+
       if (editing) {
-        await fetch(`/api/tournaments/${editing.id}`, {
+        const res = await fetch(`/api/tournaments/${editing.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
+
+        const result = await res.json().catch(() => null);
+
+        if (await handleMissingEntity(res, {
+            entityName: "tournament",
+            action: "update",
+            reload: reloadTournaments,
+            onMissing: closeModal,})) {
+            return;
+        }
+
+        if (!res.ok) {
+          throw new Error(result?.error ?? "Failed to update tournament");
+        }
+
+        savedTournament = hydrateTournament(
+          {
+            ...editing,
+            ...(result?.tournament ?? result ?? {}),
+            ...body,
+          } as Tournament,
+          divisions
+        );
+
+        setLocalTournaments((prev) =>
+          prev.map((t) => (t.id === savedTournament.id ? savedTournament : t))
+        );
       } else {
-        await fetch("/api/tournaments", {
+        const res = await fetch("/api/tournaments", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
+
+        const result = await res.json().catch(() => null);
+
+        if (!res.ok) {
+          throw new Error(result?.error ?? "Failed to create tournament");
+        }
+
+        savedTournament = hydrateTournament(
+          {
+            ...(result?.tournament ?? result),
+            ...body,
+          } as Tournament,
+          divisions
+        );
+
+        setLocalTournaments((prev) => [...prev, savedTournament]);
       }
 
       closeModal();
-      refetch();
+    } catch (err) {
+      console.error(err);
     } finally {
       setSaving(false);
     }
@@ -235,10 +317,30 @@ export default function ManageTournamentsPage() {
   async function handleDelete(id: number) {
     if (!confirm("Delete this tournament?")) return;
 
+    const previous = localTournaments;
     setDeleting(id);
+    setLocalTournaments((prev) => prev.filter((t) => t.id !== id));
+
     try {
-      await fetch(`/api/tournaments/${id}`, { method: "DELETE" });
-      refetch();
+      const res = await fetch(`/api/tournaments/${id}`, { method: "DELETE" });
+      const result = await res.json().catch(() => null);
+
+      if (
+        await handleMissingEntity(res, {
+          entityName: "tournament",
+          action: "delete",
+          reload: reloadTournaments,
+        })
+      ) {
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error(result?.error ?? "Failed to delete tournament");
+      }
+    } catch (err) {
+      console.error(err);
+      setLocalTournaments(previous);
     } finally {
       setDeleting(null);
     }

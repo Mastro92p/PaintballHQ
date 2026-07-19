@@ -52,7 +52,7 @@ type Props = {
   editing: Team | null;
   divisions: Division[] | null | undefined;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (team: Team, mode: "create" | "edit") => void;
 };
 
 export default function TeamFormModal({ open, editing, divisions, onClose, onSaved }: Props) {
@@ -130,66 +130,101 @@ export default function TeamFormModal({ open, editing, divisions, onClose, onSav
     setLogoPreview(null);
   }
 
-  async function handleSave() {
-    if (!validate()) return;
+async function handleSave() {
+  if (!validate()) return;
 
-    setSaving(true);
-    setFormErrors((p) => ({ ...p, general: undefined }));
+  setSaving(true);
+  setFormErrors((p) => ({ ...p, general: undefined }));
 
-    const body: CreateTeamBody | UpdateTeamBody = {
-      name: form.name,
-      contact: form.contact || undefined,
-      divisionId: form.divisionId ? Number(form.divisionId) : null,
-    };
+  const body: CreateTeamBody | UpdateTeamBody = {
+    name: form.name,
+    contact: form.contact || undefined,
+    divisionId: form.divisionId ? Number(form.divisionId) : null,
+  };
 
-    try {
-      let teamId = editing?.id ?? null;
+  try {
+    let savedTeam: Team | null = null;
+    const mode: "create" | "edit" = editing ? "edit" : "create";
 
-      if (editing) {
-        const res = await fetch(`/api/teams/${editing.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          setFormErrors({ general: data?.error ?? "Failed to update team" });
-          setSaving(false);
-          return;
-        }
-      } else {
-        const res = await fetch("/api/teams", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => null);
-          const message = data?.error ?? "Failed to create team";
-          if (message.toLowerCase().includes("name")) {
-            setFormErrors({ name: message });
-          } else {
-            setFormErrors({ general: message });
-          }
-          setSaving(false);
-          return;
-        }
-        const created = await res.json();
-        teamId = created.id;
+    if (editing) {
+      const res = await fetch(`/api/teams/${editing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        setFormErrors({ general: data?.error ?? "Failed to update team" });
+        setSaving(false);
+        return;
       }
 
-      if (teamId && logoFile) {
-        await uploadLogo(teamId, logoFile);
+      const updated = await res.json().catch(() => null);
+
+      savedTeam = {
+        ...editing,
+        ...(updated?.team ?? updated ?? {}),
+        name: form.name,
+        contact: form.contact || null,
+        divisionId: form.divisionId ? Number(form.divisionId) : null,
+      };
+    } else {
+      const res = await fetch("/api/teams", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        const message = data?.error ?? "Failed to create team";
+
+        if (message.toLowerCase().includes("name")) {
+          setFormErrors({ name: message });
+        } else {
+          setFormErrors({ general: message });
+        }
+
+        setSaving(false);
+        return;
       }
 
-      setSaving(false);
-      onSaved();
-      onClose();
-    } catch {
-      setFormErrors({ general: "Something went wrong. Please try again." });
-      setSaving(false);
+      const created = await res.json();
+
+      savedTeam = {
+        ...(created?.team ?? created),
+        name: created?.team?.name ?? created?.name ?? form.name,
+        contact: created?.team?.contact ?? created?.contact ?? (form.contact || null),
+        divisionId:
+          created?.team?.divisionId ??
+          created?.divisionId ??
+          (form.divisionId ? Number(form.divisionId) : null),
+      };
     }
+
+    if (!savedTeam?.id) {
+      setFormErrors({ general: "Team was saved, but no team payload was returned." });
+      setSaving(false);
+      return;
+    }
+
+    if (savedTeam.id && logoFile) {
+      await uploadLogo(savedTeam.id, logoFile);
+      savedTeam = {
+        ...savedTeam,
+        logoUrl: logoPreview ?? savedTeam.logoUrl ?? null,
+      };
+    }
+
+    setSaving(false);
+    onSaved(savedTeam, mode);
+    onClose();
+  } catch {
+    setFormErrors({ general: "Something went wrong. Please try again." });
+    setSaving(false);
   }
+}
 
   return (
     <Modal open={open} onClose={onClose} title={editing ? "Edit Team" : "New Team"}>

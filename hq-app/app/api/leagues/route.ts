@@ -20,7 +20,9 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body: CreateLeagueBody = await req.json()
-    if (!body.name?.trim()) return apiError('League name is required')
+    if (!body.name?.trim()) {
+      return apiError("League name is required");
+    }
     const league = await prisma.league.create({
       data: {
         name: body.name.trim(),
