@@ -1,5 +1,7 @@
 "use client";
 
+import { Modal } from "@/components/ui/Modal";
+
 type ConfirmModalProps = {
   open: boolean;
   title: string;
@@ -23,30 +25,14 @@ export function ConfirmModal({
   onConfirm,
   onCancel,
 }: ConfirmModalProps) {
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Close dialog"
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onCancel}
-      />
-
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-modal-title"
-        className="relative w-full max-w-md rounded-2xl border border-white/10 bg-gray-900 text-gray-100 shadow-2xl"
-      >
-        <div className="p-6 space-y-3">
-          <h3 id="confirm-modal-title" className="text-lg font-semibold">
-            {title}
-          </h3>
-
+    <Modal open={open} onClose={onCancel} title={title} size="sm">
+      <div className="px-5 py-4">
+        <div className="space-y-3">
           {description ? (
-            <p className="text-sm leading-6 text-gray-400">{description}</p>
+            <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
+              {description}
+            </p>
           ) : null}
 
           <div className="flex items-center justify-end gap-3 pt-2">
@@ -54,7 +40,7 @@ export function ConfirmModal({
               type="button"
               onClick={onCancel}
               disabled={loading}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-800 text-gray-200 hover:bg-gray-700 disabled:opacity-50"
+              className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 disabled:opacity-50 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
             >
               {cancelLabel}
             </button>
@@ -63,10 +49,10 @@ export function ConfirmModal({
               type="button"
               onClick={onConfirm}
               disabled={loading}
-              className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 ${
+              className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
                 danger
-                  ? "bg-red-600 text-white hover:bg-red-500"
-                  : "bg-teal-600 text-white hover:bg-teal-500"
+                  ? "bg-red-600 hover:bg-red-500"
+                  : "bg-teal-600 hover:bg-teal-500"
               }`}
             >
               {loading ? "Please wait..." : confirmLabel}
@@ -74,6 +60,6 @@ export function ConfirmModal({
           </div>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }

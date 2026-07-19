@@ -1,40 +1,22 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useFetch } from "@/hooks/use-fetch";
-import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
-import { Modal } from "@/components/ui/Modal";
-import { formatDate } from "@/lib/utils";
-import type { League, Team, Tournament } from "@/types";
+import type { Team, Tournament, LeagueDetail, LeagueFormState } from "@/types";
 import { TeamsTransferTab } from "@/components/team-assignment/TeamsTransferTab";
+import { LeagueInfoTab } from "@/components/leagues/LeagueInfoTab";
+import { AssignTournamentModal } from "@/components/leagues/AssignTournamentModal";
+import { LeagueTournamentsTab } from "@/components/leagues/LeagueTournamentsTab";
+import { LeaguePageHeader } from "@/components/leagues/LeaguePageHeader";
+import { LeagueDetailSkeleton } from "@/components/leagues/LeagueDetailSkeleton";
+import { LeagueNotFoundState } from "@/components/leagues/LeagueNotFoundState";
+import { handleMissingEntity } from "@/lib/handle-missing-entity";
+import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
 
-type EnrolledTeam = { teamId: number; team: Team };
 
-type TournamentWithDivision = Tournament & {
-  divisionId?: number | null;
-  division?: { id: number; name: string } | null;
-};
-
-type LeagueDetail = League & {
-  tournaments: TournamentWithDivision[];
-  teams: EnrolledTeam[];
-};
-
-const statusVariant: Record<string, "default" | "success" | "warning" | "muted"> = {
-  upcoming: "warning",
-  active: "default",
-  completed: "muted",
-};
 
 type Tab = "tournaments" | "teams" | "info";
 
-type LeagueFormState = {
-  name: string;
-  description: string;
-  logoUrl: string;
-};
 
 export default function ManageLeagueDetailPage({
   params,
@@ -68,6 +50,14 @@ export default function ManageLeagueDetailPage({
   const [assigningSaving, setAssigningSaving] = useState(false);
   const [detaching, setDetaching] = useState<number | null>(null);
 
+  const [localAllTournaments, setLocalAllTournaments] = useState<Tournament[]>([]);
+  const [divisionFilter, setDivisionFilter] = useState<string>("all");
+
+  function closeTournamentModal() {
+    setTournamentModalOpen(false);
+    setSelectedTournamentId("");
+  }
+
   useEffect(() => {
     if (!data) return;
     setLocalLeague(data);
@@ -81,6 +71,11 @@ export default function ManageLeagueDetailPage({
       logoUrl: localLeague.logoUrl ?? "",
     });
   }, [localLeague]);
+
+  useEffect(() => {
+    if (!allTournaments) return;
+    setLocalAllTournaments(allTournaments);
+  }, [allTournaments]);
 
   useEffect(() => {
     if (!localLeague || !allTeams) return;
@@ -97,10 +92,22 @@ export default function ManageLeagueDetailPage({
       if (t.division) map[t.division.id] = t.division.name;
     });
 
+
     return Object.entries(map)
       .map(([divisionId, name]) => ({ id: Number(divisionId), name }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [localLeague]);
+
+
+  const filteredLeagueTournaments = useMemo(() => {
+      if (!localLeague?.tournaments) return [];
+
+      return localLeague.tournaments.filter((t) => {
+        if (divisionFilter === "all") return true;
+        if (divisionFilter === "unassigned") return t.divisionId == null;
+        return t.divisionId === Number(divisionFilter);
+      });
+    }, [localLeague, divisionFilter]);
 
   const originalEnrolledIds = useMemo(
     () => new Set(localLeague?.teams.map((t) => t.teamId) ?? []),
@@ -117,10 +124,10 @@ export default function ManageLeagueDetailPage({
   }, [localEnrolled, originalEnrolledIds]);
 
   const unassignedTournaments = useMemo(() => {
-    if (!allTournaments || !localLeague) return [];
+    if (!localLeague) return [];
     const assignedIds = new Set(localLeague.tournaments.map((t) => t.id));
-    return allTournaments.filter((t) => !assignedIds.has(t.id) && !t.leagueId);
-  }, [allTournaments, localLeague]);
+    return localAllTournaments.filter((t) => !assignedIds.has(t.id) && !t.leagueId);
+  }, [localAllTournaments, localLeague]);
 
   async function reloadLeague() {
     const res = await fetch(`/api/leagues/${id}`);
@@ -205,14 +212,40 @@ export default function ManageLeagueDetailPage({
 
     setAssigningSaving(true);
     try {
-      await fetch(`/api/tournaments/${selectedTournamentId}`, {
+      const tournamentId = parseInt(selectedTournamentId, 10);
+      const leagueId = parseInt(id, 10);
+
+      const res = await fetch(`/api/tournaments/${selectedTournamentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leagueId: parseInt(id, 10) }),
+        body: JSON.stringify({ leagueId }),
       });
 
-      setTournamentModalOpen(false);
-      setSelectedTournamentId("");
+      if (
+        await handleMissingEntity(res, {
+          entityName: "tournament",
+          action: "update",
+          reload: reloadLeague,
+          onMissing: () => {
+            setLocalAllTournaments((prev) => prev.filter((t) => t.id !== tournamentId));
+            closeTournamentModal();
+          },
+        })
+      ) {
+        return;
+      }
+
+      const result = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(result?.error ?? "Failed to assign tournament");
+      }
+
+      setLocalAllTournaments((prev) =>
+        prev.map((t) => (t.id === tournamentId ? { ...t, leagueId } : t))
+      );
+
+      closeTournamentModal();
       await reloadLeague();
     } finally {
       setAssigningSaving(false);
@@ -224,11 +257,34 @@ export default function ManageLeagueDetailPage({
 
     setDetaching(tournamentId);
     try {
-      await fetch(`/api/tournaments/${tournamentId}`, {
+      const res = await fetch(`/api/tournaments/${tournamentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ leagueId: null }),
       });
+
+      if (
+        await handleMissingEntity(res, {
+          entityName: "tournament",
+          action: "update",
+          reload: reloadLeague,
+          onMissing: () => {
+            setLocalAllTournaments((prev) => prev.filter((t) => t.id !== tournamentId));
+          },
+        })
+      ) {
+        return;
+      }
+
+      const result = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(result?.error ?? "Failed to detach tournament");
+      }
+
+      setLocalAllTournaments((prev) =>
+        prev.map((t) => (t.id === tournamentId ? { ...t, leagueId: null } : t))
+      );
 
       await reloadLeague();
     } finally {
@@ -240,21 +296,11 @@ export default function ManageLeagueDetailPage({
     "w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100";
 
   if (loading && !localLeague) {
-    return (
-      <main className="max-w-4xl mx-auto px-4 py-10 space-y-4">
-        <div className="h-8 w-64 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
-        <div className="h-10 w-72 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
-        <div className="h-48 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
-      </main>
-    );
+    return <LeagueDetailSkeleton />;
   }
 
   if (error && !localLeague) {
-    return (
-      <main className="max-w-4xl mx-auto px-4 py-10 text-center">
-        <p className="text-gray-400">League not found</p>
-      </main>
-    );
+    return <LeagueNotFoundState />;
   }
 
   if (!localLeague) {
@@ -271,119 +317,30 @@ export default function ManageLeagueDetailPage({
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
-      <Link
-        href="/manage/leagues"
-        className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-      >
-        ← Back to Leagues
-      </Link>
-
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{league.name}</h1>
-        {league.description && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">{league.description}</p>
-        )}
-      </div>
-
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              activeTab === tab.key
-                ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-            }`}
-          >
-            {tab.label}
-            {tab.count !== undefined && (
-              <span
-                className={`text-xs tabular-nums px-1.5 py-0.5 rounded-full ${
-                  activeTab === tab.key
-                    ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500"
-                }`}
-              >
-                {tab.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+      
+      <LeaguePageHeader
+        league={league}
+        activeTab={activeTab}
+        tabs={tabs}
+        onTabChange={setActiveTab}
+      />
 
       {activeTab === "tournaments" && (
         <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-              Tournaments
-            </h2>
-            <Button size="sm" onClick={() => setTournamentModalOpen(true)}>
-              + Assign Tournament
-            </Button>
-          </div>
+          <DivisionFilterChips
+            divisions={assignedDivisions}
+            value={divisionFilter}
+            onChange={setDivisionFilter}
+            includeAll
+            includeUnassigned
+          />
 
-          {league.tournaments.length === 0 ? (
-            <div className="text-center py-10 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-gray-400">
-              <p className="text-2xl mb-2">🏆</p>
-              <p className="font-medium">No tournaments yet</p>
-              <p className="text-sm mt-1">
-                Assign existing tournaments or create new ones under this league
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wide">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Name</th>
-                    <th className="px-4 py-3 text-left">Date</th>
-                    <th className="px-4 py-3 text-left">Format</th>
-                    <th className="px-4 py-3 text-left">Status</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {league.tournaments.map((t) => (
-                    <tr
-                      key={t.id}
-                      className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                    >
-                      <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        {t.name}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
-                        {formatDate(t.date)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">
-                        {(t.type ?? "round_robin").replace(/_/g, " ")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={statusVariant[t.status] ?? "muted"}>{t.status}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link href={`/manage/tournaments/${t.id}`}>
-                            <Button variant="ghost" size="sm">
-                              Manage →
-                            </Button>
-                          </Link>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            loading={detaching === t.id}
-                            onClick={() => handleDetachTournament(t.id)}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <LeagueTournamentsTab
+            tournaments={filteredLeagueTournaments}
+            detaching={detaching}
+            onAssignClick={() => setTournamentModalOpen(true)}
+            onDetach={handleDetachTournament}
+          />
         </section>
       )}
 
@@ -405,163 +362,34 @@ export default function ManageLeagueDetailPage({
       )}
 
       {activeTab === "info" && (
-        <section className="space-y-4 max-w-md">
-          {!infoEditing ? (
-            <>
-              <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-                <div className="text-sm divide-y divide-gray-100 dark:divide-gray-700">
-                  {[
-                    { label: "Name", value: league.name },
-                    { label: "Description", value: league.description ?? "—" },
-                    { label: "Logo URL", value: league.logoUrl ?? "—" },
-                    { label: "Tournaments", value: league.tournaments.length },
-                    { label: "Teams", value: league.teams.length },
-                  ].map((row) => (
-                    <div key={row.label} className="flex items-center justify-between py-2.5">
-                      <span className="text-gray-500 dark:text-gray-400">{row.label}</span>
-                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                        {row.value}
-                      </span>
-                    </div>
-                  ))}
-
-                  <div className="flex items-center justify-between py-2.5">
-                    <span className="text-gray-500 dark:text-gray-400">Divisions</span>
-                    <div className="flex flex-wrap gap-1.5 justify-end max-w-[240px]">
-                      {assignedDivisions.length === 0 ? (
-                        <span className="font-medium text-gray-900 dark:text-gray-100">—</span>
-                      ) : (
-                        assignedDivisions.map((d) => (
-                          <span
-                            key={d.id}
-                            className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-800"
-                          >
-                            {d.name}
-                          </span>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <Button variant="secondary" size="sm" onClick={() => setInfoEditing(true)}>
-                Edit Info
-              </Button>
-            </>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleInfoSave();
-              }}
-              className="space-y-4"
-            >
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  value={infoForm.name}
-                  onChange={(e) => setInfoForm({ ...infoForm, name: e.target.value })}
-                  className={inputCls}
-                  placeholder="League name"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Description
-                </label>
-                <textarea
-                  value={infoForm.description}
-                  onChange={(e) => setInfoForm({ ...infoForm, description: e.target.value })}
-                  className={inputCls}
-                  rows={3}
-                  placeholder="Short description..."
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Logo URL
-                </label>
-                <input
-                  value={infoForm.logoUrl}
-                  onChange={(e) => setInfoForm({ ...infoForm, logoUrl: e.target.value })}
-                  className={inputCls}
-                  placeholder="https://..."
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button variant="secondary" type="button" onClick={() => setInfoEditing(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" loading={infoSaving}>
-                  Save Changes
-                </Button>
-              </div>
-            </form>
-          )}
-        </section>
+        <LeagueInfoTab
+          league={league}
+          assignedDivisions={assignedDivisions}
+          infoEditing={infoEditing}
+          infoForm={infoForm}
+          infoSaving={infoSaving}
+          inputCls={inputCls}
+          onEdit={() => setInfoEditing(true)}
+          onCancel={() => setInfoEditing(false)}
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleInfoSave();
+          }}
+          onChange={(patch) => setInfoForm((prev) => ({ ...prev, ...patch }))}
+        />
       )}
 
-      <Modal
+      <AssignTournamentModal
         open={tournamentModalOpen}
-        onClose={() => {
-          setTournamentModalOpen(false);
-          setSelectedTournamentId("");
-        }}
-        title="Assign Tournament"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Only unassigned tournaments are shown. To move a tournament between leagues, remove it
-            from the other league first.
-          </p>
+        selectedTournamentId={selectedTournamentId}
+        tournaments={unassignedTournaments}
+        assigningSaving={assigningSaving}
+        inputCls={inputCls}
+        onClose={closeTournamentModal}
+        onChangeTournament={setSelectedTournamentId}
+        onAssign={handleAssignTournament}
+      />
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Tournament
-            </label>
-            <select
-              value={selectedTournamentId}
-              onChange={(e) => setSelectedTournamentId(e.target.value)}
-              className={inputCls}
-            >
-              <option value="">Select tournament...</option>
-              {unassignedTournaments.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} — {formatDate(t.date)}
-                </option>
-              ))}
-            </select>
-            {unassignedTournaments.length === 0 && (
-              <p className="text-xs text-gray-400 mt-1">No unassigned tournaments available</p>
-            )}
-          </div>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setTournamentModalOpen(false);
-                setSelectedTournamentId("");
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              loading={assigningSaving}
-              disabled={!selectedTournamentId}
-              onClick={handleAssignTournament}
-            >
-              Assign
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </main>
   );
 }

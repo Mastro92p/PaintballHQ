@@ -1,4 +1,4 @@
-export type TournamentStatus = 'upcoming' | 'active' | 'completed'
+export type TournamentStatus = 'upcoming' | 'active' | 'completed' | 'to_check'
 export type MatchStatus = 'pending' | 'completed'
 export type UserRole = 'organizer' | 'admin'
 
@@ -308,3 +308,20 @@ export interface AssignTeamGroupBody {
   groupIds: number[]
 }
 
+export type LeagueFormState = {
+  name: string;
+  description: string;
+  logoUrl: string;
+};
+
+export type LeagueDetail = League & {
+  tournaments: TournamentWithDivision[];
+  teams: EnrolledTeam[];
+};
+
+export type TournamentWithDivision = Tournament & {
+  divisionId?: number | null;
+  division?: { id: number; name: string } | null;
+};
+
+export type LeagueFormErrors = Partial<Record<keyof LeagueFormState, string>>;

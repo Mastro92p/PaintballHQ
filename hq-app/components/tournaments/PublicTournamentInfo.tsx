@@ -17,6 +17,13 @@ type Props = {
   tournament: TournamentDetail;
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  active: "Active",
+  upcoming: "Upcoming",
+  to_check: "To Check",
+  completed: "Completed",
+};
+
 function formatTournamentType(type?: string | null) {
   switch (type) {
     case "round_robin":
@@ -32,7 +39,7 @@ function formatTournamentType(type?: string | null) {
 
 function formatStatus(status?: string | null) {
   if (!status) return "—";
-  return status.charAt(0).toUpperCase() + status.slice(1);
+  return STATUS_LABELS[status] ?? status.replaceAll("_", " ");
 }
 
 function formatSeedingRule(rule?: string | null) {

@@ -7,24 +7,40 @@ import type { Tournament, Division } from "@/types";
 import { calcStandings } from "@/lib/utils";
 
 const STATUS_TABS = [
-  { value: "",          label: "All" },
-  { value: "active",    label: "Active" },
-  { value: "upcoming",  label: "Upcoming" },
+  { value: "", label: "All" },
+  { value: "active", label: "Active" },
+  { value: "upcoming", label: "Upcoming" },
+  { value: "to_check", label: "To Check" },
   { value: "completed", label: "Completed" },
 ] as const;
 
+const STATUS_LABELS: Record<string, string> = {
+  active: "Active",
+  upcoming: "Upcoming",
+  to_check: "To Check",
+  completed: "Completed",
+};
+
 const STATUS_DOT: Record<string, string> = {
-  active:    "bg-green-500",
-  upcoming:  "bg-orange-400",
+  active: "bg-green-500",
+  upcoming: "bg-orange-400",
+  to_check: "bg-yellow-400",
   completed: "bg-gray-400",
+};
+
+const STATUS_TEXT: Record<string, string> = {
+  active: "text-green-600 dark:text-green-400",
+  upcoming: "text-orange-500 dark:text-orange-400",
+  to_check: "text-yellow-600 dark:text-yellow-400",
+  completed: "text-gray-400 dark:text-gray-500",
 };
 
 function formatDateBlock(dateStr: string) {
   const d = new Date(dateStr);
   return {
     month: d.toLocaleString("en-US", { month: "short" }).toUpperCase(),
-    day:   d.getDate(),
-    year:  d.getFullYear(),
+    day: d.getDate(),
+    year: d.getFullYear(),
   };
 }
 
@@ -72,9 +88,10 @@ export default function TournamentsPage() {
   const filtered = useMemo(() => {
     if (!data) return [];
     return data
-      .filter((t) =>
-        t.name.toLowerCase().includes(search.toLowerCase()) ||
-        (t.location ?? "").toLowerCase().includes(search.toLowerCase())
+      .filter(
+        (t) =>
+          t.name.toLowerCase().includes(search.toLowerCase()) ||
+          (t.location ?? "").toLowerCase().includes(search.toLowerCase())
       )
       .filter((t) => status === "" || t.status === status)
       .filter((t) => {
@@ -86,8 +103,6 @@ export default function TournamentsPage() {
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-10 space-y-6">
-
-      {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
@@ -100,14 +115,18 @@ export default function TournamentsPage() {
           </p>
         </div>
 
-        {/* Search */}
         <div className="relative">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-            width="14" height="14" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
           >
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
           </svg>
           <input
             type="search"
@@ -119,7 +138,6 @@ export default function TournamentsPage() {
         </div>
       </div>
 
-      {/* Filter tabs */}
       <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-full sm:w-fit">
         {STATUS_TABS.map((tab) => {
           const isActive = status === tab.value;
@@ -129,20 +147,23 @@ export default function TournamentsPage() {
               onClick={() => setStatus(tab.value)}
               className={`flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-all duration-200 overflow-hidden
                 sm:px-4 sm:flex-none
-                ${isActive
-                  ? "flex-[2] px-3 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
-                  : "flex-[1] px-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                ${
+                  isActive
+                    ? "flex-[2] px-3 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
+                    : "flex-[1] px-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 }`}
             >
               <span className={`truncate ${isActive ? "inline" : "hidden sm:inline"}`}>
                 {tab.label}
               </span>
               {counts[tab.value] !== undefined && (
-                <span className={`text-xs tabular-nums px-1.5 py-0.5 rounded-full shrink-0 ${
-                  isActive
-                    ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500"
-                }`}>
+                <span
+                  className={`text-xs tabular-nums px-1.5 py-0.5 rounded-full shrink-0 ${
+                    isActive
+                      ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500"
+                  }`}
+                >
                   {counts[tab.value]}
                 </span>
               )}
@@ -151,7 +172,6 @@ export default function TournamentsPage() {
         })}
       </div>
 
-      {/* Division filter tabs */}
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -193,16 +213,17 @@ export default function TournamentsPage() {
         </button>
       </div>
 
-      {/* Loading */}
       {loading && (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-20 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+            <div
+              key={i}
+              className="h-20 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse"
+            />
           ))}
         </div>
       )}
 
-      {/* Error */}
       {error && (
         <div className="text-center py-12 text-red-500">
           <p className="text-lg font-medium">Failed to load tournaments</p>
@@ -210,16 +231,18 @@ export default function TournamentsPage() {
         </div>
       )}
 
-      {/* List */}
       {!loading && !error && (
         <>
           {filtered.length > 0 ? (
             <div className="space-y-2">
               {filtered.map((t) => {
                 const { month, day, year } = formatDateBlock(t.date);
-                const teamCount   = t.teams?.length ?? t._teamCount ?? 0;
-                const playedCount = t.matches?.filter((m: any) => m.status === "completed").length ?? t._playedCount ?? 0;
-                const leader      = getLeader(t);
+                const teamCount = t.teams?.length ?? t._teamCount ?? 0;
+                const playedCount =
+                  t.matches?.filter((m: any) => m.status === "completed").length ??
+                  t._playedCount ??
+                  0;
+                const leader = getLeader(t);
 
                 return (
                   <button
@@ -227,7 +250,6 @@ export default function TournamentsPage() {
                     onClick={() => router.push(`/tournaments/${t.id}`)}
                     className="w-full text-left flex items-center gap-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors overflow-hidden group"
                   >
-                    {/* Date block */}
                     <div className="flex flex-col items-center justify-center w-20 shrink-0 px-3 py-4 border-r border-gray-100 dark:border-gray-800 self-stretch">
                       <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider leading-none">
                         {month}
@@ -240,21 +262,22 @@ export default function TournamentsPage() {
                       </span>
                     </div>
 
-                    {/* Main info */}
                     <div className="flex-1 min-w-0 px-5 py-4">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-gray-900 dark:text-gray-100 text-base">
                           {t.name}
                         </span>
-                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${
-                          t.status === "active"
-                            ? "text-green-600 dark:text-green-400"
-                            : t.status === "upcoming"
-                            ? "text-orange-500 dark:text-orange-400"
-                            : "text-gray-400 dark:text-gray-500"
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[t.status] ?? "bg-gray-400"}`} />
-                          {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${
+                            STATUS_TEXT[t.status] ?? "text-gray-400 dark:text-gray-500"
+                          }`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              STATUS_DOT[t.status] ?? "bg-gray-400"
+                            }`}
+                          />
+                          {STATUS_LABELS[t.status] ?? t.status}
                         </span>
                         {t.division?.name && (
                           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
@@ -262,56 +285,89 @@ export default function TournamentsPage() {
                           </span>
                         )}
                       </div>
+
                       {t.location && (
                         <div className="hidden sm:flex items-center gap-1 mt-1 text-xs text-gray-500 dark:text-gray-400">
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                            <circle cx="12" cy="10" r="3"/>
+                          <svg
+                            width="11"
+                            height="11"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                            <circle cx="12" cy="10" r="3" />
                           </svg>
                           {t.location}
                         </div>
                       )}
 
-                      {/* Mobile stats — single inline row, hidden on sm+ */}
                       <div className="flex sm:hidden items-center gap-2 mt-2 flex-wrap">
                         <span className="text-xs text-gray-400 dark:text-gray-500">
-                          <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{teamCount}</span> teams
+                          <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
+                            {teamCount}
+                          </span>{" "}
+                          teams
                         </span>
                         <span className="text-gray-300 dark:text-gray-700">·</span>
                         <span className="text-xs text-gray-400 dark:text-gray-500">
-                          <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{playedCount}</span> played
+                          <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
+                            {playedCount}
+                          </span>{" "}
+                          played
                         </span>
                         {leader !== "—" && (
                           <>
                             <span className="text-gray-300 dark:text-gray-700">·</span>
                             <span className="text-xs flex items-center gap-1 text-gray-400 dark:text-gray-500">
-                              🏆 <span className="font-semibold text-gray-700 dark:text-gray-300">{truncate(leader, 14)}</span>
+                              🏆{" "}
+                              <span className="font-semibold text-gray-700 dark:text-gray-300">
+                                {truncate(leader, 14)}
+                              </span>
                             </span>
                           </>
                         )}
                       </div>
                     </div>
 
-                    {/* Desktop stats — hidden on mobile */}
                     <div className="hidden sm:flex items-center gap-8 px-6 py-4 border-l border-gray-100 dark:border-gray-800 shrink-0">
                       <div className="text-center">
-                        <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Teams</p>
-                        <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">{teamCount}</p>
+                        <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">
+                          Teams
+                        </p>
+                        <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+                          {teamCount}
+                        </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Played</p>
-                        <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">{playedCount}</p>
+                        <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">
+                          Played
+                        </p>
+                        <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+                          {playedCount}
+                        </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">Leader</p>
-                        <p className="text-base font-bold text-gray-900 dark:text-gray-100">{leader}</p>
+                        <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">
+                          Leader
+                        </p>
+                        <p className="text-base font-bold text-gray-900 dark:text-gray-100">
+                          {leader}
+                        </p>
                       </div>
                     </div>
 
-                    {/* Chevron */}
                     <div className="pr-4 pl-2 text-gray-300 dark:text-gray-600 group-hover:text-gray-400 dark:group-hover:text-gray-500 transition-colors shrink-0">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="m9 18 6-6-6-6"/>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="m9 18 6-6-6-6" />
                       </svg>
                     </div>
                   </button>
@@ -327,7 +383,6 @@ export default function TournamentsPage() {
           )}
         </>
       )}
-
     </main>
   );
 }

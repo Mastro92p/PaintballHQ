@@ -1,7 +1,7 @@
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { apiError } from '@/lib/utils'
 import type { UpdateTeamBody } from '@/types'
-
 
 export async function GET(
   _req: Request,
@@ -10,6 +10,7 @@ export async function GET(
   try {
     const { id: rawId } = await params
     const id = parseInt(rawId)
+
     const team = await prisma.team.findUnique({
       where: { id },
       include: {
@@ -29,13 +30,13 @@ export async function GET(
         },
       },
     })
+
     if (!team) return apiError('Team not found', 404)
     return Response.json(team)
   } catch {
     return apiError('Failed to fetch team', 500)
   }
 }
-
 
 export async function PATCH(
   req: Request,
@@ -46,18 +47,17 @@ export async function PATCH(
     const id = parseInt(rawId)
     const body: UpdateTeamBody = await req.json()
 
-
     let divisionId: number | null | undefined = undefined
     if (body.divisionId !== undefined) {
       divisionId =
         body.divisionId === null || body.divisionId === ''
           ? null
           : Number(body.divisionId)
+
       if (divisionId !== null && Number.isNaN(divisionId)) {
         return apiError('Invalid division')
       }
     }
-
 
     const team = await prisma.team.update({
       where: { id },
@@ -68,12 +68,19 @@ export async function PATCH(
       },
       include: { division: true },
     })
+
     return Response.json(team)
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
+      return apiError('Team not found', 404)
+    }
+
     return apiError('Failed to update team', 500)
   }
 }
-
 
 export async function DELETE(
   _req: Request,
@@ -82,9 +89,17 @@ export async function DELETE(
   try {
     const { id: rawId } = await params
     const id = parseInt(rawId)
+
     await prisma.team.delete({ where: { id } })
     return Response.json({ success: true })
-  } catch {
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2025'
+    ) {
+      return apiError('Team not found', 404)
+    }
+
     return apiError('Failed to delete team', 500)
   }
 }

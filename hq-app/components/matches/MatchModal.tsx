@@ -104,13 +104,14 @@ export default function MatchModal({
 }: MatchModalProps) {
   return (
     <Modal open={open} onClose={onClose} title={title} size="lg">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSubmit();
-        }}
-        className="space-y-5"
-      >
+      <div className="max-h-[75vh] overflow-y-auto px-5 py-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSubmit();
+          }}
+          className="space-y-5"
+        >
         <div style={threeColGrid}>
           <div className="space-y-1">
             <label className="text-xs font-bold uppercase tracking-widest text-gray-400">
@@ -316,7 +317,8 @@ export default function MatchModal({
             {submitLabel}
           </Button>
         </div>
-      </form>
-    </Modal>
+        </form>
+    </div>
+  </Modal>
   );
 }

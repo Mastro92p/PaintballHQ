@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
-import type { ReactNode } from "react";
+import { useEffect, useId } from "react";
+import type { ReactNode, MouseEvent } from "react";
 
 type ModalProps = {
   open: boolean;
@@ -25,6 +25,8 @@ export function Modal({
   children,
   size = "md",
 }: ModalProps) {
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) return;
 
@@ -33,6 +35,7 @@ export function Modal({
     };
 
     document.addEventListener("keydown", onKeyDown);
+
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -44,38 +47,46 @@ export function Modal({
 
   if (!open) return null;
 
-  return (
-    <div className="fixed inset-0 z-50">
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"
-        onClick={onClose}
-      />
+  function handleBackdropClick(e: MouseEvent<HTMLDivElement>) {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  }
 
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[1px]"
+      onClick={handleBackdropClick}
+    >
       <div className="absolute inset-0 flex items-center justify-center p-4 sm:p-6">
         <div
-          className={`w-full ${sizeMap[size]} max-h-[90vh] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-2xl flex flex-col`}
+          className={`w-full ${sizeMap[size]} max-h-[90vh] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-950 flex flex-col`}
           role="dialog"
           aria-modal="true"
-          aria-label={title ?? "Modal"}
-          onClick={(e) => e.stopPropagation()}
+          aria-labelledby={title ? titleId : undefined}
+          aria-label={title ? undefined : "Modal"}
         >
-          <div className="shrink-0 flex items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-800 px-5 py-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-              {title}
-            </h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
-              aria-label="Close modal"
-            >
-              ✕
-            </button>
-          </div>
+          {title ? (
+            <div className="shrink-0 flex items-center justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
+              <h2
+                id={titleId}
+                className="text-lg font-semibold text-gray-900 dark:text-gray-100"
+              >
+                {title}
+              </h2>
 
-          <div className="flex-1 overflow-y-auto px-5 py-4">
-            {children}
-          </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+          ) : null}
+
+          <div className="min-h-0 flex-1">{children}</div>
         </div>
       </div>
     </div>

@@ -1,17 +1,25 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import { formatDate } from "@/lib/utils";
 
 const statusDot: Record<string, string> = {
-  active:    "bg-green-500",
-  upcoming:  "bg-orange-400",
+  active: "bg-green-500",
+  upcoming: "bg-orange-400",
+  to_check: "bg-yellow-400",
   completed: "bg-gray-400 dark:bg-gray-500",
 };
 
 const statusLabel: Record<string, string> = {
-  active:    "Active",
-  upcoming:  "Upcoming",
+  active: "Active",
+  upcoming: "Upcoming",
+  to_check: "To Check",
   completed: "Completed",
+};
+
+const statusBadge: Record<string, string> = {
+  active: "border-green-500/30 text-green-500 bg-green-500/10",
+  upcoming: "border-orange-400/30 text-orange-400 bg-orange-400/10",
+  to_check: "border-yellow-400/30 text-yellow-600 bg-yellow-400/10 dark:text-yellow-400",
+  completed: "border-gray-400/30 text-gray-400 bg-gray-400/10",
 };
 
 export default async function DashboardPage() {
@@ -31,18 +39,33 @@ export default async function DashboardPage() {
 
   const activeCount = allTournaments.filter((t) => t.status === "active").length;
   const upcomingCount = allTournaments.filter((t) => t.status === "upcoming").length;
+  const toCheckCount = allTournaments.filter((t) => t.status === "to_check").length;
 
   const kpis = [
-    { label: "Tournaments", value: allTournaments.length, sub: `${activeCount} active` },
-    { label: "Teams",        value: teamsCount,            sub: "Across all tournaments" },
-    { label: "Matches Played", value: matchesPlayed,       sub: `${pendingMatches} pending` },
-    { label: "Upcoming",     value: upcomingCount,          sub: "tournaments scheduled" },
+    {
+      label: "Tournaments",
+      value: allTournaments.length,
+      sub: `${activeCount} active${toCheckCount > 0 ? ` · ${toCheckCount} to check` : ""}`,
+    },
+    {
+      label: "Teams",
+      value: teamsCount,
+      sub: "Across all tournaments",
+    },
+    {
+      label: "Matches Played",
+      value: matchesPlayed,
+      sub: `${pendingMatches} pending`,
+    },
+    {
+      label: "Upcoming",
+      value: upcomingCount,
+      sub: "tournaments scheduled",
+    },
   ];
 
   return (
     <main className="max-w-6xl mx-auto px-4 py-10 space-y-8">
-
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
           Dashboard
@@ -52,7 +75,6 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      {/* KPIs */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {kpis.map((k) => (
           <div
@@ -72,10 +94,7 @@ export default async function DashboardPage() {
         ))}
       </section>
 
-      {/* Two column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* Tournaments — all in one panel */}
         <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
             <h2 className="font-semibold text-gray-900 dark:text-gray-100">
@@ -111,22 +130,27 @@ export default async function DashboardPage() {
                       {t.location && ` · ${t.location}`}
                     </p>
                   </div>
+
                   <div className="flex items-center gap-2 shrink-0 ml-4">
                     <span
                       className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                        t.status === "active"
-                          ? "border-green-500/30 text-green-500 bg-green-500/10"
-                          : t.status === "upcoming"
-                          ? "border-orange-400/30 text-orange-400 bg-orange-400/10"
-                          : "border-gray-400/30 text-gray-400 bg-gray-400/10"
+                        statusBadge[t.status] ?? "border-gray-400/30 text-gray-400 bg-gray-400/10"
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${statusDot[t.status]}`} />
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          statusDot[t.status] ?? "bg-gray-400"
+                        }`}
+                      />
                       {statusLabel[t.status] ?? t.status}
                     </span>
+
                     <svg
                       className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-teal-500 transition-colors"
-                      fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
@@ -137,7 +161,6 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        {/* Recent Results */}
         <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
             <h2 className="font-semibold text-gray-900 dark:text-gray-100">
@@ -170,12 +193,10 @@ export default async function DashboardPage() {
                     <p className="text-sm font-mono tabular-nums text-right text-gray-900 dark:text-gray-100">
                       <span className={!aWon && !isDraw ? "text-gray-400 dark:text-gray-500" : ""}>
                         {teamAName}
-                      </span>
-                      {" "}
+                      </span>{" "}
                       <span className="font-bold">
                         {m.scoreA}–{m.scoreB}
-                      </span>
-                      {" "}
+                      </span>{" "}
                       <span className={aWon && !isDraw ? "text-gray-400 dark:text-gray-500" : ""}>
                         {teamBName}
                       </span>
@@ -186,7 +207,6 @@ export default async function DashboardPage() {
             </div>
           )}
         </section>
-
       </div>
     </main>
   );
