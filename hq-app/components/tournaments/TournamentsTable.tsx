@@ -4,15 +4,18 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
+import {
+  getTournamentStatusBadgeVariant,
+  getTournamentStatusLabel,
+} from "@/lib/tournamentStatusStyles";
 import type { Tournament } from "@/types";
+import { formatTournamentType } from "@/lib/tournamentType";
 
 type TournamentsTableProps = {
   tournaments: Tournament[];
   deleting: number | null;
   onEdit: (tournament: Tournament) => void;
   onDelete: (id: number) => void;
-  statusVariant: Record<string, "default" | "success" | "warning" | "muted" | "toCheck">;
-  statusLabels?: Record<string, string>;
 };
 
 export function TournamentsTable({
@@ -20,8 +23,6 @@ export function TournamentsTable({
   deleting,
   onEdit,
   onDelete,
-  statusVariant,
-  statusLabels,
 }: TournamentsTableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
@@ -54,23 +55,29 @@ export function TournamentsTable({
                 <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                   {t.name}
                 </td>
+
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                   {formatDate(t.date)}
                 </td>
+
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                   {t.location ?? "—"}
                 </td>
+
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                   {t.division?.name ?? "—"}
                 </td>
+
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">
-                  {(t.type ?? "round_robin").replace(/_/g, " ")}
+                  {formatTournamentType(t.type)}
                 </td>
+
                 <td className="px-4 py-3">
-                  <Badge variant={statusVariant[t.status] ?? "muted"}>
-                    {statusLabels?.[t.status] ?? t.status}
+                  <Badge variant={getTournamentStatusBadgeVariant(t.status)}>
+                    {getTournamentStatusLabel(t.status)}
                   </Badge>
                 </td>
+
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
                     <Link href={`/manage/tournaments/${t.id}`}>

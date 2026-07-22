@@ -32,6 +32,10 @@ export function TournamentsFilters({
         divisions={divisions}
         value={divisionFilter}
         onChange={onDivisionFilterChange}
+        includeAll
+        includeUnassigned
+        allLabel="All"
+        highlightInactive
       />
     </div>
   );

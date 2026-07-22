@@ -1,20 +1,36 @@
-import { prisma } from '@/lib/db'
-import { apiError } from '@/lib/utils'
-import type { FormatConfig } from '@/types'
+import { prisma } from "@/lib/db";
+import { apiError } from "@/lib/utils";
+import type { FormatConfig } from "@/types";
+
+function buildTeamGroupsMap(
+  teams: Array<{
+    teamId: number;
+    groupLinks?: Array<{ groupId: number | null }>;
+  }>
+) {
+  return Object.fromEntries(
+    teams.map((t) => [
+      t.teamId,
+      (t.groupLinks ?? [])
+        .map((link) => link.groupId)
+        .filter((groupId): groupId is number => typeof groupId === "number"),
+    ])
+  );
+}
 
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: rawId } = await params
-    const id = parseInt(rawId)
+    const { id: rawId } = await params;
+    const id = parseInt(rawId, 10);
 
     const tournament = await prisma.tournament.findUnique({
       where: { id },
       include: {
         groups: {
-          orderBy: [{ order: 'asc' }, { id: 'asc' }],
+          orderBy: [{ order: "asc" }, { id: "asc" }],
         },
         teams: {
           include: {
@@ -27,58 +43,64 @@ export async function POST(
           },
         },
       },
-    })
+    });
 
-    if (!tournament) return apiError('Tournament not found', 404)
-    if (tournament.type !== 'group_and_bracket') {
-      return apiError('Tournament is not group_and_bracket type', 400)
+    if (!tournament) return apiError("Tournament not found", 404);
+
+    if (tournament.type !== "group_and_bracket") {
+      return apiError("Tournament is not group_and_bracket type", 400);
     }
+
     if (!tournament.formatConfig) {
-      return apiError('Tournament has no formatConfig', 400)
+      return apiError("Tournament has no formatConfig", 400);
     }
 
-    const fc = tournament.formatConfig as FormatConfig
-    const enrolledTeams = tournament.teams.map((tt) => tt.team)
+    const fc = tournament.formatConfig as FormatConfig;
+    const enrolledTeams = tournament.teams.map((tt) => tt.team);
 
     if (fc.groupCount == null || fc.teamsPerGroup == null) {
-      return apiError('Missing group configuration (groupCount or teamsPerGroup)', 400)
+      return apiError(
+        "Missing group configuration (groupCount or teamsPerGroup)",
+        400
+      );
     }
 
-    const groupCount = fc.groupCount
-    const teamsPerGroup = fc.teamsPerGroup
-    const totalExpected = groupCount * teamsPerGroup
+    const groupCount = fc.groupCount;
+    const teamsPerGroup = fc.teamsPerGroup;
+    const totalExpected = groupCount * teamsPerGroup;
 
     if (enrolledTeams.length < 2) {
-      return apiError('Not enough teams enrolled (minimum 2)', 400)
+      return apiError("Not enough teams enrolled (minimum 2)", 400);
     }
 
-    const shuffled = [...enrolledTeams].sort(() => Math.random() - 0.5)
+    const shuffled = [...enrolledTeams].sort(() => Math.random() - 0.5);
 
     const buckets: (typeof enrolledTeams)[] = Array.from(
       { length: groupCount },
       () => []
-    )
+    );
 
     shuffled.forEach((team, i) => {
-      buckets[i % groupCount].push(team)
-    })
+      buckets[i % groupCount].push(team);
+    });
 
-    const groupLabels = 'ABCDEFGH'.split('').slice(0, groupCount)
+    const groupLabels = "ABCDEFGH".split("").slice(0, groupCount);
 
     await prisma.$transaction(async (tx) => {
       await tx.match.deleteMany({
-        where: { tournamentId: id, phase: 'group' },
-      })
+        where: { tournamentId: id, phase: "group" },
+      });
 
       await tx.tournamentTeamGroup.deleteMany({
         where: { tournamentId: id },
-      })
+      });
 
       await tx.tournamentGroup.deleteMany({
         where: { tournamentId: id },
-      })
+      });
 
-      const createdGroups = []
+      const createdGroups = [];
+
       for (let i = 0; i < groupCount; i++) {
         const created = await tx.tournamentGroup.create({
           data: {
@@ -86,13 +108,16 @@ export async function POST(
             name: groupLabels[i] ?? `Group ${i + 1}`,
             order: i,
           },
-        })
-        createdGroups.push(created)
+        });
+
+        createdGroups.push(created);
       }
 
       for (let g = 0; g < buckets.length; g++) {
-        const group = createdGroups[g]
-        const groupTeams = buckets[g]
+        const group = createdGroups[g];
+        const groupTeams = buckets[g];
+
+        if (!group) continue;
 
         for (const team of groupTeams) {
           await tx.tournamentTeamGroup.create({
@@ -101,7 +126,7 @@ export async function POST(
               teamId: team.id,
               groupId: group.id,
             },
-          })
+          });
         }
 
         for (let i = 0; i < groupTeams.length; i++) {
@@ -111,66 +136,64 @@ export async function POST(
                 tournamentId: id,
                 teamAId: groupTeams[i].id,
                 teamBId: groupTeams[j].id,
-                phase: 'group',
+                phase: "group",
                 groupId: group.id,
                 round: 1,
-                status: 'pending',
+                status: "pending",
               },
-            })
+            });
           }
         }
       }
 
       await tx.tournament.update({
         where: { id },
-        data: { status: 'active' },
-      })
-    })
+        data: { status: "active" },
+      });
+    });
 
-    const refreshedGroups = await prisma.tournamentGroup.findMany({
-      where: { tournamentId: id },
+    const refreshedTournament = await prisma.tournament.findUnique({
+      where: { id },
       include: {
-        teamGroups: {
+        groups: {
+          orderBy: [{ order: "asc" }, { id: "asc" }],
+        },
+        matches: {
+          orderBy: [{ round: "asc" }, { id: "asc" }],
+        },
+        teams: {
           include: {
-            tournamentTeam: {
-              include: {
-                team: true,
-              },
-            },
+            team: true,
+            groupLinks: true,
           },
         },
-        matches: true,
       },
-      orderBy: [{ order: 'asc' }, { id: 'asc' }],
-    })
+    });
 
-    const matchesCreated = refreshedGroups.reduce(
-      (acc, g) => acc + g.matches.length,
-      0
-    )
+    if (!refreshedTournament) {
+      return apiError("Tournament not found after generation", 404);
+    }
 
     return Response.json({
       success: true,
-      groups: refreshedGroups.map((group) => ({
+      groups: refreshedTournament.groups.map((group) => ({
         id: group.id,
-        label: group.name,
+        name: group.name,
         order: group.order,
-        teams: group.teamGroups.map((tg) => ({
-          id: tg.tournamentTeam.team.id,
-          name: tg.tournamentTeam.team.name,
-        })),
       })),
-      matchesCreated,
+      matches: refreshedTournament.matches,
+      teamGroups: buildTeamGroupsMap(refreshedTournament.teams),
+      status: refreshedTournament.status,
       totalTeams: enrolledTeams.length,
       expectedTeams: totalExpected,
       warning:
         enrolledTeams.length !== totalExpected
           ? `Expected ${totalExpected} teams but found ${enrolledTeams.length}. Groups were distributed evenly.`
           : undefined,
-    })
+    });
   } catch (error) {
-    console.error(error)
-    return apiError('Failed to generate groups', 500)
+    console.error(error);
+    return apiError("Failed to generate groups", 500);
   }
 }
 
@@ -179,12 +202,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: rawId } = await params
-    const tournamentId = parseInt(rawId)
+    const { id: rawId } = await params;
+    const tournamentId = parseInt(rawId, 10);
 
     await prisma.$transaction([
       prisma.match.deleteMany({
-        where: { tournamentId, phase: 'group' },
+        where: { tournamentId, phase: "group" },
       }),
       prisma.tournamentTeamGroup.deleteMany({
         where: { tournamentId },
@@ -192,10 +215,43 @@ export async function DELETE(
       prisma.tournamentGroup.deleteMany({
         where: { tournamentId },
       }),
-    ])
+    ]);
 
-    return Response.json({ success: true })
-  } catch {
-    return apiError('Failed to reset group stage', 500)
+    const refreshedTournament = await prisma.tournament.findUnique({
+      where: { id: tournamentId },
+      include: {
+        groups: {
+          orderBy: [{ order: "asc" }, { id: "asc" }],
+        },
+        matches: {
+          orderBy: [{ round: "asc" }, { id: "asc" }],
+        },
+        teams: {
+          include: {
+            team: true,
+            groupLinks: true,
+          },
+        },
+      },
+    });
+
+    if (!refreshedTournament) {
+      return apiError("Tournament not found after reset", 404);
+    }
+
+    return Response.json({
+      success: true,
+      groups: refreshedTournament.groups.map((group) => ({
+        id: group.id,
+        name: group.name,
+        order: group.order,
+      })),
+      matches: refreshedTournament.matches,
+      teamGroups: buildTeamGroupsMap(refreshedTournament.teams),
+      status: refreshedTournament.status,
+    });
+  } catch (error) {
+    console.error(error);
+    return apiError("Failed to reset group stage", 500);
   }
 }
