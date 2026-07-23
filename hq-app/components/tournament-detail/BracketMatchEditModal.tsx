@@ -1,15 +1,17 @@
 "use client";
 
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
-  type FormEvent,
-} from "react";
+import React, { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { Match, Team } from "@/types";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
+
+type SaveBracketEditInput = {
+  matchId: number;
+  teamAId: number | null;
+  teamBId: number | null;
+  scoreA?: number | null;
+  scoreB?: number | null;
+};
 
 type Props = {
   open: boolean;
@@ -17,13 +19,7 @@ type Props = {
   teams: Team[];
   loading: boolean;
   onClose: () => void;
-  onSave: (
-    matchId: number,
-    teamAId: number | null,
-    teamBId: number | null,
-    scoreA: number | null,
-    scoreB: number | null
-  ) => void;
+  onSave: (input: SaveBracketEditInput) => void;
 };
 
 const threeColGrid: CSSProperties = {
@@ -107,7 +103,7 @@ export function BracketMatchEditModal({
     setError(null);
   }
 
-  function handleSubmit(e: FormEvent) {
+  const handleSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
     if (!match) return;
 
@@ -147,8 +143,15 @@ export function BracketMatchEditModal({
     }
 
     setError(null);
-    onSave(match.id, parsedTeamAId, parsedTeamBId, parsedScoreA, parsedScoreB);
-  }
+
+    onSave({
+      matchId: match.id,
+      teamAId: parsedTeamAId,
+      teamBId: parsedTeamBId,
+      scoreA: parsedScoreA,
+      scoreB: parsedScoreB,
+    });
+  };
 
   return (
     <Modal open={open} onClose={onClose} title="Edit Match" size="lg">
@@ -278,17 +281,17 @@ export function BracketMatchEditModal({
             </p>
           )}
 
-          <div className="border-t border-gray-100 dark:border-gray-700" />
-
           <FieldError message={error} />
 
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="secondary" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={loading}>
-              Save changes
-            </Button>
+          <div className="border-t border-gray-100 pt-4 dark:border-gray-700">
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" type="button" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={loading}>
+                Save changes
+              </Button>
+            </div>
           </div>
         </form>
       </div>

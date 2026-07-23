@@ -5,13 +5,13 @@ import { prisma } from "@/lib/db";
 
 type Params = { params: Promise<{ id: string }> };
 
-const PHASE_ORDER: string[] = [
+const PHASE_ORDER = [
   "round_of_32",
   "round_of_16",
   "quarter_final",
   "semi_final",
   "final",
-];
+] as const;
 
 const PHASE_BY_SIZE: Record<number, string> = {
   32: "round_of_32",
@@ -44,6 +44,27 @@ type GroupMatchLike = {
   scoreB: number | null;
   status: string;
   groupId: number | null;
+};
+
+type PlacementMode = "auto" | "manual";
+
+type InitialPair = {
+  teamAId: number | null;
+  teamBId: number | null;
+  autoAdvanceTeamId: number | null;
+};
+
+type MatchCreateData = {
+  tournamentId: number;
+  teamAId: number | null;
+  teamBId: number | null;
+  phase: string;
+  round: number;
+  status: string;
+  bracketOrder: number | null;
+  nextMatchOrder: number | null;
+  nextSlot: string | null;
+  groupId?: number | null;
 };
 
 function nextPowerOf2(n: number): number {
@@ -138,6 +159,194 @@ function computeGroupStandings(
     .map((r, idx) => ({ ...r, rank: idx + 1 }));
 }
 
+function buildBracketPositions(size: number): number[] {
+  if (size === 2) return [1, 2];
+
+  const half = buildBracketPositions(size / 2);
+  const result: number[] = [];
+
+  for (const seed of half) {
+    result.push(seed);
+    result.push(size + 1 - seed);
+  }
+
+  return result;
+}
+
+async function getAutoSeededTeamIds(tournament: any): Promise<number[]> {
+  const fc = (tournament.formatConfig ?? {}) as {
+    qualifiersPerGroup?: number;
+    wildCardCount?: number;
+  };
+
+  if (tournament.type === "group_and_bracket") {
+    const qualifiersPerGroup = fc.qualifiersPerGroup ?? 2;
+    const wildCardCount = fc.wildCardCount ?? 0;
+
+    const groupMatches: GroupMatchLike[] = tournament.matches.filter(
+      (m: any) =>
+        m.phase === "group" &&
+        m.groupId != null &&
+        m.teamAId != null &&
+        m.teamBId != null
+    );
+
+    if (groupMatches.length === 0) {
+      throw new Error("No group stage matches found.");
+    }
+
+    const teamMap: Record<number, string> = {};
+    tournament.teams.forEach((tt: any) => {
+      teamMap[tt.teamId] = tt.team?.name ?? `Team ${tt.teamId}`;
+    });
+
+    const matchesByGroup = groupMatches.reduce(
+      (acc, m) => {
+        if (m.groupId == null) return acc;
+        if (!acc[m.groupId]) acc[m.groupId] = [];
+        acc[m.groupId].push(m);
+        return acc;
+      },
+      {} as Record<number, GroupMatchLike[]>
+    );
+
+    const validGroups = tournament.groups.filter(
+      (group: any) => matchesByGroup[group.id]?.length > 0
+    );
+
+    if (validGroups.length === 0) {
+      throw new Error("No valid groups found.");
+    }
+
+    const directByRank: Record<number, StandingRow[]> = {};
+    const wildcardCandidates: StandingRow[] = [];
+
+    for (const group of validGroups) {
+      const standings = computeGroupStandings(
+        group.id,
+        group.name,
+        matchesByGroup[group.id] ?? [],
+        teamMap
+      );
+
+      if (standings.length < qualifiersPerGroup) {
+        throw new Error(
+          `Group ${group.name} does not have enough teams to qualify ${qualifiersPerGroup} teams.`
+        );
+      }
+
+      standings.forEach((row, idx) => {
+        if (idx < qualifiersPerGroup) {
+          const rank = idx + 1;
+          if (!directByRank[rank]) directByRank[rank] = [];
+          directByRank[rank].push(row);
+        } else {
+          wildcardCandidates.push(row);
+        }
+      });
+    }
+
+    Object.keys(directByRank).forEach((rank) => {
+      directByRank[Number(rank)].sort(sortRows);
+    });
+
+    wildcardCandidates.sort(sortRows);
+
+    const directQualifiers = Object.keys(directByRank)
+      .map(Number)
+      .sort((a, b) => a - b)
+      .flatMap((rank) => directByRank[rank]);
+
+    const wildCards = wildcardCandidates.slice(0, wildCardCount);
+
+    return [...directQualifiers, ...wildCards].map((r) => r.teamId);
+  }
+
+  return tournament.teams.map((tt: any) => tt.teamId);
+}
+
+function getBracketSize(
+  tournament: any,
+  placementMode: PlacementMode,
+  seededTeamIds: number[]
+): number {
+  if (placementMode === "auto") {
+    if (seededTeamIds.length < 2) {
+      throw new Error("At least 2 teams are required to generate a bracket");
+    }
+    return nextPowerOf2(seededTeamIds.length);
+  }
+
+  const fc = (tournament.formatConfig ?? {}) as {
+    qualifiersPerGroup?: number;
+    wildCardCount?: number;
+  };
+
+  let slotCount = 0;
+
+  if (tournament.type === "group_and_bracket") {
+    const qualifiersPerGroup = fc.qualifiersPerGroup ?? 2;
+    const wildCardCount = fc.wildCardCount ?? 0;
+    const groupCount = tournament.groups?.length ?? 0;
+
+    slotCount =
+      groupCount > 0
+        ? groupCount * qualifiersPerGroup + wildCardCount
+        : tournament.teams.length;
+  } else {
+    slotCount = tournament.teams.length;
+  }
+
+  if (slotCount < 2) {
+    throw new Error("At least 2 teams are required to generate a bracket");
+  }
+
+  return nextPowerOf2(slotCount);
+}
+
+function buildInitialPairs(
+  bracketSize: number,
+  placementMode: PlacementMode,
+  seededTeamIds: number[]
+): InitialPair[] {
+  if (placementMode === "manual") {
+    return Array.from({ length: bracketSize / 2 }, () => ({
+      teamAId: null,
+      teamBId: null,
+      autoAdvanceTeamId: null,
+    }));
+  }
+
+  const positions = buildBracketPositions(bracketSize);
+  const paddedSeeds: (number | null)[] = [
+    ...seededTeamIds,
+    ...Array(bracketSize - seededTeamIds.length).fill(null),
+  ];
+
+  const bracketSlots: (number | null)[] = positions.map(
+    (seedNum) => paddedSeeds[seedNum - 1] ?? null
+  );
+
+  const pairs: InitialPair[] = [];
+
+  for (let i = 0; i < bracketSize / 2; i++) {
+    const teamAId = bracketSlots[i * 2];
+    const teamBId = bracketSlots[i * 2 + 1];
+
+    const isBye =
+      (teamAId !== null && teamBId === null) ||
+      (teamAId === null && teamBId !== null);
+
+    pairs.push({
+      teamAId: isBye ? null : teamAId,
+      teamBId: isBye ? null : teamBId,
+      autoAdvanceTeamId: isBye ? (teamAId ?? teamBId) : null,
+    });
+  }
+
+  return pairs;
+}
+
 export async function DELETE(req: NextRequest, { params }: Params) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -214,120 +423,52 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  let seededTeamIds: number[] = [];
+  const placementMode: PlacementMode =
+    tournament.managementMode === "manual" ? "manual" : "auto";
+
   const fc = (tournament.formatConfig ?? {}) as {
     thirdPlaceMatch?: boolean;
-    qualifiersPerGroup?: number;
-    wildCardCount?: number;
   };
   const wantsThirdPlace = fc.thirdPlaceMatch === true;
 
-  if (tournament.type === "group_and_bracket") {
-    const qualifiersPerGroup = fc.qualifiersPerGroup ?? 2;
-    const wildCardCount = fc.wildCardCount ?? 0;
+  let seededTeamIds: number[] = [];
 
-    const groupMatches = tournament.matches.filter(
-      (m) =>
-        m.phase === "group" &&
-        m.groupId != null &&
-        m.teamAId != null &&
-        m.teamBId != null
-    );
+  try {
+    if (placementMode === "auto") {
+      seededTeamIds = await getAutoSeededTeamIds(tournament);
 
-    if (groupMatches.length === 0) {
-      return NextResponse.json(
-        { error: "No group stage matches found." },
-        { status: 400 }
-      );
-    }
-
-    const teamMap: Record<number, string> = {};
-    tournament.teams.forEach((tt) => {
-      teamMap[tt.teamId] = tt.team?.name ?? `Team ${tt.teamId}`;
-    });
-
-    const matchesByGroup = groupMatches.reduce<Record<number, GroupMatchLike[]>>(
-      (acc, m) => {
-        if (m.groupId == null) return acc;
-        if (!acc[m.groupId]) acc[m.groupId] = [];
-        acc[m.groupId].push(m);
-        return acc;
-      },
-      {}
-    );
-
-    const validGroups = tournament.groups.filter((group) => matchesByGroup[group.id]?.length > 0);
-
-    if (validGroups.length === 0) {
-      return NextResponse.json({ error: "No valid groups found." }, { status: 400 });
-    }
-
-    const directByRank: Record<number, StandingRow[]> = {};
-    const wildcardCandidates: StandingRow[] = [];
-
-    for (const group of validGroups) {
-      const standings = computeGroupStandings(
-        group.id,
-        group.name,
-        matchesByGroup[group.id] ?? [],
-        teamMap
-      );
-
-      if (standings.length < qualifiersPerGroup) {
+      if (seededTeamIds.length === 0) {
         return NextResponse.json(
-          {
-            error: `Group ${group.name} does not have enough teams to qualify ${qualifiersPerGroup} teams.`,
-          },
+          { error: "No teams qualified for the bracket." },
           { status: 400 }
         );
       }
-
-      standings.forEach((row, idx) => {
-        if (idx < qualifiersPerGroup) {
-          const rank = idx + 1;
-          if (!directByRank[rank]) directByRank[rank] = [];
-          directByRank[rank].push(row);
-        } else {
-          wildcardCandidates.push(row);
-        }
-      });
     }
-
-    Object.keys(directByRank).forEach((rank) => {
-      directByRank[Number(rank)].sort(sortRows);
-    });
-
-    wildcardCandidates.sort(sortRows);
-
-    const directQualifiers = Object.keys(directByRank)
-      .map(Number)
-      .sort((a, b) => a - b)
-      .flatMap((rank) => directByRank[rank]);
-
-    const wildCards = wildcardCandidates.slice(0, wildCardCount);
-
-    seededTeamIds = [...directQualifiers, ...wildCards].map((r) => r.teamId);
-
-    if (seededTeamIds.length === 0) {
-      return NextResponse.json(
-        { error: "No teams qualified for the bracket." },
-        { status: 400 }
-      );
-    }
-  } else {
-    seededTeamIds = tournament.teams.map((tt) => tt.teamId);
-  }
-
-  if (seededTeamIds.length < 2) {
+  } catch (err) {
     return NextResponse.json(
-      { error: "At least 2 teams are required to generate a bracket" },
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "Failed to determine bracket teams.",
+      },
       { status: 400 }
     );
   }
 
-  const advanceCount = seededTeamIds.length;
-  const bracketSize = nextPowerOf2(advanceCount);
-  const byeCount = bracketSize - advanceCount;
+  let bracketSize: number;
+
+  try {
+    bracketSize = getBracketSize(tournament, placementMode, seededTeamIds);
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error:
+          err instanceof Error ? err.message : "Invalid bracket size.",
+      },
+      { status: 400 }
+    );
+  }
 
   const firstPhase = PHASE_BY_SIZE[bracketSize];
   if (!firstPhase) {
@@ -342,112 +483,56 @@ export async function POST(req: NextRequest, { params }: Params) {
     return entry !== undefined && Number(entry[0]) <= bracketSize;
   });
 
-  function buildBracketPositions(size: number): number[] {
-    if (size === 2) return [1, 2];
-    const half = buildBracketPositions(size / 2);
-    const result: number[] = [];
-    for (const seed of half) {
-      result.push(seed);
-      result.push(size + 1 - seed);
+  const initialPairs = buildInitialPairs(bracketSize, placementMode, seededTeamIds);
+
+  const allMatchData: MatchCreateData[] = [];
+
+  const nextRoundPhase = PHASE_BY_SIZE[bracketSize / 2];
+
+  const nextRoundTop: (number | null)[] =
+    nextRoundPhase && placementMode === "auto"
+      ? Array(bracketSize / 4).fill(null)
+      : [];
+
+  const nextRoundBot: (number | null)[] =
+    nextRoundPhase && placementMode === "auto"
+      ? Array(bracketSize / 4).fill(null)
+      : [];
+
+  for (let i = 0; i < initialPairs.length; i++) {
+    const pair = initialPairs[i];
+
+    if (placementMode === "auto" && pair.autoAdvanceTeamId != null && nextRoundPhase) {
+      const nextIdx = Math.floor(i / 2);
+      const isTop = i % 2 === 0;
+
+      if (isTop) nextRoundTop[nextIdx] = pair.autoAdvanceTeamId;
+      else nextRoundBot[nextIdx] = pair.autoAdvanceTeamId;
+
+      continue;
     }
-    return result;
-  }
 
-  const positions = buildBracketPositions(bracketSize);
-  const paddedSeeds: (number | null)[] = [
-    ...seededTeamIds,
-    ...Array(bracketSize - advanceCount).fill(null),
-  ];
-
-  const bracketSlots: (number | null)[] = positions.map(
-    (seedNum) => paddedSeeds[seedNum - 1] ?? null
-  );
-
-  let byeTeams = 0;
-
-  interface SlotPair {
-    teamA: number | null;
-    teamB: number | null;
-  }
-
-  const firstRoundPairs: SlotPair[] = [];
-  for (let i = 0; i < bracketSize / 2; i++) {
-    firstRoundPairs.push({
-      teamA: bracketSlots[i * 2],
-      teamB: bracketSlots[i * 2 + 1],
+    allMatchData.push({
+      tournamentId,
+      teamAId: pair.teamAId,
+      teamBId: pair.teamBId,
+      phase: firstPhase,
+      round: 1,
+      status: "pending",
+      bracketOrder: i,
+      nextMatchOrder: Math.floor(i / 2),
+      nextSlot: i % 2 === 0 ? "teamAId" : "teamBId",
+      groupId: null,
     });
   }
 
-  const r16Matches: {
-    pairIndex: number;
-    teamAId: number | null;
-    teamBId: number | null;
-  }[] = [];
-
-  const qfSlotTop: (number | null)[] = Array(bracketSize / 4).fill(null);
-  const qfSlotBot: (number | null)[] = Array(bracketSize / 4).fill(null);
-
-  for (let i = 0; i < firstRoundPairs.length; i++) {
-    const { teamA, teamB } = firstRoundPairs[i];
-    const qfMatchIdx = Math.floor(i / 2);
-    const isTop = i % 2 === 0;
-
-    const isBye =
-      (teamA !== null && teamB === null) ||
-      (teamA === null && teamB !== null);
-
-    if (isBye) {
-      byeTeams++;
-      const byeTeamId = teamA ?? teamB;
-      if (isTop) qfSlotTop[qfMatchIdx] = byeTeamId;
-      else qfSlotBot[qfMatchIdx] = byeTeamId;
-    } else {
-      r16Matches.push({
-        pairIndex: i,
-        teamAId: teamA,
-        teamBId: teamB,
-      });
-    }
-  }
-
-  const allMatchData: {
-    tournamentId: number;
-    teamAId: number | null;
-    teamBId: number | null;
-    phase: string;
-    round: number;
-    status: string;
-    bracketOrder: number | null;
-    nextMatchOrder: number | null;
-    nextSlot: string | null;
-    groupId?: number | null;
-  }[] = [];
-
-  if (r16Matches.length > 0) {
-    for (const m of r16Matches) {
-      allMatchData.push({
-        tournamentId,
-        teamAId: m.teamAId,
-        teamBId: m.teamBId,
-        phase: firstPhase,
-        round: 1,
-        status: "pending",
-        bracketOrder: m.pairIndex,
-        nextMatchOrder: Math.floor(m.pairIndex / 2),
-        nextSlot: m.pairIndex % 2 === 0 ? "teamAId" : "teamBId",
-        groupId: null,
-      });
-    }
-  }
-
-  const qfPhase = PHASE_BY_SIZE[bracketSize / 2];
-  if (qfPhase) {
+  if (nextRoundPhase) {
     for (let i = 0; i < bracketSize / 4; i++) {
       allMatchData.push({
         tournamentId,
-        teamAId: qfSlotTop[i],
-        teamBId: qfSlotBot[i],
-        phase: qfPhase,
+        teamAId: placementMode === "auto" ? nextRoundTop[i] : null,
+        teamBId: placementMode === "auto" ? nextRoundBot[i] : null,
+        phase: nextRoundPhase,
         round: 1,
         status: "pending",
         bracketOrder: i,
@@ -458,7 +543,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
   }
 
-  const laterPhases = allPhases.filter((p) => p !== firstPhase && p !== qfPhase);
+  const laterPhases = allPhases.filter(
+    (p) => p !== firstPhase && p !== nextRoundPhase
+  );
+
   let matchCount = bracketSize / 8;
 
   for (const phase of laterPhases) {
@@ -476,6 +564,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         groupId: null,
       });
     }
+
     matchCount = Math.max(1, Math.floor(matchCount / 2));
   }
 
@@ -486,6 +575,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       const created = await prisma.match.create({ data: matchData as any });
       const phase = matchData.phase;
       const order = matchData.bracketOrder ?? 0;
+
       if (!createdIds[phase]) createdIds[phase] = {};
       createdIds[phase][order] = created.id;
     }
@@ -533,6 +623,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   try {
     const semiIds = createdIds["semi_final"];
+
     if (wantsThirdPlace && semiIds && semiIds[0] && semiIds[1]) {
       const thirdPlace = await prisma.match.create({
         data: {
@@ -549,12 +640,18 @@ export async function POST(req: NextRequest, { params }: Params) {
 
       await prisma.match.update({
         where: { id: semiIds[0] },
-        data: { loserNextMatchId: thirdPlace.id, loserNextSlot: "teamAId" },
+        data: {
+          loserNextMatchId: thirdPlace.id,
+          loserNextSlot: "teamAId",
+        },
       });
 
       await prisma.match.update({
         where: { id: semiIds[1] },
-        data: { loserNextMatchId: thirdPlace.id, loserNextSlot: "teamBId" },
+        data: {
+          loserNextMatchId: thirdPlace.id,
+          loserNextSlot: "teamBId",
+        },
       });
 
       thirdPlaceCreated = true;
@@ -569,12 +666,10 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   return NextResponse.json({
     created: allMatchData.length + (thirdPlaceCreated ? 1 : 0),
-    byeTeams,
     bracketSize,
     firstPhase: allPhases[0],
+    placementMode,
     teamsSeeded: seededTeamIds.length,
-    advanceCount,
-    byeCount,
     phases: allPhases,
     seededTeamIds,
     thirdPlaceCreated,

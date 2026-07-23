@@ -244,6 +244,9 @@ export default function ManageTournamentDetailPage({
     { key: "info", label: "Info" },
   ];
 
+  const pageWidthClass =
+    activeTab === "bracket" ? "max-w-[1500px]" : "max-w-4xl"; // to be used
+
   return (
     <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
       <TournamentDetailHeader
@@ -308,15 +311,15 @@ export default function ManageTournamentDetailPage({
       {activeTab === "bracket" && (
         <BracketTab
           matches={localMatches}
-          enrolledTeams={enrolledTeams}
+          editableTeams={enrolledTeams}
           hasBracketMatches={hasBracketMatches}
           generatingBracket={generatingBracket}
           resettingBracket={resettingBracket}
           bracketError={bracketError}
-          onGenerateBracket={handleGenerateBracket}
-          onResetBracket={handleResetBracket}
           editingBracketMatch={editingBracketMatch}
           bracketEditSaving={bracketEditSaving}
+          onGenerateBracket={handleGenerateBracket}
+          onResetBracket={handleResetBracket}
           onOpenBracketEdit={openBracketEdit}
           onCloseBracketEdit={closeBracketEdit}
           onSaveBracketEdit={handleSaveBracketEdit}

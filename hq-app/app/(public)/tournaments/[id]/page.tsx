@@ -8,6 +8,7 @@ import { TournamentHeader } from "@/components/tournaments/TournamentHeader";
 import PublicGroupStage from "@/components/ui/PublicGroupStage";
 import { PublicTournamentInfo } from "@/components/tournaments/PublicTournamentInfo";
 import PublicStandingsTable from "@/components/tournaments/PublicStandingsTable";
+import { BracketTab } from "@/components/tournament-detail/BracketTab";
 
 type Tab = "standings" | "groupStage" | "bracket" | "info";
 
@@ -150,11 +151,13 @@ export default function TournamentPublicPage({
             />
           )}
 
-          {activeTab === "bracket" && !isRoundRobin && (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-8 text-sm text-slate-400">
-              Active tab: <span className="font-medium text-slate-200">{activeTab}</span>
-            </div>
-          )}
+            {activeTab === "bracket" && !isRoundRobin && (
+              <BracketTab
+                matches={data.matches}
+                hasBracketMatches={hasBracketMatches}
+                readonly
+              />
+            )}
 
           {activeTab === "info" && data && <PublicTournamentInfo tournament={data} />}
         </section>

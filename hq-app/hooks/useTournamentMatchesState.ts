@@ -18,6 +18,16 @@ type Params = {
   onMatchesUpdated?: (matches: Match[]) => void;
 };
 
+type MatchSlot = "teamAId" | "teamBId";
+
+type SaveBracketEditInput = {
+  matchId: number;
+  teamAId: number | null;
+  teamBId: number | null;
+  scoreA?: number | null;
+  scoreB?: number | null;
+};
+
 export function useTournamentMatchesState({
   tournamentId,
   tournament,
@@ -109,14 +119,14 @@ export function useTournamentMatchesState({
     return errors;
   }
 
-    function openAddMatch(groupId?: number | null) {
-        setMatchForm(emptyMatchForm);
-        setMatchErrors({});
-        if (groupId != null) {
-            setActiveGroupTab(groupId);
-        }
-        setMatchModalOpen(true);
+  function openAddMatch(groupId?: number | null) {
+    setMatchForm(emptyMatchForm);
+    setMatchErrors({});
+    if (groupId != null) {
+      setActiveGroupTab(groupId);
     }
+    setMatchModalOpen(true);
+  }
 
   async function handleAddMatch() {
     const errors = validateMatchForm(matchForm);
@@ -317,13 +327,13 @@ export function useTournamentMatchesState({
     setEditingBracketMatch(null);
   }
 
-  async function handleSaveBracketEdit(
-    matchId: number,
-    teamAId: number | null,
-    teamBId: number | null,
-    scoreA: number | null,
-    scoreB: number | null
-  ) {
+  async function handleSaveBracketEdit({
+    matchId,
+    teamAId,
+    teamBId,
+    scoreA = null,
+    scoreB = null,
+  }: SaveBracketEditInput) {
     setBracketEditSaving(true);
 
     const previousMatches = localMatches;
@@ -384,22 +394,26 @@ export function useTournamentMatchesState({
         throw new Error(body.error ?? "Failed to update bracket match");
       }
 
-      if (body.match) {
+      const returnedMatch = body.match ?? body;
+
+      if (returnedMatch) {
         updateMatches((prev) =>
           prev.map((match) =>
             match.id === matchId
               ? {
                   ...match,
-                  ...body.match,
+                  ...returnedMatch,
                   teamA:
-                    body.match.teamA ??
-                    (body.match.teamAId != null
-                      ? enrolledTeams.find((team) => team.id === body.match.teamAId) ?? null
+                    returnedMatch.teamA ??
+                    (returnedMatch.teamAId != null
+                      ? enrolledTeams.find((team) => team.id === returnedMatch.teamAId) ??
+                        null
                       : null),
                   teamB:
-                    body.match.teamB ??
-                    (body.match.teamBId != null
-                      ? enrolledTeams.find((team) => team.id === body.match.teamBId) ?? null
+                    returnedMatch.teamB ??
+                    (returnedMatch.teamBId != null
+                      ? enrolledTeams.find((team) => team.id === returnedMatch.teamBId) ??
+                        null
                       : null),
                 }
               : match
