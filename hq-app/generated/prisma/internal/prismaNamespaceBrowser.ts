@@ -57,6 +57,7 @@ export const ModelName = {
   Tournament: 'Tournament',
   Team: 'Team',
   TournamentTeam: 'TournamentTeam',
+  TournamentBracket: 'TournamentBracket',
   Match: 'Match',
   User: 'User',
   TournamentGroup: 'TournamentGroup',
@@ -115,13 +116,13 @@ export const TournamentScalarFieldEnum = {
   date: 'date',
   location: 'location',
   status: 'status',
-  type: 'type',
-  teamsToAdvance: 'teamsToAdvance',
-  formatConfig: 'formatConfig',
   createdAt: 'createdAt',
-  managementMode: 'managementMode',
   leagueId: 'leagueId',
-  divisionId: 'divisionId'
+  teamsToAdvance: 'teamsToAdvance',
+  type: 'type',
+  formatConfig: 'formatConfig',
+  divisionId: 'divisionId',
+  managementMode: 'managementMode'
 } as const
 
 export type TournamentScalarFieldEnum = (typeof TournamentScalarFieldEnum)[keyof typeof TournamentScalarFieldEnum]
@@ -131,8 +132,8 @@ export const TeamScalarFieldEnum = {
   id: 'id',
   name: 'name',
   contact: 'contact',
-  logoUrl: 'logoUrl',
   createdAt: 'createdAt',
+  logoUrl: 'logoUrl',
   divisionId: 'divisionId'
 } as const
 
@@ -148,6 +149,17 @@ export const TournamentTeamScalarFieldEnum = {
 export type TournamentTeamScalarFieldEnum = (typeof TournamentTeamScalarFieldEnum)[keyof typeof TournamentTeamScalarFieldEnum]
 
 
+export const TournamentBracketScalarFieldEnum = {
+  id: 'id',
+  tournamentId: 'tournamentId',
+  name: 'name',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt'
+} as const
+
+export type TournamentBracketScalarFieldEnum = (typeof TournamentBracketScalarFieldEnum)[keyof typeof TournamentBracketScalarFieldEnum]
+
+
 export const MatchScalarFieldEnum = {
   id: 'id',
   tournamentId: 'tournamentId',
@@ -156,22 +168,23 @@ export const MatchScalarFieldEnum = {
   scoreA: 'scoreA',
   scoreB: 'scoreB',
   round: 'round',
-  label: 'label',
+  field: 'field',
+  status: 'status',
+  createdAt: 'createdAt',
+  manualOverride: 'manualOverride',
   phase: 'phase',
   groupLegacy: 'groupLegacy',
-  groupId: 'groupId',
-  field: 'field',
-  nextMatchId: 'nextMatchId',
-  loserNextMatchId: 'loserNextMatchId',
-  loserNextSlot: 'loserNextSlot',
   bracketOrder: 'bracketOrder',
   nextMatchOrder: 'nextMatchOrder',
   nextSlot: 'nextSlot',
-  status: 'status',
-  manualOverride: 'manualOverride',
-  createdAt: 'createdAt',
+  nextMatchId: 'nextMatchId',
+  loserNextMatchId: 'loserNextMatchId',
+  loserNextSlot: 'loserNextSlot',
   bodyCountA: 'bodyCountA',
-  bodyCountB: 'bodyCountB'
+  bodyCountB: 'bodyCountB',
+  label: 'label',
+  groupId: 'groupId',
+  bracketId: 'bracketId'
 } as const
 
 export type MatchScalarFieldEnum = (typeof MatchScalarFieldEnum)[keyof typeof MatchScalarFieldEnum]

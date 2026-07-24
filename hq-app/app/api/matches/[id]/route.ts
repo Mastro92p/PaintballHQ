@@ -219,17 +219,52 @@ export async function PATCH(
         include: { teamA: true, teamB: true, group: true },
       });
 
+      const isKnockout = isKnockoutPhase(match.phase);
+      const hasTeams = match.teamAId != null && match.teamBId != null;
+      const hasScores = match.scoreA != null && match.scoreB != null;
+      const isTie = hasScores && match.scoreA === match.scoreB;
+      const isCompleteResult =
+        isKnockout &&
+        hasTeams &&
+        hasScores &&
+        !isTie &&
+        match.phase !== "final";
+
+      const sourceSlotsChanged =
+        (body.teamAId !== undefined && body.teamAId !== existingMatch.teamAId) ||
+        (body.teamBId !== undefined && body.teamBId !== existingMatch.teamBId) ||
+        (body.scoreA !== undefined && body.scoreA !== existingMatch.scoreA) ||
+        (body.scoreB !== undefined && body.scoreB !== existingMatch.scoreB);
+
       if (
-        isKnockoutPhase(match.phase) &&
-        match.scoreA != null &&
-        match.scoreB != null &&
-        match.teamAId != null &&
-        match.teamBId != null &&
-        match.scoreA !== match.scoreB &&
+        isKnockout &&
+        sourceSlotsChanged &&
         match.phase !== "final"
       ) {
-        const winnerId = match.scoreA > match.scoreB ? match.teamAId : match.teamBId;
-        const loserId = match.scoreA > match.scoreB ? match.teamBId : match.teamAId;
+        if (match.nextMatchId && match.nextSlot) {
+          await tx.match.update({
+            where: { id: match.nextMatchId },
+            data: {
+              [match.nextSlot]: null,
+            },
+          });
+          affectedIds.add(match.nextMatchId);
+        }
+
+        if (match.loserNextMatchId && match.loserNextSlot) {
+          await tx.match.update({
+            where: { id: match.loserNextMatchId },
+            data: {
+              [match.loserNextSlot]: null,
+            },
+          });
+          affectedIds.add(match.loserNextMatchId);
+        }
+      }
+
+      if (isCompleteResult) {
+        const winnerId = match.scoreA! > match.scoreB! ? match.teamAId! : match.teamBId!;
+        const loserId = match.scoreA! > match.scoreB! ? match.teamBId! : match.teamAId!;
 
         if (match.nextMatchId && match.nextSlot) {
           await tx.match.update({

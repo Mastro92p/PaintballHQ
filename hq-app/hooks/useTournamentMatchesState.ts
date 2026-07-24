@@ -59,6 +59,24 @@ export function useTournamentMatchesState({
     setLocalMatches(tournament?.matches ?? []);
   }, [tournament?.matches]);
 
+  useEffect(() => {
+    if (!editingBracketMatch) return;
+
+    const stillExists = localMatches.some((m) => m.id === editingBracketMatch.id);
+      if (!stillExists) {
+        setEditingBracketMatch(null);
+      }
+    }, [editingBracketMatch, localMatches]);
+
+  useEffect(() => {
+      if (!editingMatch) return;
+
+      const stillExists = localMatches.some((m) => m.id === editingMatch.id);
+      if (!stillExists) {
+        setEditingMatch(null);
+      }
+  }, [editingMatch, localMatches]);
+
   function updateMatches(next: Match[] | ((prev: Match[]) => Match[])) {
     setLocalMatches((prev) => {
       const resolved = typeof next === "function" ? next(prev) : next;
@@ -337,7 +355,6 @@ export function useTournamentMatchesState({
     setBracketEditSaving(true);
 
     const previousMatches = localMatches;
-    const existingMatch = localMatches.find((match) => match.id === matchId);
 
     const nextTeamA =
       teamAId != null
@@ -348,13 +365,8 @@ export function useTournamentMatchesState({
         ? enrolledTeams.find((team) => team.id === teamBId) ?? null
         : null;
 
-    const teamsChanged =
-      !!existingMatch &&
-      ((existingMatch.teamAId ?? null) !== teamAId ||
-        (existingMatch.teamBId ?? null) !== teamBId);
-
-    const nextScoreA = teamsChanged ? null : scoreA;
-    const nextScoreB = teamsChanged ? null : scoreB;
+    const nextScoreA = scoreA;
+    const nextScoreB = scoreB;
     const nextStatus =
       nextScoreA != null && nextScoreB != null ? "completed" : "pending";
 

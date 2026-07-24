@@ -31,6 +31,7 @@ export interface Tournament {
   teams?: TournamentTeam[];
   matches?: Match[];
   groups?: TournamentGroup[];
+  brackets?: TournamentBracket[];
   formatConfig: FormatConfig | null;
   type: TournamentType;
   teamsToAdvance: number;
@@ -69,6 +70,16 @@ export interface TournamentGroup {
   matches?: Match[];
 }
 
+export interface TournamentBracket {
+  id: number;
+  tournamentId: number;
+  name: string;
+  sortOrder: number;
+  createdAt?: string;
+  tournament?: Tournament;
+  matches?: Match[];
+}
+
 export interface TournamentTeamGroup {
   tournamentId: number;
   teamId: number;
@@ -92,6 +103,8 @@ export type Match = {
   phase: MatchPhase;
   groupId?: number | null;
   group?: TournamentGroup | null;
+  bracketId?: number | null;
+  bracket?: TournamentBracket | null;
   groupLegacy?: string | null;
   field: string | null;
   nextMatchId?: number | null;
@@ -167,6 +180,7 @@ export type CreateMatchBody = {
   field?: string | null;
   phase?: MatchPhase;
   groupId?: number | null;
+  bracketId?: number | null;
   nextMatchId?: number | null;
   loserNextMatchId?: number | null;
   nextSlot?: MatchSlot | null;
@@ -188,6 +202,7 @@ export type UpdateMatchBody = {
   field?: string | null;
   phase?: MatchPhase;
   groupId?: number | null;
+  bracketId?: number | null;
   nextMatchId?: number | null;
   loserNextMatchId?: number | null;
   nextSlot?: MatchSlot | null;
@@ -260,6 +275,7 @@ export type TournamentDetail = Tournament & {
   teams: EnrolledTeam[];
   matches: Match[];
   groups?: TournamentGroup[];
+  brackets?: TournamentBracket[];
 };
 
 export type Division = {
@@ -287,6 +303,7 @@ export type MatchDetail = {
   teamAId: number;
   teamBId: number;
   groupId?: number | null;
+  bracketId?: number | null;
   teamA?: { id: number; name: string };
   teamB?: { id: number; name: string };
   tournament?: { id: number; name: string };
@@ -330,6 +347,7 @@ export type TournamentWithMatches = Tournament & {
   }[];
   matches: Match[];
   groups?: TournamentGroup[];
+  brackets?: TournamentBracket[];
 };
 
 export type LeagueDetailResponse = Omit<League, "tournaments" | "teams"> & {
@@ -356,6 +374,7 @@ export type LeagueDetail = League & {
 export type TournamentWithDivision = Tournament & {
   divisionId?: number | null;
   division?: { id: number; name: string } | null;
+  brackets?: TournamentBracket[];
 };
 
 export type LeagueFormErrors = Partial<Record<keyof LeagueFormState, string>>;

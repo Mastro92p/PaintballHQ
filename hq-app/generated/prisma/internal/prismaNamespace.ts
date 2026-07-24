@@ -390,6 +390,7 @@ export const ModelName = {
   Tournament: 'Tournament',
   Team: 'Team',
   TournamentTeam: 'TournamentTeam',
+  TournamentBracket: 'TournamentBracket',
   Match: 'Match',
   User: 'User',
   TournamentGroup: 'TournamentGroup',
@@ -409,7 +410,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "league" | "leagueTeam" | "division" | "tournament" | "team" | "tournamentTeam" | "match" | "user" | "tournamentGroup" | "tournamentTeamGroup"
+    modelProps: "league" | "leagueTeam" | "division" | "tournament" | "team" | "tournamentTeam" | "tournamentBracket" | "match" | "user" | "tournamentGroup" | "tournamentTeamGroup"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -857,6 +858,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    TournamentBracket: {
+      payload: Prisma.$TournamentBracketPayload<ExtArgs>
+      fields: Prisma.TournamentBracketFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.TournamentBracketFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.TournamentBracketFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload>
+        }
+        findFirst: {
+          args: Prisma.TournamentBracketFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.TournamentBracketFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload>
+        }
+        findMany: {
+          args: Prisma.TournamentBracketFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload>[]
+        }
+        create: {
+          args: Prisma.TournamentBracketCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload>
+        }
+        createMany: {
+          args: Prisma.TournamentBracketCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.TournamentBracketCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload>[]
+        }
+        delete: {
+          args: Prisma.TournamentBracketDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload>
+        }
+        update: {
+          args: Prisma.TournamentBracketUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload>
+        }
+        deleteMany: {
+          args: Prisma.TournamentBracketDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.TournamentBracketUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.TournamentBracketUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload>[]
+        }
+        upsert: {
+          args: Prisma.TournamentBracketUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$TournamentBracketPayload>
+        }
+        aggregate: {
+          args: Prisma.TournamentBracketAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateTournamentBracket>
+        }
+        groupBy: {
+          args: Prisma.TournamentBracketGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TournamentBracketGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.TournamentBracketCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.TournamentBracketCountAggregateOutputType> | number
+        }
+      }
+    }
     Match: {
       payload: Prisma.$MatchPayload<ExtArgs>
       fields: Prisma.MatchFieldRefs
@@ -1228,13 +1303,13 @@ export const TournamentScalarFieldEnum = {
   date: 'date',
   location: 'location',
   status: 'status',
-  type: 'type',
-  teamsToAdvance: 'teamsToAdvance',
-  formatConfig: 'formatConfig',
   createdAt: 'createdAt',
-  managementMode: 'managementMode',
   leagueId: 'leagueId',
-  divisionId: 'divisionId'
+  teamsToAdvance: 'teamsToAdvance',
+  type: 'type',
+  formatConfig: 'formatConfig',
+  divisionId: 'divisionId',
+  managementMode: 'managementMode'
 } as const
 
 export type TournamentScalarFieldEnum = (typeof TournamentScalarFieldEnum)[keyof typeof TournamentScalarFieldEnum]
@@ -1244,8 +1319,8 @@ export const TeamScalarFieldEnum = {
   id: 'id',
   name: 'name',
   contact: 'contact',
-  logoUrl: 'logoUrl',
   createdAt: 'createdAt',
+  logoUrl: 'logoUrl',
   divisionId: 'divisionId'
 } as const
 
@@ -1261,6 +1336,17 @@ export const TournamentTeamScalarFieldEnum = {
 export type TournamentTeamScalarFieldEnum = (typeof TournamentTeamScalarFieldEnum)[keyof typeof TournamentTeamScalarFieldEnum]
 
 
+export const TournamentBracketScalarFieldEnum = {
+  id: 'id',
+  tournamentId: 'tournamentId',
+  name: 'name',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt'
+} as const
+
+export type TournamentBracketScalarFieldEnum = (typeof TournamentBracketScalarFieldEnum)[keyof typeof TournamentBracketScalarFieldEnum]
+
+
 export const MatchScalarFieldEnum = {
   id: 'id',
   tournamentId: 'tournamentId',
@@ -1269,22 +1355,23 @@ export const MatchScalarFieldEnum = {
   scoreA: 'scoreA',
   scoreB: 'scoreB',
   round: 'round',
-  label: 'label',
+  field: 'field',
+  status: 'status',
+  createdAt: 'createdAt',
+  manualOverride: 'manualOverride',
   phase: 'phase',
   groupLegacy: 'groupLegacy',
-  groupId: 'groupId',
-  field: 'field',
-  nextMatchId: 'nextMatchId',
-  loserNextMatchId: 'loserNextMatchId',
-  loserNextSlot: 'loserNextSlot',
   bracketOrder: 'bracketOrder',
   nextMatchOrder: 'nextMatchOrder',
   nextSlot: 'nextSlot',
-  status: 'status',
-  manualOverride: 'manualOverride',
-  createdAt: 'createdAt',
+  nextMatchId: 'nextMatchId',
+  loserNextMatchId: 'loserNextMatchId',
+  loserNextSlot: 'loserNextSlot',
   bodyCountA: 'bodyCountA',
-  bodyCountB: 'bodyCountB'
+  bodyCountB: 'bodyCountB',
+  label: 'label',
+  groupId: 'groupId',
+  bracketId: 'bracketId'
 } as const
 
 export type MatchScalarFieldEnum = (typeof MatchScalarFieldEnum)[keyof typeof MatchScalarFieldEnum]
@@ -1560,6 +1647,7 @@ export type GlobalOmitConfig = {
   tournament?: Prisma.TournamentOmit
   team?: Prisma.TeamOmit
   tournamentTeam?: Prisma.TournamentTeamOmit
+  tournamentBracket?: Prisma.TournamentBracketOmit
   match?: Prisma.MatchOmit
   user?: Prisma.UserOmit
   tournamentGroup?: Prisma.TournamentGroupOmit

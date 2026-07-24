@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { BracketMatchEditModal } from "@/components/tournament-detail/BracketMatchEditModal";
-import type { Match, Team } from "@/types";
+import type { Match, Team, TournamentBracket } from "@/types";
 
 type SaveBracketEditInput = {
   matchId: number;
@@ -18,6 +18,15 @@ type GenerateBracketInput = {
 };
 
 type Props = {
+  brackets?: TournamentBracket[];
+  activeBracketId?: number | null;
+  onSelectBracket?: (bracketId: number) => void;
+  onAddBracket?: () => void;
+  onRenameBracket?: (bracketId: number, name: string) => void;
+  onDeleteBracket?: (bracketId: number) => void;
+  renamingBracket?: boolean;
+  deletingBracket?: boolean;
+
   matches: Match[];
   editableTeams?: Team[];
   hasBracketMatches: boolean;
@@ -211,20 +220,19 @@ function MatchCard({
         score: "#f87171",
       };
 
-  const rowAStyle = aWins
-    ? winnerStyles.row
-    : bWins
-    ? loserStyles.row
-    : undefined;
+  const rowAStyle = aWins ? winnerStyles.row : bWins ? loserStyles.row : undefined;
+  const rowBStyle = bWins ? winnerStyles.row : aWins ? loserStyles.row : undefined;
 
-  const rowBStyle = bWins
-    ? winnerStyles.row
-    : aWins
-    ? loserStyles.row
-    : undefined;
-
-  const nameAClass = !match.teamA ? "text-slate-300" : !isCompleted ? "text-slate-100" : "";
-  const nameBClass = !match.teamB ? "text-slate-300" : !isCompleted ? "text-slate-100" : "";
+  const nameAClass = !match.teamA
+    ? "text-slate-300"
+    : !isCompleted
+    ? "text-slate-100"
+    : "";
+  const nameBClass = !match.teamB
+    ? "text-slate-300"
+    : !isCompleted
+    ? "text-slate-100"
+    : "";
 
   const teamAInlineColor = aWins
     ? winnerStyles.text
@@ -471,7 +479,9 @@ function ManualAdvancingTeamsModal({
   onClose: () => void;
   onConfirm: (advancingTeams: number) => void;
 }) {
-  const [advancingTeams, setAdvancingTeams] = useState<number>(Math.min(teamCount, 2));
+  const [advancingTeams, setAdvancingTeams] = useState<number>(
+    Math.min(teamCount, 2)
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -510,7 +520,8 @@ function ManualAdvancingTeamsModal({
             Generate Manual Bracket
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Choose how many teams advance. You currently have {teamCount} enrolled teams.
+            Choose how many teams advance. You currently have {teamCount} enrolled
+            teams.
           </p>
         </div>
 
@@ -567,6 +578,14 @@ function ManualAdvancingTeamsModal({
 }
 
 export function BracketTab({
+  brackets = [],
+  activeBracketId = null,
+  onSelectBracket,
+  onAddBracket,
+  onRenameBracket,
+  onDeleteBracket,
+  renamingBracket = false,
+  deletingBracket = false,
   matches,
   editableTeams = [],
   hasBracketMatches,
@@ -589,6 +608,9 @@ export function BracketTab({
   const [isPanning, setIsPanning] = useState(false);
   const [manualModalOpen, setManualModalOpen] = useState(false);
 
+  const [isRenamingBracket, setIsRenamingBracket] = useState(false);
+  const [bracketNameDraft, setBracketNameDraft] = useState("");
+
   const panStateRef = useRef({
     active: false,
     startX: 0,
@@ -596,6 +618,16 @@ export function BracketTab({
     scrollLeft: 0,
     scrollTop: 0,
   });
+
+  const activeBracket = useMemo(
+    () => brackets.find((bracket) => bracket.id === activeBracketId) ?? null,
+    [brackets, activeBracketId]
+  );
+
+  useEffect(() => {
+    setIsRenamingBracket(false);
+    setBracketNameDraft(activeBracket?.name?.trim() || "");
+  }, [activeBracket?.id, activeBracket?.name]);
 
   const {
     mainPhases,
@@ -611,7 +643,9 @@ export function BracketTab({
     );
 
     const mainMatches = bracketMatches.filter((m) => m.phase !== "third_place");
-    const thirdPlaceMatches = bracketMatches.filter((m) => m.phase === "third_place");
+    const thirdPlaceMatches = bracketMatches.filter(
+      (m) => m.phase === "third_place"
+    );
 
     const phases = Array.from(
       new Set(
@@ -734,7 +768,10 @@ export function BracketTab({
                 (sum, source) => sum + source.y + CARD_HEIGHT / 2,
                 0
               ) / incomingMatches.length;
-            idealY = Math.max(maxBottom + 28, centerAverage - CARD_HEIGHT / 2 + 48);
+            idealY = Math.max(
+              maxBottom + 28,
+              centerAverage - CARD_HEIGHT / 2 + 48
+            );
           }
 
           const item: PositionedMatch = {
@@ -833,7 +870,14 @@ export function BracketTab({
   const scaledHeight = canvasHeight * scale;
   const canPan = scale > fitScale + 0.01;
   const isManual = managementMode === "manual";
-  const canGenerate = editableTeams.length >= 2 && !hasBracketMatches && !generatingBracket;
+  const hasActiveBracket = activeBracketId != null;
+  const interactive = !readonly && !!onOpenBracketEdit;
+
+  const canGenerate =
+    hasActiveBracket &&
+    editableTeams.length >= 2 &&
+    !hasBracketMatches &&
+    !generatingBracket;
 
   const handleGenerateClick = () => {
     if (!onGenerateBracket || !canGenerate) return;
@@ -888,16 +932,126 @@ export function BracketTab({
     setIsPanning(false);
   };
 
-  const interactive = !readonly && !!onOpenBracketEdit;
-
   return (
     <section className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        {brackets.map((bracket, index) => {
+          const isActive = bracket.id === activeBracketId;
+
+          return (
+            <button
+              key={bracket.id}
+              type="button"
+              onClick={() => onSelectBracket?.(bracket.id)}
+              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                isActive
+                  ? "border-white/30 bg-white/10 text-white"
+                  : "border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.06]"
+              }`}
+              title={bracket.name ?? `Bracket ${index + 1}`}
+            >
+              {bracket.name?.trim() || `B${index + 1}`}
+            </button>
+          );
+        })}
+
+        {!readonly && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={onAddBracket}
+          >
+            + Add
+          </Button>
+        )}
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-            Bracket
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            {isRenamingBracket && activeBracket ? (
+              <>
+                <input
+                  autoFocus
+                  value={bracketNameDraft}
+                  onChange={(e) => setBracketNameDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const nextName = bracketNameDraft.trim();
+                      if (nextName) {
+                        onRenameBracket?.(activeBracket.id, nextName);
+                      }
+                      setIsRenamingBracket(false);
+                    }
+
+                    if (e.key === "Escape") {
+                      setBracketNameDraft(activeBracket.name?.trim() || "");
+                      setIsRenamingBracket(false);
+                    }
+                  }}
+                  className="w-56 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                  placeholder="Bracket name"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  loading={renamingBracket}
+                  onClick={() => {
+                    const nextName = bracketNameDraft.trim();
+                    if (activeBracket && nextName) {
+                      onRenameBracket?.(activeBracket.id, nextName);
+                    }
+                    setIsRenamingBracket(false);
+                  }}
+                >
+                  Save
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setBracketNameDraft(activeBracket.name?.trim() || "");
+                    setIsRenamingBracket(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <h2 className="truncate text-base font-semibold text-gray-900 dark:text-gray-100">
+                  {activeBracket?.name?.trim() || "Bracket"}
+                </h2>
+
+                {!readonly && activeBracket && (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setIsRenamingBracket(true)}
+                    >
+                      Rename
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="danger"
+                      loading={deletingBracket}
+                      onClick={() => onDeleteBracket?.(activeBracket.id)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                )}
+              </>
+            )}
+          </div>
+
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             {readonly
               ? "knockout bracket."
               : isManual
@@ -914,6 +1068,7 @@ export function BracketTab({
                 variant="danger"
                 loading={resettingBracket}
                 onClick={onResetBracket}
+                disabled={!hasActiveBracket}
               >
                 Reset Bracket
               </Button>
@@ -924,7 +1079,9 @@ export function BracketTab({
               loading={generatingBracket}
               disabled={!canGenerate}
               title={
-                hasBracketMatches
+                !hasActiveBracket
+                  ? "Add or select a bracket first"
+                  : hasBracketMatches
                   ? "Reset the bracket first"
                   : editableTeams.length < 2
                   ? "Enroll at least 2 teams first"
@@ -946,18 +1103,26 @@ export function BracketTab({
         </div>
       )}
 
-      {!hasBracketMatches ? (
+      {!hasActiveBracket ? (
+        <div className="rounded-2xl border border-dashed border-gray-200 py-12 text-center text-gray-400 dark:border-gray-700">
+          <p className="mb-2 text-2xl">🏆</p>
+          <p className="font-medium">No bracket selected</p>
+          <p className="mt-1 text-sm">
+            Create a bracket tab first, then generate its knockout stage.
+          </p>
+        </div>
+      ) : !hasBracketMatches ? (
         <div className="rounded-2xl border border-dashed border-gray-200 py-12 text-center text-gray-400 dark:border-gray-700">
           <p className="mb-2 text-2xl">🏆</p>
           <p className="font-medium">
-            {readonly ? "Bracket not available yet" : "No bracket yet"}
+            {readonly ? "Bracket not available yet" : "This bracket is empty"}
           </p>
           <p className="mt-1 text-sm">
             {readonly
               ? "The knockout stage will appear here once it has been generated."
               : isManual
-              ? "Generate the bracket and choose how many teams advance to start the knockout stage."
-              : "Generate the bracket to start the knockout stage."}
+              ? "Generate this bracket and choose how many teams advance to start the knockout stage."
+              : "Generate this bracket to start the knockout stage."}
           </p>
         </div>
       ) : (
@@ -971,7 +1136,9 @@ export function BracketTab({
               <button
                 type="button"
                 className="flex h-8 w-8 items-center justify-center rounded-md border border-[#2e3440] bg-[#151922] text-sm text-slate-200 hover:bg-[#1b2130]"
-                onClick={() => setZoom((z) => Math.max(0.9, +(z - 0.1).toFixed(2)))}
+                onClick={() =>
+                  setZoom((z) => Math.max(0.9, +(z - 0.1).toFixed(2)))
+                }
               >
                 −
               </button>
@@ -987,7 +1154,9 @@ export function BracketTab({
               <button
                 type="button"
                 className="flex h-8 w-8 items-center justify-center rounded-md border border-[#2e3440] bg-[#151922] text-sm text-slate-200 hover:bg-[#1b2130]"
-                onClick={() => setZoom((z) => Math.min(1.35, +(z + 0.1).toFixed(2)))}
+                onClick={() =>
+                  setZoom((z) => Math.min(1.35, +(z + 0.1).toFixed(2)))
+                }
               >
                 +
               </button>
@@ -1008,7 +1177,10 @@ export function BracketTab({
           >
             <div
               style={{
-                width: Math.max(scaledWidth, wrapperRef.current?.clientWidth ?? 0),
+                width: Math.max(
+                  scaledWidth,
+                  wrapperRef.current?.clientWidth ?? 0
+                ),
                 height: scaledHeight,
                 position: "relative",
               }}
@@ -1020,11 +1192,14 @@ export function BracketTab({
                   minHeight: canvasHeight,
                   transform: `scale(${scale})`,
                   transformOrigin: "top left",
-                  background: "linear-gradient(180deg, #0c0f14 0%, #090c11 100%)",
+                  background:
+                    "linear-gradient(180deg, #0c0f14 0%, #090c11 100%)",
                 }}
               >
                 {mainPhases.map((phase) => {
-                  const first = positionedMainMatches.find((m) => m.phase === phase);
+                  const first = positionedMainMatches.find(
+                    (m) => m.phase === phase
+                  );
                   if (!first) return null;
 
                   return (

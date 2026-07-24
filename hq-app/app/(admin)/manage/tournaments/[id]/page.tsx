@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { useFetch } from "@/hooks/use-fetch";
 import { useTournamentSettingsState } from "@/hooks/useTournamentSettingsState";
 import { useTournamentTeamsState } from "@/hooks/useTournamentTeamsState";
@@ -42,9 +42,10 @@ export default function ManageTournamentDetailPage({
 
   const [activeTab, setActiveTab] = useState<Tab>("teams");
   const [localTournament, setLocalTournament] = useState<TournamentDetail | null>(null);
+  const [activeBracketId, setActiveBracketId] = useState<number | null>(null);
 
   const tournament = localTournament;
-  
+  const brackets = tournament?.brackets ?? [];
 
   useEffect(() => {
     if (!data) return;
@@ -127,7 +128,6 @@ export default function ManageTournamentDetailPage({
 
   const {
     localMatches,
-    hasBracketMatches,
     hasGroupMatches,
     isClassic,
     canAddMatch,
@@ -177,16 +177,63 @@ export default function ManageTournamentDetailPage({
     },
   });
 
+  const activeBracketMatches = useMemo(
+    () =>
+      localMatches.filter(
+        (m) => m.phase !== "group" && m.bracketId === activeBracketId
+      ),
+    [localMatches, activeBracketId]
+  );
+
+  const selectedBracketHasMatches = activeBracketMatches.length > 0;
+
+  useEffect(() => {
+    if (!tournament) return;
+
+    if (activeBracketId != null && brackets.some((b) => b.id === activeBracketId)) {
+      return;
+    }
+
+    if (brackets.length > 0) {
+      setActiveBracketId(brackets[0].id);
+    } else {
+      setActiveBracketId(null);
+    }
+  }, [tournament, brackets, activeBracketId]);
+
   const [generatingBracket, setGeneratingBracket] = useState(false);
   const [bracketError, setBracketError] = useState<string | null>(null);
   const [resettingBracket, setResettingBracket] = useState(false);
+  const [renamingBracket, setRenamingBracket] = useState(false);
+  const [deletingBracket, setDeletingBracket] = useState(false);
 
   async function handleResetBracket() {
-    if (!confirm("Delete the entire bracket? This cannot be undone.")) return;
+    if (activeBracketId == null) {
+      setBracketError("Select a bracket first");
+      return;
+    }
+
+    if (!confirm("Delete the selected bracket? This cannot be undone.")) return;
+
     setResettingBracket(true);
-    await fetch(`/api/tournaments/${id}/generate-bracket`, { method: "DELETE" });
+    setBracketError(null);
+
+    const res = await fetch(`/api/tournaments/${id}/generate-bracket`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ bracketId: activeBracketId }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setBracketError(body.error ?? "Failed to reset bracket");
+    } else {
+      refetch();
+    }
+
     setResettingBracket(false);
-    refetch();
   }
 
   async function handleGenerateBracket(input?: GenerateBracketInput) {
@@ -197,6 +244,11 @@ export default function ManageTournamentDetailPage({
       tournament.type === "round_robin_classic"
     ) {
       setBracketError("Bracket generation is not available for round robin tournaments");
+      return;
+    }
+
+    if (activeBracketId == null) {
+      setBracketError("Select a bracket first");
       return;
     }
 
@@ -216,13 +268,14 @@ export default function ManageTournamentDetailPage({
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(
-        isManual
+      body: JSON.stringify({
+        bracketId: activeBracketId,
+        ...(isManual
           ? { advancingTeams: input?.advancingTeams }
           : input?.advancingTeams != null
           ? { advancingTeams: input.advancingTeams }
-          : {}
-      ),
+          : {}),
+      }),
     });
 
     if (!res.ok) {
@@ -233,6 +286,144 @@ export default function ManageTournamentDetailPage({
     }
 
     setGeneratingBracket(false);
+  }
+
+
+  async function handleAddBracket() {
+    setBracketError(null);
+
+    const res = await fetch(`/api/tournaments/${id}/brackets`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+
+    const body = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      setBracketError(body.error ?? "Failed to create bracket");
+      return;
+    }
+
+    const nextBracket =
+      body.bracket ??
+      body.data ??
+      null;
+
+    if (nextBracket) {
+      setLocalTournament((prev) =>
+        prev
+          ? {
+              ...prev,
+              brackets: (prev.brackets ?? []).some((b) => b.id === nextBracket.id)
+                ? (prev.brackets ?? [])
+                : [...(prev.brackets ?? []), nextBracket],
+            }
+          : prev
+      );
+      setActiveBracketId(nextBracket.id);
+      return;
+    }
+
+    await refetch();
+  }
+
+  async function handleDeleteBracket(bracketId: number) {
+    if (!confirm("Reset the selected bracket? This will remove its matches.")) {
+      return;
+    }
+
+    setDeletingBracket(true);
+    setBracketError(null);
+
+    try {
+      const res = await fetch(`/api/tournaments/${id}/brackets/${bracketId}`, {
+        method: "DELETE",
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to delete bracket");
+      }
+
+      setLocalTournament((prev) =>
+        prev
+          ? {
+              ...prev,
+              brackets: (prev.brackets ?? []).filter((b) => b.id !== bracketId),
+              matches: (prev.matches ?? []).filter((m) => m.bracketId !== bracketId),
+            }
+          : prev
+      );
+
+      setActiveBracketId((prev) => {
+        if (prev !== bracketId) return prev;
+        const remaining = brackets.filter((b) => b.id !== bracketId);
+        return remaining[0]?.id ?? null;
+      });
+    } catch (error) {
+      console.error(error);
+      setBracketError(
+        error instanceof Error ? error.message : "Failed to delete bracket"
+      );
+    } finally {
+      setDeletingBracket(false);
+    }
+  }
+
+  async function handleRenameBracket(bracketId: number, name: string) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setBracketError("Bracket name is required");
+      return;
+    }
+
+    setRenamingBracket(true);
+    setBracketError(null);
+
+    try {
+      const res = await fetch(`/api/tournaments/${id}/brackets/${bracketId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: trimmedName }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to rename bracket");
+      }
+
+      const updatedBracket = body.bracket ?? null;
+
+      if (updatedBracket) {
+        setLocalTournament((prev) =>
+          prev
+            ? {
+                ...prev,
+                brackets: (prev.brackets ?? []).map((b) =>
+                  b.id === bracketId ? { ...b, ...updatedBracket } : b
+                ),
+              }
+            : prev
+        );
+        return;
+      }
+
+      await refetch();
+    } catch (error) {
+      console.error(error);
+      setBracketError(
+        error instanceof Error ? error.message : "Failed to rename bracket"
+      );
+    } finally {
+      setRenamingBracket(false);
+    }
   }
 
   if (loading) {
@@ -262,9 +453,6 @@ export default function ManageTournamentDetailPage({
       : []),
     { key: "info", label: "Info" },
   ];
-
-  const pageWidthClass =
-    activeTab === "bracket" ? "max-w-[1500px]" : "max-w-4xl";
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
@@ -327,24 +515,32 @@ export default function ManageTournamentDetailPage({
         />
       )}
 
-      {activeTab === "bracket" && (
-        <BracketTab
-          matches={localMatches}
-          editableTeams={enrolledTeams}
-          hasBracketMatches={hasBracketMatches}
-          generatingBracket={generatingBracket}
-          resettingBracket={resettingBracket}
-          bracketError={bracketError}
-          editingBracketMatch={editingBracketMatch}
-          bracketEditSaving={bracketEditSaving}
-          managementMode={tournament.managementMode ?? "auto"}
-          onGenerateBracket={handleGenerateBracket}
-          onResetBracket={handleResetBracket}
-          onOpenBracketEdit={openBracketEdit}
-          onCloseBracketEdit={closeBracketEdit}
-          onSaveBracketEdit={handleSaveBracketEdit}
-        />
-      )}
+    {activeTab === "bracket" && (
+      <BracketTab
+        brackets={brackets}
+        activeBracketId={activeBracketId}
+        onSelectBracket={setActiveBracketId}
+        onAddBracket={handleAddBracket}
+        onRenameBracket={handleRenameBracket}
+        onDeleteBracket={handleDeleteBracket}
+        renamingBracket={renamingBracket}
+        deletingBracket={deletingBracket}
+        matches={activeBracketMatches}
+        editableTeams={enrolledTeams}
+        hasBracketMatches={selectedBracketHasMatches}
+        generatingBracket={generatingBracket}
+        resettingBracket={resettingBracket}
+        bracketError={bracketError}
+        editingBracketMatch={editingBracketMatch}
+        bracketEditSaving={bracketEditSaving}
+        managementMode={tournament.managementMode ?? "auto"}
+        onGenerateBracket={handleGenerateBracket}
+        onResetBracket={handleResetBracket}
+        onOpenBracketEdit={openBracketEdit}
+        onCloseBracketEdit={closeBracketEdit}
+        onSaveBracketEdit={handleSaveBracketEdit}
+      />
+    )}
 
       {activeTab === "info" && <InfoTab data={tournament} />}
 

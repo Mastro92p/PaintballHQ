@@ -17,6 +17,9 @@ export async function GET(
         groups: {
           orderBy: [{ order: 'asc' }, { id: 'asc' }],
         },
+        brackets: {
+          orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+        },
         teams: {
           include: {
             team: true,
@@ -32,6 +35,7 @@ export async function GET(
             teamA: true,
             teamB: true,
             group: true,
+            bracket: true,
           },
           orderBy: [{ round: 'asc' }, { id: 'asc' }],
         },
@@ -95,6 +99,9 @@ export async function PATCH(
         groups: {
           orderBy: [{ order: 'asc' }, { id: 'asc' }],
         },
+        brackets: {
+          orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+        },
         teams: {
           include: {
             team: true,
@@ -110,6 +117,7 @@ export async function PATCH(
             teamA: true,
             teamB: true,
             group: true,
+            bracket: true,
           },
           orderBy: [{ round: 'asc' }, { id: 'asc' }],
         },

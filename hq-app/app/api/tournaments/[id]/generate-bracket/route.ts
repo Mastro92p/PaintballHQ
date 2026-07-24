@@ -56,6 +56,7 @@ type InitialPair = {
 
 type MatchCreateData = {
   tournamentId: number;
+  bracketId: number;
   teamAId: number | null;
   teamBId: number | null;
   phase: string;
@@ -68,6 +69,7 @@ type MatchCreateData = {
 };
 
 type GenerateBracketBody = {
+  bracketId?: number;
   advancingTeams?: number;
 };
 
@@ -366,8 +368,28 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 });
   }
 
+  const body = (await req.json().catch(() => ({}))) as GenerateBracketBody;
+  const bracketId = typeof body?.bracketId === "number" ? body.bracketId : NaN;
+
+  if (!Number.isInteger(bracketId)) {
+    return NextResponse.json({ error: "Invalid bracket id" }, { status: 400 });
+  }
+
+  const bracket = await prisma.tournamentBracket.findFirst({
+    where: { id: bracketId, tournamentId },
+    select: { id: true },
+  });
+
+  if (!bracket) {
+    return NextResponse.json({ error: "Bracket not found" }, { status: 404 });
+  }
+
   await prisma.match.deleteMany({
-    where: { tournamentId, NOT: { phase: "group" } },
+    where: {
+      tournamentId,
+      bracketId,
+      NOT: { phase: "group" },
+    },
   });
 
   return new Response(null, { status: 204 });
@@ -387,12 +409,20 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const body = (await req.json().catch(() => ({}))) as GenerateBracketBody;
+  const bracketId = typeof body?.bracketId === "number" ? body.bracketId : NaN;
   const requestedAdvancingTeams =
     typeof body?.advancingTeams === "number" ? body.advancingTeams : undefined;
+
+  if (!Number.isInteger(bracketId)) {
+    return NextResponse.json({ error: "Invalid bracket id" }, { status: 400 });
+  }
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
     include: {
+      brackets: {
+        orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+      },
       teams: {
         include: {
           team: true,
@@ -418,6 +448,11 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Tournament not found" }, { status: 404 });
   }
 
+  const bracket = tournament.brackets.find((b: any) => b.id === bracketId);
+  if (!bracket) {
+    return NextResponse.json({ error: "Bracket not found" }, { status: 404 });
+  }
+
   if (tournament.type === "round_robin") {
     return NextResponse.json(
       { error: "Round robin tournaments do not have a bracket" },
@@ -425,7 +460,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
-  const existingBracket = tournament.matches.filter((m) => m.phase !== "group");
+  const existingBracket = tournament.matches.filter(
+    (m) => m.phase !== "group" && m.bracketId === bracketId
+  );
   if (existingBracket.length > 0) {
     return NextResponse.json(
       { error: "Bracket already generated. Reset the bracket first." },
@@ -538,6 +575,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     allMatchData.push({
       tournamentId,
+      bracketId,
       teamAId: placementMode === "manual" ? null : pair.teamAId,
       teamBId: placementMode === "manual" ? null : pair.teamBId,
       phase: firstPhase,
@@ -554,6 +592,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     for (let i = 0; i < bracketSize / 4; i++) {
       allMatchData.push({
         tournamentId,
+        bracketId,
         teamAId: placementMode === "manual" ? null : nextRoundTop[i],
         teamBId: placementMode === "manual" ? null : nextRoundBot[i],
         phase: nextRoundPhase,
@@ -577,6 +616,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     for (let i = 0; i < matchCount; i++) {
       allMatchData.push({
         tournamentId,
+        bracketId,
         teamAId: null,
         teamBId: null,
         phase,
@@ -652,6 +692,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       const thirdPlace = await prisma.match.create({
         data: {
           tournamentId,
+          bracketId,
           teamAId: null,
           teamBId: null,
           phase: "third_place",

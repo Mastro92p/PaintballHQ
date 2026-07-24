@@ -14,25 +14,26 @@ model League {
   logoUrl     String?
   createdAt   DateTime     @default(now())
 
-  tournaments Tournament[]
   teams       LeagueTeam[]
+  tournaments Tournament[]
 }
 
 model LeagueTeam {
-  league     League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  leagueId   Int
-  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  teamId     Int
-  joinedAt   DateTime @default(now())
+  leagueId Int
+  teamId   Int
+  joinedAt DateTime @default(now())
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@id([leagueId, teamId])
 }
 
 model Division {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique
-  isActive    Boolean      @default(true)
-  createdAt   DateTime     @default(now())
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
 
   teams       Team[]
   tournaments Tournament[]
@@ -44,89 +45,100 @@ model Tournament {
   date           String
   location       String
   status         String   @default("upcoming")
-  type           String   @default("round_robin")
-  teamsToAdvance Int      @default(4)
-  formatConfig   Json?
   createdAt      DateTime @default(now())
-
+  leagueId       Int?
+  teamsToAdvance Int      @default(4)
+  type           String   @default("round_robin")
+  formatConfig   Json?
+  divisionId     Int?
   managementMode String   @default("auto")
 
-  leagueId       Int?
-  league         League?   @relation(fields: [leagueId], references: [id], onDelete: SetNull)
-
-  divisionId     Int?
-  division       Division? @relation(fields: [divisionId], references: [id], onDelete: SetNull)
-
-  teams          TournamentTeam[]
-  matches        Match[]
-  groups         TournamentGroup[]
+  matches  Match[]
+  division Division? @relation(fields: [divisionId], references: [id])
+  league   League?   @relation(fields: [leagueId], references: [id])
+  groups   TournamentGroup[]
+  teams    TournamentTeam[]
+  brackets TournamentBracket[]
 }
 
 model Team {
-  id          Int      @id @default(autoincrement())
-  name        String
-  contact     String?
-  logoUrl     String?
-  createdAt   DateTime @default(now())
-
-  divisionId  Int?
-  division    Division? @relation(fields: [divisionId], references: [id], onDelete: SetNull)
+  id         Int      @id @default(autoincrement())
+  name       String
+  contact    String?
+  createdAt  DateTime @default(now())
+  logoUrl    String?
+  divisionId Int?
 
   leagues     LeagueTeam[]
+  matchesA    Match[] @relation("TeamA")
+  matchesB    Match[] @relation("TeamB")
+  division    Division? @relation(fields: [divisionId], references: [id])
   tournaments TournamentTeam[]
-  matchesA    Match[]    @relation("TeamA")
-  matchesB    Match[]    @relation("TeamB")
 }
 
 model TournamentTeam {
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   tournamentId Int
-  team         Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId       Int
+  groups       String[] @default([])
 
-  groups       String[]   @default([])
-  groupLinks   TournamentTeamGroup[]
+  team       Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  groupLinks TournamentTeamGroup[]
 
   @@id([tournamentId, teamId])
 }
 
-model Match {
-  id           Int        @id @default(autoincrement())
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+model TournamentBracket {
+  id           Int      @id @default(autoincrement())
   tournamentId Int
-  teamA        Team?      @relation("TeamA", fields: [teamAId], references: [id])
-  teamAId      Int?
-  teamB        Team?      @relation("TeamB", fields: [teamBId], references: [id])
-  teamBId      Int?
-  scoreA       Int?
-  scoreB       Int?
-  round        Int?
-  label        String?
-  phase        String     @default("group")
+  name         String
+  sortOrder    Int
+  createdAt    DateTime @default(now())
 
-  groupLegacy  String?    @map("group")
-  group        TournamentGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  groupId      Int?
+  tournament Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  matches    Match[]
 
-  field        String?
+  @@unique([tournamentId, name])
+  @@index([tournamentId, sortOrder])
+}
 
-  nextMatchId      Int?
-  nextMatch        Match?  @relation("MatchProgression", fields: [nextMatchId], references: [id])
-  prevMatches      Match[] @relation("MatchProgression")
-
-  loserNextMatchId Int?
-  loserNextSlot    String?
-
+model Match {
+  id               Int      @id @default(autoincrement())
+  tournamentId     Int
+  teamAId          Int?
+  teamBId          Int?
+  scoreA           Int?
+  scoreB           Int?
+  round            Int?
+  field            String?
+  status           String   @default("pending")
+  createdAt        DateTime @default(now())
+  manualOverride   Boolean  @default(false)
+  phase            String   @default("group")
+  groupLegacy      String?  @map("group")
   bracketOrder     Int?
   nextMatchOrder   Int?
   nextSlot         String?
-
-  status           String   @default("pending")
-  manualOverride   Boolean  @default(false)
-  createdAt        DateTime @default(now())
-
+  nextMatchId      Int?
+  loserNextMatchId Int?
+  loserNextSlot    String?
   bodyCountA       Int?
   bodyCountB       Int?
+  label            String?
+  groupId          Int?
+  bracketId        Int?
+
+  group      TournamentGroup?   @relation(fields: [groupId], references: [id])
+  bracket    TournamentBracket? @relation(fields: [bracketId], references: [id], onDelete: SetNull)
+  nextMatch  Match?             @relation("MatchProgression", fields: [nextMatchId], references: [id])
+  prevMatches Match[]           @relation("MatchProgression")
+  teamA      Team?              @relation("TeamA", fields: [teamAId], references: [id])
+  teamB      Team?              @relation("TeamB", fields: [teamBId], references: [id])
+  tournament Tournament         @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@index([bracketId])
+  @@index([tournamentId, phase])
 }
 
 model User {
@@ -138,26 +150,27 @@ model User {
 }
 
 model TournamentGroup {
-  id           Int        @id @default(autoincrement())
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  id           Int      @id @default(autoincrement())
   tournamentId Int
   name         String
   order        Int
-  createdAt    DateTime   @default(now())
+  createdAt    DateTime @default(now())
 
-  matches      Match[]
-  teamGroups   TournamentTeamGroup[]
+  matches    Match[]
+  tournament Tournament            @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  teamGroups TournamentTeamGroup[]
 
   @@unique([tournamentId, name])
   @@index([tournamentId, order])
 }
 
 model TournamentTeamGroup {
-  tournamentTeam TournamentTeam  @relation(fields: [tournamentId, teamId], references: [tournamentId, teamId], onDelete: Cascade)
-  tournamentId   Int
-  teamId         Int
+  tournamentId Int
+  teamId       Int
+  groupId      Int
+
   group          TournamentGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId        Int
+  tournamentTeam TournamentTeam  @relation(fields: [tournamentId, teamId], references: [tournamentId, teamId], onDelete: Cascade)
 
   @@id([tournamentId, teamId, groupId])
 }

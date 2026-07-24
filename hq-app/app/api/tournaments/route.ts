@@ -20,10 +20,22 @@ export async function GET() {
         groups: {
           orderBy: [{ order: 'asc' }, { id: 'asc' }],
         },
-        matches: true,
+        brackets: {
+          orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+        },
+        matches: {
+          include: {
+            teamA: true,
+            teamB: true,
+            group: true,
+            bracket: true,
+          },
+          orderBy: [{ round: 'asc' }, { id: 'asc' }],
+        },
         division: true,
       },
     })
+
     return Response.json(tournaments)
   } catch {
     return apiError('Failed to fetch tournaments', 500)
@@ -74,6 +86,18 @@ export async function POST(req: Request) {
         },
         groups: {
           orderBy: [{ order: 'asc' }, { id: 'asc' }],
+        },
+        brackets: {
+          orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+        },
+        matches: {
+          include: {
+            teamA: true,
+            teamB: true,
+            group: true,
+            bracket: true,
+          },
+          orderBy: [{ round: 'asc' }, { id: 'asc' }],
         },
         division: true,
       },

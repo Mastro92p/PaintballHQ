@@ -28,15 +28,15 @@ export type AggregateTournament = {
 
 export type TournamentAvgAggregateOutputType = {
   id: number | null
-  teamsToAdvance: number | null
   leagueId: number | null
+  teamsToAdvance: number | null
   divisionId: number | null
 }
 
 export type TournamentSumAggregateOutputType = {
   id: number | null
-  teamsToAdvance: number | null
   leagueId: number | null
+  teamsToAdvance: number | null
   divisionId: number | null
 }
 
@@ -46,12 +46,12 @@ export type TournamentMinAggregateOutputType = {
   date: string | null
   location: string | null
   status: string | null
-  type: string | null
-  teamsToAdvance: number | null
   createdAt: Date | null
-  managementMode: string | null
   leagueId: number | null
+  teamsToAdvance: number | null
+  type: string | null
   divisionId: number | null
+  managementMode: string | null
 }
 
 export type TournamentMaxAggregateOutputType = {
@@ -60,12 +60,12 @@ export type TournamentMaxAggregateOutputType = {
   date: string | null
   location: string | null
   status: string | null
-  type: string | null
-  teamsToAdvance: number | null
   createdAt: Date | null
-  managementMode: string | null
   leagueId: number | null
+  teamsToAdvance: number | null
+  type: string | null
   divisionId: number | null
+  managementMode: string | null
 }
 
 export type TournamentCountAggregateOutputType = {
@@ -74,28 +74,28 @@ export type TournamentCountAggregateOutputType = {
   date: number
   location: number
   status: number
-  type: number
-  teamsToAdvance: number
-  formatConfig: number
   createdAt: number
-  managementMode: number
   leagueId: number
+  teamsToAdvance: number
+  type: number
+  formatConfig: number
   divisionId: number
+  managementMode: number
   _all: number
 }
 
 
 export type TournamentAvgAggregateInputType = {
   id?: true
-  teamsToAdvance?: true
   leagueId?: true
+  teamsToAdvance?: true
   divisionId?: true
 }
 
 export type TournamentSumAggregateInputType = {
   id?: true
-  teamsToAdvance?: true
   leagueId?: true
+  teamsToAdvance?: true
   divisionId?: true
 }
 
@@ -105,12 +105,12 @@ export type TournamentMinAggregateInputType = {
   date?: true
   location?: true
   status?: true
-  type?: true
-  teamsToAdvance?: true
   createdAt?: true
-  managementMode?: true
   leagueId?: true
+  teamsToAdvance?: true
+  type?: true
   divisionId?: true
+  managementMode?: true
 }
 
 export type TournamentMaxAggregateInputType = {
@@ -119,12 +119,12 @@ export type TournamentMaxAggregateInputType = {
   date?: true
   location?: true
   status?: true
-  type?: true
-  teamsToAdvance?: true
   createdAt?: true
-  managementMode?: true
   leagueId?: true
+  teamsToAdvance?: true
+  type?: true
   divisionId?: true
+  managementMode?: true
 }
 
 export type TournamentCountAggregateInputType = {
@@ -133,13 +133,13 @@ export type TournamentCountAggregateInputType = {
   date?: true
   location?: true
   status?: true
-  type?: true
-  teamsToAdvance?: true
-  formatConfig?: true
   createdAt?: true
-  managementMode?: true
   leagueId?: true
+  teamsToAdvance?: true
+  type?: true
+  formatConfig?: true
   divisionId?: true
+  managementMode?: true
   _all?: true
 }
 
@@ -235,13 +235,13 @@ export type TournamentGroupByOutputType = {
   date: string
   location: string
   status: string
-  type: string
-  teamsToAdvance: number
-  formatConfig: runtime.JsonValue | null
   createdAt: Date
-  managementMode: string
   leagueId: number | null
+  teamsToAdvance: number
+  type: string
+  formatConfig: runtime.JsonValue | null
   divisionId: number | null
+  managementMode: string
   _count: TournamentCountAggregateOutputType | null
   _avg: TournamentAvgAggregateOutputType | null
   _sum: TournamentSumAggregateOutputType | null
@@ -273,18 +273,19 @@ export type TournamentWhereInput = {
   date?: Prisma.StringFilter<"Tournament"> | string
   location?: Prisma.StringFilter<"Tournament"> | string
   status?: Prisma.StringFilter<"Tournament"> | string
-  type?: Prisma.StringFilter<"Tournament"> | string
-  teamsToAdvance?: Prisma.IntFilter<"Tournament"> | number
-  formatConfig?: Prisma.JsonNullableFilter<"Tournament">
   createdAt?: Prisma.DateTimeFilter<"Tournament"> | Date | string
-  managementMode?: Prisma.StringFilter<"Tournament"> | string
   leagueId?: Prisma.IntNullableFilter<"Tournament"> | number | null
+  teamsToAdvance?: Prisma.IntFilter<"Tournament"> | number
+  type?: Prisma.StringFilter<"Tournament"> | string
+  formatConfig?: Prisma.JsonNullableFilter<"Tournament">
   divisionId?: Prisma.IntNullableFilter<"Tournament"> | number | null
-  league?: Prisma.XOR<Prisma.LeagueNullableScalarRelationFilter, Prisma.LeagueWhereInput> | null
-  division?: Prisma.XOR<Prisma.DivisionNullableScalarRelationFilter, Prisma.DivisionWhereInput> | null
-  teams?: Prisma.TournamentTeamListRelationFilter
+  managementMode?: Prisma.StringFilter<"Tournament"> | string
   matches?: Prisma.MatchListRelationFilter
+  division?: Prisma.XOR<Prisma.DivisionNullableScalarRelationFilter, Prisma.DivisionWhereInput> | null
+  league?: Prisma.XOR<Prisma.LeagueNullableScalarRelationFilter, Prisma.LeagueWhereInput> | null
   groups?: Prisma.TournamentGroupListRelationFilter
+  teams?: Prisma.TournamentTeamListRelationFilter
+  brackets?: Prisma.TournamentBracketListRelationFilter
 }
 
 export type TournamentOrderByWithRelationInput = {
@@ -293,18 +294,19 @@ export type TournamentOrderByWithRelationInput = {
   date?: Prisma.SortOrder
   location?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  teamsToAdvance?: Prisma.SortOrder
-  formatConfig?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
-  managementMode?: Prisma.SortOrder
   leagueId?: Prisma.SortOrderInput | Prisma.SortOrder
+  teamsToAdvance?: Prisma.SortOrder
+  type?: Prisma.SortOrder
+  formatConfig?: Prisma.SortOrderInput | Prisma.SortOrder
   divisionId?: Prisma.SortOrderInput | Prisma.SortOrder
-  league?: Prisma.LeagueOrderByWithRelationInput
-  division?: Prisma.DivisionOrderByWithRelationInput
-  teams?: Prisma.TournamentTeamOrderByRelationAggregateInput
+  managementMode?: Prisma.SortOrder
   matches?: Prisma.MatchOrderByRelationAggregateInput
+  division?: Prisma.DivisionOrderByWithRelationInput
+  league?: Prisma.LeagueOrderByWithRelationInput
   groups?: Prisma.TournamentGroupOrderByRelationAggregateInput
+  teams?: Prisma.TournamentTeamOrderByRelationAggregateInput
+  brackets?: Prisma.TournamentBracketOrderByRelationAggregateInput
 }
 
 export type TournamentWhereUniqueInput = Prisma.AtLeast<{
@@ -316,18 +318,19 @@ export type TournamentWhereUniqueInput = Prisma.AtLeast<{
   date?: Prisma.StringFilter<"Tournament"> | string
   location?: Prisma.StringFilter<"Tournament"> | string
   status?: Prisma.StringFilter<"Tournament"> | string
-  type?: Prisma.StringFilter<"Tournament"> | string
-  teamsToAdvance?: Prisma.IntFilter<"Tournament"> | number
-  formatConfig?: Prisma.JsonNullableFilter<"Tournament">
   createdAt?: Prisma.DateTimeFilter<"Tournament"> | Date | string
-  managementMode?: Prisma.StringFilter<"Tournament"> | string
   leagueId?: Prisma.IntNullableFilter<"Tournament"> | number | null
+  teamsToAdvance?: Prisma.IntFilter<"Tournament"> | number
+  type?: Prisma.StringFilter<"Tournament"> | string
+  formatConfig?: Prisma.JsonNullableFilter<"Tournament">
   divisionId?: Prisma.IntNullableFilter<"Tournament"> | number | null
-  league?: Prisma.XOR<Prisma.LeagueNullableScalarRelationFilter, Prisma.LeagueWhereInput> | null
-  division?: Prisma.XOR<Prisma.DivisionNullableScalarRelationFilter, Prisma.DivisionWhereInput> | null
-  teams?: Prisma.TournamentTeamListRelationFilter
+  managementMode?: Prisma.StringFilter<"Tournament"> | string
   matches?: Prisma.MatchListRelationFilter
+  division?: Prisma.XOR<Prisma.DivisionNullableScalarRelationFilter, Prisma.DivisionWhereInput> | null
+  league?: Prisma.XOR<Prisma.LeagueNullableScalarRelationFilter, Prisma.LeagueWhereInput> | null
   groups?: Prisma.TournamentGroupListRelationFilter
+  teams?: Prisma.TournamentTeamListRelationFilter
+  brackets?: Prisma.TournamentBracketListRelationFilter
 }, "id">
 
 export type TournamentOrderByWithAggregationInput = {
@@ -336,13 +339,13 @@ export type TournamentOrderByWithAggregationInput = {
   date?: Prisma.SortOrder
   location?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  teamsToAdvance?: Prisma.SortOrder
-  formatConfig?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
-  managementMode?: Prisma.SortOrder
   leagueId?: Prisma.SortOrderInput | Prisma.SortOrder
+  teamsToAdvance?: Prisma.SortOrder
+  type?: Prisma.SortOrder
+  formatConfig?: Prisma.SortOrderInput | Prisma.SortOrder
   divisionId?: Prisma.SortOrderInput | Prisma.SortOrder
+  managementMode?: Prisma.SortOrder
   _count?: Prisma.TournamentCountOrderByAggregateInput
   _avg?: Prisma.TournamentAvgOrderByAggregateInput
   _max?: Prisma.TournamentMaxOrderByAggregateInput
@@ -359,13 +362,13 @@ export type TournamentScalarWhereWithAggregatesInput = {
   date?: Prisma.StringWithAggregatesFilter<"Tournament"> | string
   location?: Prisma.StringWithAggregatesFilter<"Tournament"> | string
   status?: Prisma.StringWithAggregatesFilter<"Tournament"> | string
-  type?: Prisma.StringWithAggregatesFilter<"Tournament"> | string
-  teamsToAdvance?: Prisma.IntWithAggregatesFilter<"Tournament"> | number
-  formatConfig?: Prisma.JsonNullableWithAggregatesFilter<"Tournament">
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Tournament"> | Date | string
-  managementMode?: Prisma.StringWithAggregatesFilter<"Tournament"> | string
   leagueId?: Prisma.IntNullableWithAggregatesFilter<"Tournament"> | number | null
+  teamsToAdvance?: Prisma.IntWithAggregatesFilter<"Tournament"> | number
+  type?: Prisma.StringWithAggregatesFilter<"Tournament"> | string
+  formatConfig?: Prisma.JsonNullableWithAggregatesFilter<"Tournament">
   divisionId?: Prisma.IntNullableWithAggregatesFilter<"Tournament"> | number | null
+  managementMode?: Prisma.StringWithAggregatesFilter<"Tournament"> | string
 }
 
 export type TournamentCreateInput = {
@@ -373,16 +376,17 @@ export type TournamentCreateInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: string
-  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
-  division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
-  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
   matches?: Prisma.MatchCreateNestedManyWithoutTournamentInput
+  division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
+  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
   groups?: Prisma.TournamentGroupCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentUncheckedCreateInput = {
@@ -391,16 +395,17 @@ export type TournamentUncheckedCreateInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
-  managementMode?: string
   leagueId?: number | null
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: number | null
-  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  managementMode?: string
   matches?: Prisma.MatchUncheckedCreateNestedManyWithoutTournamentInput
   groups?: Prisma.TournamentGroupUncheckedCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketUncheckedCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentUpdateInput = {
@@ -408,16 +413,17 @@ export type TournamentUpdateInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
-  division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
-  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
   matches?: Prisma.MatchUpdateManyWithoutTournamentNestedInput
+  division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
+  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
   groups?: Prisma.TournamentGroupUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentUncheckedUpdateInput = {
@@ -426,16 +432,17 @@ export type TournamentUncheckedUpdateInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   leagueId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   matches?: Prisma.MatchUncheckedUpdateManyWithoutTournamentNestedInput
   groups?: Prisma.TournamentGroupUncheckedUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUncheckedUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentCreateManyInput = {
@@ -444,13 +451,13 @@ export type TournamentCreateManyInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
-  managementMode?: string
   leagueId?: number | null
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: number | null
+  managementMode?: string
 }
 
 export type TournamentUpdateManyMutationInput = {
@@ -458,10 +465,10 @@ export type TournamentUpdateManyMutationInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
@@ -471,13 +478,13 @@ export type TournamentUncheckedUpdateManyInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   leagueId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type TournamentListRelationFilter = {
@@ -496,19 +503,19 @@ export type TournamentCountOrderByAggregateInput = {
   date?: Prisma.SortOrder
   location?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  teamsToAdvance?: Prisma.SortOrder
-  formatConfig?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
-  managementMode?: Prisma.SortOrder
   leagueId?: Prisma.SortOrder
+  teamsToAdvance?: Prisma.SortOrder
+  type?: Prisma.SortOrder
+  formatConfig?: Prisma.SortOrder
   divisionId?: Prisma.SortOrder
+  managementMode?: Prisma.SortOrder
 }
 
 export type TournamentAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  teamsToAdvance?: Prisma.SortOrder
   leagueId?: Prisma.SortOrder
+  teamsToAdvance?: Prisma.SortOrder
   divisionId?: Prisma.SortOrder
 }
 
@@ -518,12 +525,12 @@ export type TournamentMaxOrderByAggregateInput = {
   date?: Prisma.SortOrder
   location?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  teamsToAdvance?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
-  managementMode?: Prisma.SortOrder
   leagueId?: Prisma.SortOrder
+  teamsToAdvance?: Prisma.SortOrder
+  type?: Prisma.SortOrder
   divisionId?: Prisma.SortOrder
+  managementMode?: Prisma.SortOrder
 }
 
 export type TournamentMinOrderByAggregateInput = {
@@ -532,18 +539,18 @@ export type TournamentMinOrderByAggregateInput = {
   date?: Prisma.SortOrder
   location?: Prisma.SortOrder
   status?: Prisma.SortOrder
-  type?: Prisma.SortOrder
-  teamsToAdvance?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
-  managementMode?: Prisma.SortOrder
   leagueId?: Prisma.SortOrder
+  teamsToAdvance?: Prisma.SortOrder
+  type?: Prisma.SortOrder
   divisionId?: Prisma.SortOrder
+  managementMode?: Prisma.SortOrder
 }
 
 export type TournamentSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  teamsToAdvance?: Prisma.SortOrder
   leagueId?: Prisma.SortOrder
+  teamsToAdvance?: Prisma.SortOrder
   divisionId?: Prisma.SortOrder
 }
 
@@ -658,6 +665,20 @@ export type TournamentUpdateOneRequiredWithoutTeamsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.TournamentUpdateToOneWithWhereWithoutTeamsInput, Prisma.TournamentUpdateWithoutTeamsInput>, Prisma.TournamentUncheckedUpdateWithoutTeamsInput>
 }
 
+export type TournamentCreateNestedOneWithoutBracketsInput = {
+  create?: Prisma.XOR<Prisma.TournamentCreateWithoutBracketsInput, Prisma.TournamentUncheckedCreateWithoutBracketsInput>
+  connectOrCreate?: Prisma.TournamentCreateOrConnectWithoutBracketsInput
+  connect?: Prisma.TournamentWhereUniqueInput
+}
+
+export type TournamentUpdateOneRequiredWithoutBracketsNestedInput = {
+  create?: Prisma.XOR<Prisma.TournamentCreateWithoutBracketsInput, Prisma.TournamentUncheckedCreateWithoutBracketsInput>
+  connectOrCreate?: Prisma.TournamentCreateOrConnectWithoutBracketsInput
+  upsert?: Prisma.TournamentUpsertWithoutBracketsInput
+  connect?: Prisma.TournamentWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.TournamentUpdateToOneWithWhereWithoutBracketsInput, Prisma.TournamentUpdateWithoutBracketsInput>, Prisma.TournamentUncheckedUpdateWithoutBracketsInput>
+}
+
 export type TournamentCreateNestedOneWithoutMatchesInput = {
   create?: Prisma.XOR<Prisma.TournamentCreateWithoutMatchesInput, Prisma.TournamentUncheckedCreateWithoutMatchesInput>
   connectOrCreate?: Prisma.TournamentCreateOrConnectWithoutMatchesInput
@@ -691,15 +712,16 @@ export type TournamentCreateWithoutLeagueInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: string
-  division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
-  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
   matches?: Prisma.MatchCreateNestedManyWithoutTournamentInput
+  division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
   groups?: Prisma.TournamentGroupCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentUncheckedCreateWithoutLeagueInput = {
@@ -708,15 +730,16 @@ export type TournamentUncheckedCreateWithoutLeagueInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
-  managementMode?: string
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: number | null
-  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  managementMode?: string
   matches?: Prisma.MatchUncheckedCreateNestedManyWithoutTournamentInput
   groups?: Prisma.TournamentGroupUncheckedCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketUncheckedCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentCreateOrConnectWithoutLeagueInput = {
@@ -754,13 +777,13 @@ export type TournamentScalarWhereInput = {
   date?: Prisma.StringFilter<"Tournament"> | string
   location?: Prisma.StringFilter<"Tournament"> | string
   status?: Prisma.StringFilter<"Tournament"> | string
-  type?: Prisma.StringFilter<"Tournament"> | string
-  teamsToAdvance?: Prisma.IntFilter<"Tournament"> | number
-  formatConfig?: Prisma.JsonNullableFilter<"Tournament">
   createdAt?: Prisma.DateTimeFilter<"Tournament"> | Date | string
-  managementMode?: Prisma.StringFilter<"Tournament"> | string
   leagueId?: Prisma.IntNullableFilter<"Tournament"> | number | null
+  teamsToAdvance?: Prisma.IntFilter<"Tournament"> | number
+  type?: Prisma.StringFilter<"Tournament"> | string
+  formatConfig?: Prisma.JsonNullableFilter<"Tournament">
   divisionId?: Prisma.IntNullableFilter<"Tournament"> | number | null
+  managementMode?: Prisma.StringFilter<"Tournament"> | string
 }
 
 export type TournamentCreateWithoutDivisionInput = {
@@ -768,15 +791,16 @@ export type TournamentCreateWithoutDivisionInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: string
-  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
-  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
   matches?: Prisma.MatchCreateNestedManyWithoutTournamentInput
+  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
   groups?: Prisma.TournamentGroupCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentUncheckedCreateWithoutDivisionInput = {
@@ -785,15 +809,16 @@ export type TournamentUncheckedCreateWithoutDivisionInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
-  managementMode?: string
   leagueId?: number | null
-  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  managementMode?: string
   matches?: Prisma.MatchUncheckedCreateNestedManyWithoutTournamentInput
   groups?: Prisma.TournamentGroupUncheckedCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketUncheckedCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentCreateOrConnectWithoutDivisionInput = {
@@ -827,15 +852,16 @@ export type TournamentCreateWithoutTeamsInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: string
-  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
-  division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
   matches?: Prisma.MatchCreateNestedManyWithoutTournamentInput
+  division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
+  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
   groups?: Prisma.TournamentGroupCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentUncheckedCreateWithoutTeamsInput = {
@@ -844,15 +870,16 @@ export type TournamentUncheckedCreateWithoutTeamsInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
-  managementMode?: string
   leagueId?: number | null
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: number | null
+  managementMode?: string
   matches?: Prisma.MatchUncheckedCreateNestedManyWithoutTournamentInput
   groups?: Prisma.TournamentGroupUncheckedCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketUncheckedCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentCreateOrConnectWithoutTeamsInput = {
@@ -876,15 +903,16 @@ export type TournamentUpdateWithoutTeamsInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
-  division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
   matches?: Prisma.MatchUpdateManyWithoutTournamentNestedInput
+  division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
+  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
   groups?: Prisma.TournamentGroupUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentUncheckedUpdateWithoutTeamsInput = {
@@ -893,15 +921,102 @@ export type TournamentUncheckedUpdateWithoutTeamsInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   leagueId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   matches?: Prisma.MatchUncheckedUpdateManyWithoutTournamentNestedInput
   groups?: Prisma.TournamentGroupUncheckedUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUncheckedUpdateManyWithoutTournamentNestedInput
+}
+
+export type TournamentCreateWithoutBracketsInput = {
+  name: string
+  date: string
+  location: string
+  status?: string
+  createdAt?: Date | string
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  managementMode?: string
+  matches?: Prisma.MatchCreateNestedManyWithoutTournamentInput
+  division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
+  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
+  groups?: Prisma.TournamentGroupCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
+}
+
+export type TournamentUncheckedCreateWithoutBracketsInput = {
+  id?: number
+  name: string
+  date: string
+  location: string
+  status?: string
+  createdAt?: Date | string
+  leagueId?: number | null
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  divisionId?: number | null
+  managementMode?: string
+  matches?: Prisma.MatchUncheckedCreateNestedManyWithoutTournamentInput
+  groups?: Prisma.TournamentGroupUncheckedCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+}
+
+export type TournamentCreateOrConnectWithoutBracketsInput = {
+  where: Prisma.TournamentWhereUniqueInput
+  create: Prisma.XOR<Prisma.TournamentCreateWithoutBracketsInput, Prisma.TournamentUncheckedCreateWithoutBracketsInput>
+}
+
+export type TournamentUpsertWithoutBracketsInput = {
+  update: Prisma.XOR<Prisma.TournamentUpdateWithoutBracketsInput, Prisma.TournamentUncheckedUpdateWithoutBracketsInput>
+  create: Prisma.XOR<Prisma.TournamentCreateWithoutBracketsInput, Prisma.TournamentUncheckedCreateWithoutBracketsInput>
+  where?: Prisma.TournamentWhereInput
+}
+
+export type TournamentUpdateToOneWithWhereWithoutBracketsInput = {
+  where?: Prisma.TournamentWhereInput
+  data: Prisma.XOR<Prisma.TournamentUpdateWithoutBracketsInput, Prisma.TournamentUncheckedUpdateWithoutBracketsInput>
+}
+
+export type TournamentUpdateWithoutBracketsInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  date?: Prisma.StringFieldUpdateOperationsInput | string
+  location?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  matches?: Prisma.MatchUpdateManyWithoutTournamentNestedInput
+  division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
+  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
+  groups?: Prisma.TournamentGroupUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
+}
+
+export type TournamentUncheckedUpdateWithoutBracketsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  date?: Prisma.StringFieldUpdateOperationsInput | string
+  location?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  leagueId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  divisionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  matches?: Prisma.MatchUncheckedUpdateManyWithoutTournamentNestedInput
+  groups?: Prisma.TournamentGroupUncheckedUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentCreateWithoutMatchesInput = {
@@ -909,15 +1024,16 @@ export type TournamentCreateWithoutMatchesInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: string
-  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
   division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
-  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
+  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
   groups?: Prisma.TournamentGroupCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentUncheckedCreateWithoutMatchesInput = {
@@ -926,15 +1042,16 @@ export type TournamentUncheckedCreateWithoutMatchesInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
-  managementMode?: string
   leagueId?: number | null
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: number | null
-  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  managementMode?: string
   groups?: Prisma.TournamentGroupUncheckedCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketUncheckedCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentCreateOrConnectWithoutMatchesInput = {
@@ -958,15 +1075,16 @@ export type TournamentUpdateWithoutMatchesInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
   division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
-  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
+  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
   groups?: Prisma.TournamentGroupUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentUncheckedUpdateWithoutMatchesInput = {
@@ -975,15 +1093,16 @@ export type TournamentUncheckedUpdateWithoutMatchesInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   leagueId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   groups?: Prisma.TournamentGroupUncheckedUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUncheckedUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentCreateWithoutGroupsInput = {
@@ -991,15 +1110,16 @@ export type TournamentCreateWithoutGroupsInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: string
-  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
-  division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
-  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
   matches?: Prisma.MatchCreateNestedManyWithoutTournamentInput
+  division?: Prisma.DivisionCreateNestedOneWithoutTournamentsInput
+  league?: Prisma.LeagueCreateNestedOneWithoutTournamentsInput
+  teams?: Prisma.TournamentTeamCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentUncheckedCreateWithoutGroupsInput = {
@@ -1008,15 +1128,16 @@ export type TournamentUncheckedCreateWithoutGroupsInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
-  managementMode?: string
   leagueId?: number | null
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: number | null
-  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  managementMode?: string
   matches?: Prisma.MatchUncheckedCreateNestedManyWithoutTournamentInput
+  teams?: Prisma.TournamentTeamUncheckedCreateNestedManyWithoutTournamentInput
+  brackets?: Prisma.TournamentBracketUncheckedCreateNestedManyWithoutTournamentInput
 }
 
 export type TournamentCreateOrConnectWithoutGroupsInput = {
@@ -1040,15 +1161,16 @@ export type TournamentUpdateWithoutGroupsInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
-  division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
-  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
   matches?: Prisma.MatchUpdateManyWithoutTournamentNestedInput
+  division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
+  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
+  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentUncheckedUpdateWithoutGroupsInput = {
@@ -1057,15 +1179,16 @@ export type TournamentUncheckedUpdateWithoutGroupsInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   leagueId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   matches?: Prisma.MatchUncheckedUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUncheckedUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentCreateManyLeagueInput = {
@@ -1074,12 +1197,12 @@ export type TournamentCreateManyLeagueInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
-  managementMode?: string
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: number | null
+  managementMode?: string
 }
 
 export type TournamentUpdateWithoutLeagueInput = {
@@ -1087,15 +1210,16 @@ export type TournamentUpdateWithoutLeagueInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
-  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
   matches?: Prisma.MatchUpdateManyWithoutTournamentNestedInput
+  division?: Prisma.DivisionUpdateOneWithoutTournamentsNestedInput
   groups?: Prisma.TournamentGroupUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentUncheckedUpdateWithoutLeagueInput = {
@@ -1104,15 +1228,16 @@ export type TournamentUncheckedUpdateWithoutLeagueInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   matches?: Prisma.MatchUncheckedUpdateManyWithoutTournamentNestedInput
   groups?: Prisma.TournamentGroupUncheckedUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUncheckedUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentUncheckedUpdateManyWithoutLeagueInput = {
@@ -1121,12 +1246,12 @@ export type TournamentUncheckedUpdateManyWithoutLeagueInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   divisionId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type TournamentCreateManyDivisionInput = {
@@ -1135,12 +1260,12 @@ export type TournamentCreateManyDivisionInput = {
   date: string
   location: string
   status?: string
-  type?: string
-  teamsToAdvance?: number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
-  managementMode?: string
   leagueId?: number | null
+  teamsToAdvance?: number
+  type?: string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  managementMode?: string
 }
 
 export type TournamentUpdateWithoutDivisionInput = {
@@ -1148,15 +1273,16 @@ export type TournamentUpdateWithoutDivisionInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   managementMode?: Prisma.StringFieldUpdateOperationsInput | string
-  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
-  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
   matches?: Prisma.MatchUpdateManyWithoutTournamentNestedInput
+  league?: Prisma.LeagueUpdateOneWithoutTournamentsNestedInput
   groups?: Prisma.TournamentGroupUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentUncheckedUpdateWithoutDivisionInput = {
@@ -1165,15 +1291,16 @@ export type TournamentUncheckedUpdateWithoutDivisionInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   leagueId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   matches?: Prisma.MatchUncheckedUpdateManyWithoutTournamentNestedInput
   groups?: Prisma.TournamentGroupUncheckedUpdateManyWithoutTournamentNestedInput
+  teams?: Prisma.TournamentTeamUncheckedUpdateManyWithoutTournamentNestedInput
+  brackets?: Prisma.TournamentBracketUncheckedUpdateManyWithoutTournamentNestedInput
 }
 
 export type TournamentUncheckedUpdateManyWithoutDivisionInput = {
@@ -1182,12 +1309,12 @@ export type TournamentUncheckedUpdateManyWithoutDivisionInput = {
   date?: Prisma.StringFieldUpdateOperationsInput | string
   location?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
-  type?: Prisma.StringFieldUpdateOperationsInput | string
-  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
-  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
-  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
   leagueId?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  teamsToAdvance?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  formatConfig?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  managementMode?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -1196,15 +1323,17 @@ export type TournamentUncheckedUpdateManyWithoutDivisionInput = {
  */
 
 export type TournamentCountOutputType = {
-  teams: number
   matches: number
   groups: number
+  teams: number
+  brackets: number
 }
 
 export type TournamentCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  teams?: boolean | TournamentCountOutputTypeCountTeamsArgs
   matches?: boolean | TournamentCountOutputTypeCountMatchesArgs
   groups?: boolean | TournamentCountOutputTypeCountGroupsArgs
+  teams?: boolean | TournamentCountOutputTypeCountTeamsArgs
+  brackets?: boolean | TournamentCountOutputTypeCountBracketsArgs
 }
 
 /**
@@ -1215,13 +1344,6 @@ export type TournamentCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.E
    * Select specific fields to fetch from the TournamentCountOutputType
    */
   select?: Prisma.TournamentCountOutputTypeSelect<ExtArgs> | null
-}
-
-/**
- * TournamentCountOutputType without action
- */
-export type TournamentCountOutputTypeCountTeamsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  where?: Prisma.TournamentTeamWhereInput
 }
 
 /**
@@ -1238,6 +1360,20 @@ export type TournamentCountOutputTypeCountGroupsArgs<ExtArgs extends runtime.Typ
   where?: Prisma.TournamentGroupWhereInput
 }
 
+/**
+ * TournamentCountOutputType without action
+ */
+export type TournamentCountOutputTypeCountTeamsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TournamentTeamWhereInput
+}
+
+/**
+ * TournamentCountOutputType without action
+ */
+export type TournamentCountOutputTypeCountBracketsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.TournamentBracketWhereInput
+}
+
 
 export type TournamentSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1245,18 +1381,19 @@ export type TournamentSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   date?: boolean
   location?: boolean
   status?: boolean
-  type?: boolean
-  teamsToAdvance?: boolean
-  formatConfig?: boolean
   createdAt?: boolean
-  managementMode?: boolean
   leagueId?: boolean
+  teamsToAdvance?: boolean
+  type?: boolean
+  formatConfig?: boolean
   divisionId?: boolean
-  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
-  division?: boolean | Prisma.Tournament$divisionArgs<ExtArgs>
-  teams?: boolean | Prisma.Tournament$teamsArgs<ExtArgs>
+  managementMode?: boolean
   matches?: boolean | Prisma.Tournament$matchesArgs<ExtArgs>
+  division?: boolean | Prisma.Tournament$divisionArgs<ExtArgs>
+  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
   groups?: boolean | Prisma.Tournament$groupsArgs<ExtArgs>
+  teams?: boolean | Prisma.Tournament$teamsArgs<ExtArgs>
+  brackets?: boolean | Prisma.Tournament$bracketsArgs<ExtArgs>
   _count?: boolean | Prisma.TournamentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tournament"]>
 
@@ -1266,15 +1403,15 @@ export type TournamentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   date?: boolean
   location?: boolean
   status?: boolean
-  type?: boolean
-  teamsToAdvance?: boolean
-  formatConfig?: boolean
   createdAt?: boolean
-  managementMode?: boolean
   leagueId?: boolean
+  teamsToAdvance?: boolean
+  type?: boolean
+  formatConfig?: boolean
   divisionId?: boolean
-  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
+  managementMode?: boolean
   division?: boolean | Prisma.Tournament$divisionArgs<ExtArgs>
+  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
 }, ExtArgs["result"]["tournament"]>
 
 export type TournamentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -1283,15 +1420,15 @@ export type TournamentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   date?: boolean
   location?: boolean
   status?: boolean
-  type?: boolean
-  teamsToAdvance?: boolean
-  formatConfig?: boolean
   createdAt?: boolean
-  managementMode?: boolean
   leagueId?: boolean
+  teamsToAdvance?: boolean
+  type?: boolean
+  formatConfig?: boolean
   divisionId?: boolean
-  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
+  managementMode?: boolean
   division?: boolean | Prisma.Tournament$divisionArgs<ExtArgs>
+  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
 }, ExtArgs["result"]["tournament"]>
 
 export type TournamentSelectScalar = {
@@ -1300,41 +1437,43 @@ export type TournamentSelectScalar = {
   date?: boolean
   location?: boolean
   status?: boolean
-  type?: boolean
-  teamsToAdvance?: boolean
-  formatConfig?: boolean
   createdAt?: boolean
-  managementMode?: boolean
   leagueId?: boolean
+  teamsToAdvance?: boolean
+  type?: boolean
+  formatConfig?: boolean
   divisionId?: boolean
+  managementMode?: boolean
 }
 
-export type TournamentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "date" | "location" | "status" | "type" | "teamsToAdvance" | "formatConfig" | "createdAt" | "managementMode" | "leagueId" | "divisionId", ExtArgs["result"]["tournament"]>
+export type TournamentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "date" | "location" | "status" | "createdAt" | "leagueId" | "teamsToAdvance" | "type" | "formatConfig" | "divisionId" | "managementMode", ExtArgs["result"]["tournament"]>
 export type TournamentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
-  division?: boolean | Prisma.Tournament$divisionArgs<ExtArgs>
-  teams?: boolean | Prisma.Tournament$teamsArgs<ExtArgs>
   matches?: boolean | Prisma.Tournament$matchesArgs<ExtArgs>
+  division?: boolean | Prisma.Tournament$divisionArgs<ExtArgs>
+  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
   groups?: boolean | Prisma.Tournament$groupsArgs<ExtArgs>
+  teams?: boolean | Prisma.Tournament$teamsArgs<ExtArgs>
+  brackets?: boolean | Prisma.Tournament$bracketsArgs<ExtArgs>
   _count?: boolean | Prisma.TournamentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TournamentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
   division?: boolean | Prisma.Tournament$divisionArgs<ExtArgs>
+  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
 }
 export type TournamentIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
   division?: boolean | Prisma.Tournament$divisionArgs<ExtArgs>
+  league?: boolean | Prisma.Tournament$leagueArgs<ExtArgs>
 }
 
 export type $TournamentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Tournament"
   objects: {
-    league: Prisma.$LeaguePayload<ExtArgs> | null
-    division: Prisma.$DivisionPayload<ExtArgs> | null
-    teams: Prisma.$TournamentTeamPayload<ExtArgs>[]
     matches: Prisma.$MatchPayload<ExtArgs>[]
+    division: Prisma.$DivisionPayload<ExtArgs> | null
+    league: Prisma.$LeaguePayload<ExtArgs> | null
     groups: Prisma.$TournamentGroupPayload<ExtArgs>[]
+    teams: Prisma.$TournamentTeamPayload<ExtArgs>[]
+    brackets: Prisma.$TournamentBracketPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1342,13 +1481,13 @@ export type $TournamentPayload<ExtArgs extends runtime.Types.Extensions.Internal
     date: string
     location: string
     status: string
-    type: string
-    teamsToAdvance: number
-    formatConfig: runtime.JsonValue | null
     createdAt: Date
-    managementMode: string
     leagueId: number | null
+    teamsToAdvance: number
+    type: string
+    formatConfig: runtime.JsonValue | null
     divisionId: number | null
+    managementMode: string
   }, ExtArgs["result"]["tournament"]>
   composites: {}
 }
@@ -1743,11 +1882,12 @@ readonly fields: TournamentFieldRefs;
  */
 export interface Prisma__TournamentClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  league<T extends Prisma.Tournament$leagueArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tournament$leagueArgs<ExtArgs>>): Prisma.Prisma__LeagueClient<runtime.Types.Result.GetResult<Prisma.$LeaguePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  division<T extends Prisma.Tournament$divisionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tournament$divisionArgs<ExtArgs>>): Prisma.Prisma__DivisionClient<runtime.Types.Result.GetResult<Prisma.$DivisionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-  teams<T extends Prisma.Tournament$teamsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tournament$teamsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TournamentTeamPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   matches<T extends Prisma.Tournament$matchesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tournament$matchesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$MatchPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  division<T extends Prisma.Tournament$divisionArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tournament$divisionArgs<ExtArgs>>): Prisma.Prisma__DivisionClient<runtime.Types.Result.GetResult<Prisma.$DivisionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  league<T extends Prisma.Tournament$leagueArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tournament$leagueArgs<ExtArgs>>): Prisma.Prisma__LeagueClient<runtime.Types.Result.GetResult<Prisma.$LeaguePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   groups<T extends Prisma.Tournament$groupsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tournament$groupsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TournamentGroupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  teams<T extends Prisma.Tournament$teamsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tournament$teamsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TournamentTeamPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  brackets<T extends Prisma.Tournament$bracketsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Tournament$bracketsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TournamentBracketPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1782,13 +1922,13 @@ export interface TournamentFieldRefs {
   readonly date: Prisma.FieldRef<"Tournament", 'String'>
   readonly location: Prisma.FieldRef<"Tournament", 'String'>
   readonly status: Prisma.FieldRef<"Tournament", 'String'>
-  readonly type: Prisma.FieldRef<"Tournament", 'String'>
-  readonly teamsToAdvance: Prisma.FieldRef<"Tournament", 'Int'>
-  readonly formatConfig: Prisma.FieldRef<"Tournament", 'Json'>
   readonly createdAt: Prisma.FieldRef<"Tournament", 'DateTime'>
-  readonly managementMode: Prisma.FieldRef<"Tournament", 'String'>
   readonly leagueId: Prisma.FieldRef<"Tournament", 'Int'>
+  readonly teamsToAdvance: Prisma.FieldRef<"Tournament", 'Int'>
+  readonly type: Prisma.FieldRef<"Tournament", 'String'>
+  readonly formatConfig: Prisma.FieldRef<"Tournament", 'Json'>
   readonly divisionId: Prisma.FieldRef<"Tournament", 'Int'>
+  readonly managementMode: Prisma.FieldRef<"Tournament", 'String'>
 }
     
 
@@ -2190,22 +2330,27 @@ export type TournamentDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.In
 }
 
 /**
- * Tournament.league
+ * Tournament.matches
  */
-export type Tournament$leagueArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Tournament$matchesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the League
+   * Select specific fields to fetch from the Match
    */
-  select?: Prisma.LeagueSelect<ExtArgs> | null
+  select?: Prisma.MatchSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the League
+   * Omit specific fields from the Match
    */
-  omit?: Prisma.LeagueOmit<ExtArgs> | null
+  omit?: Prisma.MatchOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.LeagueInclude<ExtArgs> | null
-  where?: Prisma.LeagueWhereInput
+  include?: Prisma.MatchInclude<ExtArgs> | null
+  where?: Prisma.MatchWhereInput
+  orderBy?: Prisma.MatchOrderByWithRelationInput | Prisma.MatchOrderByWithRelationInput[]
+  cursor?: Prisma.MatchWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.MatchScalarFieldEnum | Prisma.MatchScalarFieldEnum[]
 }
 
 /**
@@ -2225,6 +2370,49 @@ export type Tournament$divisionArgs<ExtArgs extends runtime.Types.Extensions.Int
    */
   include?: Prisma.DivisionInclude<ExtArgs> | null
   where?: Prisma.DivisionWhereInput
+}
+
+/**
+ * Tournament.league
+ */
+export type Tournament$leagueArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the League
+   */
+  select?: Prisma.LeagueSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the League
+   */
+  omit?: Prisma.LeagueOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeagueInclude<ExtArgs> | null
+  where?: Prisma.LeagueWhereInput
+}
+
+/**
+ * Tournament.groups
+ */
+export type Tournament$groupsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the TournamentGroup
+   */
+  select?: Prisma.TournamentGroupSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the TournamentGroup
+   */
+  omit?: Prisma.TournamentGroupOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.TournamentGroupInclude<ExtArgs> | null
+  where?: Prisma.TournamentGroupWhereInput
+  orderBy?: Prisma.TournamentGroupOrderByWithRelationInput | Prisma.TournamentGroupOrderByWithRelationInput[]
+  cursor?: Prisma.TournamentGroupWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.TournamentGroupScalarFieldEnum | Prisma.TournamentGroupScalarFieldEnum[]
 }
 
 /**
@@ -2252,51 +2440,27 @@ export type Tournament$teamsArgs<ExtArgs extends runtime.Types.Extensions.Intern
 }
 
 /**
- * Tournament.matches
+ * Tournament.brackets
  */
-export type Tournament$matchesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+export type Tournament$bracketsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   /**
-   * Select specific fields to fetch from the Match
+   * Select specific fields to fetch from the TournamentBracket
    */
-  select?: Prisma.MatchSelect<ExtArgs> | null
+  select?: Prisma.TournamentBracketSelect<ExtArgs> | null
   /**
-   * Omit specific fields from the Match
+   * Omit specific fields from the TournamentBracket
    */
-  omit?: Prisma.MatchOmit<ExtArgs> | null
+  omit?: Prisma.TournamentBracketOmit<ExtArgs> | null
   /**
    * Choose, which related nodes to fetch as well
    */
-  include?: Prisma.MatchInclude<ExtArgs> | null
-  where?: Prisma.MatchWhereInput
-  orderBy?: Prisma.MatchOrderByWithRelationInput | Prisma.MatchOrderByWithRelationInput[]
-  cursor?: Prisma.MatchWhereUniqueInput
+  include?: Prisma.TournamentBracketInclude<ExtArgs> | null
+  where?: Prisma.TournamentBracketWhereInput
+  orderBy?: Prisma.TournamentBracketOrderByWithRelationInput | Prisma.TournamentBracketOrderByWithRelationInput[]
+  cursor?: Prisma.TournamentBracketWhereUniqueInput
   take?: number
   skip?: number
-  distinct?: Prisma.MatchScalarFieldEnum | Prisma.MatchScalarFieldEnum[]
-}
-
-/**
- * Tournament.groups
- */
-export type Tournament$groupsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  /**
-   * Select specific fields to fetch from the TournamentGroup
-   */
-  select?: Prisma.TournamentGroupSelect<ExtArgs> | null
-  /**
-   * Omit specific fields from the TournamentGroup
-   */
-  omit?: Prisma.TournamentGroupOmit<ExtArgs> | null
-  /**
-   * Choose, which related nodes to fetch as well
-   */
-  include?: Prisma.TournamentGroupInclude<ExtArgs> | null
-  where?: Prisma.TournamentGroupWhereInput
-  orderBy?: Prisma.TournamentGroupOrderByWithRelationInput | Prisma.TournamentGroupOrderByWithRelationInput[]
-  cursor?: Prisma.TournamentGroupWhereUniqueInput
-  take?: number
-  skip?: number
-  distinct?: Prisma.TournamentGroupScalarFieldEnum | Prisma.TournamentGroupScalarFieldEnum[]
+  distinct?: Prisma.TournamentBracketScalarFieldEnum | Prisma.TournamentBracketScalarFieldEnum[]
 }
 
 /**

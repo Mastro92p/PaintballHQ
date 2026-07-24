@@ -200,8 +200,8 @@ export type TournamentTeamWhereInput = {
   tournamentId?: Prisma.IntFilter<"TournamentTeam"> | number
   teamId?: Prisma.IntFilter<"TournamentTeam"> | number
   groups?: Prisma.StringNullableListFilter<"TournamentTeam">
-  tournament?: Prisma.XOR<Prisma.TournamentScalarRelationFilter, Prisma.TournamentWhereInput>
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  tournament?: Prisma.XOR<Prisma.TournamentScalarRelationFilter, Prisma.TournamentWhereInput>
   groupLinks?: Prisma.TournamentTeamGroupListRelationFilter
 }
 
@@ -209,8 +209,8 @@ export type TournamentTeamOrderByWithRelationInput = {
   tournamentId?: Prisma.SortOrder
   teamId?: Prisma.SortOrder
   groups?: Prisma.SortOrder
-  tournament?: Prisma.TournamentOrderByWithRelationInput
   team?: Prisma.TeamOrderByWithRelationInput
+  tournament?: Prisma.TournamentOrderByWithRelationInput
   groupLinks?: Prisma.TournamentTeamGroupOrderByRelationAggregateInput
 }
 
@@ -222,8 +222,8 @@ export type TournamentTeamWhereUniqueInput = Prisma.AtLeast<{
   tournamentId?: Prisma.IntFilter<"TournamentTeam"> | number
   teamId?: Prisma.IntFilter<"TournamentTeam"> | number
   groups?: Prisma.StringNullableListFilter<"TournamentTeam">
-  tournament?: Prisma.XOR<Prisma.TournamentScalarRelationFilter, Prisma.TournamentWhereInput>
   team?: Prisma.XOR<Prisma.TeamScalarRelationFilter, Prisma.TeamWhereInput>
+  tournament?: Prisma.XOR<Prisma.TournamentScalarRelationFilter, Prisma.TournamentWhereInput>
   groupLinks?: Prisma.TournamentTeamGroupListRelationFilter
 }, "tournamentId_teamId">
 
@@ -249,8 +249,8 @@ export type TournamentTeamScalarWhereWithAggregatesInput = {
 
 export type TournamentTeamCreateInput = {
   groups?: Prisma.TournamentTeamCreategroupsInput | string[]
-  tournament: Prisma.TournamentCreateNestedOneWithoutTeamsInput
   team: Prisma.TeamCreateNestedOneWithoutTournamentsInput
+  tournament: Prisma.TournamentCreateNestedOneWithoutTeamsInput
   groupLinks?: Prisma.TournamentTeamGroupCreateNestedManyWithoutTournamentTeamInput
 }
 
@@ -263,8 +263,8 @@ export type TournamentTeamUncheckedCreateInput = {
 
 export type TournamentTeamUpdateInput = {
   groups?: Prisma.TournamentTeamUpdategroupsInput | string[]
-  tournament?: Prisma.TournamentUpdateOneRequiredWithoutTeamsNestedInput
   team?: Prisma.TeamUpdateOneRequiredWithoutTournamentsNestedInput
+  tournament?: Prisma.TournamentUpdateOneRequiredWithoutTeamsNestedInput
   groupLinks?: Prisma.TournamentTeamGroupUpdateManyWithoutTournamentTeamNestedInput
 }
 
@@ -539,8 +539,8 @@ export type TournamentTeamUpdateManyWithWhereWithoutTeamInput = {
 
 export type TournamentTeamCreateWithoutGroupLinksInput = {
   groups?: Prisma.TournamentTeamCreategroupsInput | string[]
-  tournament: Prisma.TournamentCreateNestedOneWithoutTeamsInput
   team: Prisma.TeamCreateNestedOneWithoutTournamentsInput
+  tournament: Prisma.TournamentCreateNestedOneWithoutTeamsInput
 }
 
 export type TournamentTeamUncheckedCreateWithoutGroupLinksInput = {
@@ -567,8 +567,8 @@ export type TournamentTeamUpdateToOneWithWhereWithoutGroupLinksInput = {
 
 export type TournamentTeamUpdateWithoutGroupLinksInput = {
   groups?: Prisma.TournamentTeamUpdategroupsInput | string[]
-  tournament?: Prisma.TournamentUpdateOneRequiredWithoutTeamsNestedInput
   team?: Prisma.TeamUpdateOneRequiredWithoutTournamentsNestedInput
+  tournament?: Prisma.TournamentUpdateOneRequiredWithoutTeamsNestedInput
 }
 
 export type TournamentTeamUncheckedUpdateWithoutGroupLinksInput = {
@@ -656,8 +656,8 @@ export type TournamentTeamSelect<ExtArgs extends runtime.Types.Extensions.Intern
   tournamentId?: boolean
   teamId?: boolean
   groups?: boolean
-  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
   groupLinks?: boolean | Prisma.TournamentTeam$groupLinksArgs<ExtArgs>
   _count?: boolean | Prisma.TournamentTeamCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tournamentTeam"]>
@@ -666,16 +666,16 @@ export type TournamentTeamSelectCreateManyAndReturn<ExtArgs extends runtime.Type
   tournamentId?: boolean
   teamId?: boolean
   groups?: boolean
-  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tournamentTeam"]>
 
 export type TournamentTeamSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   tournamentId?: boolean
   teamId?: boolean
   groups?: boolean
-  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["tournamentTeam"]>
 
 export type TournamentTeamSelectScalar = {
@@ -686,25 +686,25 @@ export type TournamentTeamSelectScalar = {
 
 export type TournamentTeamOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"tournamentId" | "teamId" | "groups", ExtArgs["result"]["tournamentTeam"]>
 export type TournamentTeamInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
   groupLinks?: boolean | Prisma.TournamentTeam$groupLinksArgs<ExtArgs>
   _count?: boolean | Prisma.TournamentTeamCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type TournamentTeamIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
 }
 export type TournamentTeamIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
-  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
   team?: boolean | Prisma.TeamDefaultArgs<ExtArgs>
+  tournament?: boolean | Prisma.TournamentDefaultArgs<ExtArgs>
 }
 
 export type $TournamentTeamPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "TournamentTeam"
   objects: {
-    tournament: Prisma.$TournamentPayload<ExtArgs>
     team: Prisma.$TeamPayload<ExtArgs>
+    tournament: Prisma.$TournamentPayload<ExtArgs>
     groupLinks: Prisma.$TournamentTeamGroupPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -1105,8 +1105,8 @@ readonly fields: TournamentTeamFieldRefs;
  */
 export interface Prisma__TournamentTeamClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
-  tournament<T extends Prisma.TournamentDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TournamentDefaultArgs<ExtArgs>>): Prisma.Prisma__TournamentClient<runtime.Types.Result.GetResult<Prisma.$TournamentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   team<T extends Prisma.TeamDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TeamDefaultArgs<ExtArgs>>): Prisma.Prisma__TeamClient<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  tournament<T extends Prisma.TournamentDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TournamentDefaultArgs<ExtArgs>>): Prisma.Prisma__TournamentClient<runtime.Types.Result.GetResult<Prisma.$TournamentPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   groupLinks<T extends Prisma.TournamentTeam$groupLinksArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.TournamentTeam$groupLinksArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TournamentTeamGroupPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.

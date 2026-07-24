@@ -243,7 +243,6 @@ export function BracketMatchEditModal({
                 }}
                 className={inputCls(false)}
                 placeholder="—"
-                disabled={teamsChanged}
               />
             </div>
 
@@ -270,14 +269,13 @@ export function BracketMatchEditModal({
                 }}
                 className={inputCls(false)}
                 placeholder="—"
-                disabled={teamsChanged}
               />
             </div>
           </div>
 
           {teamsChanged && (
             <p className="text-xs text-amber-600 dark:text-amber-400">
-              Scores will be cleared if you change the matchup.
+              You changed the matchup. Enter scores for the new teams, or leave both scores empty.
             </p>
           )}
 

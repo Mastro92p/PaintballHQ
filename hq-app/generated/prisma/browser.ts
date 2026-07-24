@@ -48,6 +48,11 @@ export type Team = Prisma.TeamModel
  */
 export type TournamentTeam = Prisma.TournamentTeamModel
 /**
+ * Model TournamentBracket
+ * 
+ */
+export type TournamentBracket = Prisma.TournamentBracketModel
+/**
  * Model Match
  * 
  */

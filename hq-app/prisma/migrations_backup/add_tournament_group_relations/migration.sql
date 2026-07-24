@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE "Match" ADD COLUMN "groupId" INTEGER;
+ALTER TABLE "Match" ADD COLUMN     "groupId" INTEGER;
 
 -- CreateTable
 CREATE TABLE "TournamentGroup" (
