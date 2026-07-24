@@ -1,6 +1,7 @@
 "use client";
 
 import { formatDate } from "@/lib/utils";
+import { InfoRow, StatusRow } from "@/components/tournaments/TournamentInfoRows";
 import type { Tournament, Match, Team } from "@/types";
 
 type EnrolledTeam = {
@@ -17,13 +18,6 @@ type Props = {
   tournament: TournamentDetail;
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  active: "Active",
-  upcoming: "Upcoming",
-  to_check: "To Check",
-  completed: "Completed",
-};
-
 function formatTournamentType(type?: string | null) {
   switch (type) {
     case "round_robin":
@@ -35,11 +29,6 @@ function formatTournamentType(type?: string | null) {
     default:
       return type ? type.replaceAll("_", " ") : "—";
   }
-}
-
-function formatStatus(status?: string | null) {
-  if (!status) return "—";
-  return STATUS_LABELS[status] ?? status.replaceAll("_", " ");
 }
 
 function formatSeedingRule(rule?: string | null) {
@@ -63,30 +52,6 @@ export function PublicTournamentInfo({ tournament }: Props) {
   const enrolledTeamsCount = tournament.teams?.length ?? 0;
   const totalMatchesCount = tournament.matches?.length ?? 0;
 
-  const rows: Array<{ label: string; value: string | number }> = [
-    { label: "Name", value: tournament.name ?? "—" },
-    { label: "Date", value: tournament.date ? formatDate(tournament.date) : "—" },
-    { label: "Location", value: tournament.location ?? "—" },
-    { label: "Format", value: formatTournamentType(tournament.type) },
-    { label: "Status", value: formatStatus(tournament.status) },
-  ];
-
-  if (tournament.type === "group_and_bracket") {
-    rows.push(
-      { label: "Groups", value: formatConfig.groupCount ?? "—" },
-      { label: "Teams per group", value: formatConfig.teamsPerGroup ?? "—" },
-      { label: "Qualifiers/group", value: formatConfig.qualifiersPerGroup ?? "—" },
-      { label: "Wild cards", value: formatConfig.wildCardCount ?? 0 },
-      { label: "Bracket seeding", value: formatSeedingRule(formatConfig.bracketSeedingRule) },
-    );
-  }
-
-  rows.push(
-    { label: "Total capacity", value: `${formatConfig.totalCapacity ?? enrolledTeamsCount} Teams` },
-    { label: "Enrolled teams", value: `${enrolledTeamsCount} Teams` },
-    { label: "Total matches", value: `${totalMatchesCount} Matches` },
-  );
-
   return (
     <section className="space-y-4">
       <div>
@@ -98,17 +63,52 @@ export function PublicTournamentInfo({ tournament }: Props) {
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
         <div className="divide-y divide-white/10">
-          {rows.map((row) => (
-            <div
-              key={row.label}
-              className="grid grid-cols-1 gap-2 px-4 py-3 md:grid-cols-[220px_minmax(0,1fr)] md:items-center md:px-5"
-            >
-              <div className="text-sm text-slate-400">{row.label}</div>
-              <div className="text-sm font-medium text-white md:text-right">
-                {row.value}
-              </div>
-            </div>
-          ))}
+          <InfoRow label="Name" value={tournament.name ?? "—"} />
+          <InfoRow
+            label="Date"
+            value={tournament.date ? formatDate(tournament.date) : "—"}
+          />
+          <InfoRow label="Location" value={tournament.location ?? "—"} />
+          <InfoRow
+            label="Format"
+            value={formatTournamentType(tournament.type)}
+          />
+          <StatusRow status={tournament.status} />
+
+          {tournament.type === "group_and_bracket" && (
+            <>
+              <InfoRow label="Groups" value={formatConfig.groupCount ?? "—"} />
+              <InfoRow
+                label="Teams per group"
+                value={formatConfig.teamsPerGroup ?? "—"}
+              />
+              <InfoRow
+                label="Qualifiers/group"
+                value={formatConfig.qualifiersPerGroup ?? "—"}
+              />
+              <InfoRow
+                label="Wild cards"
+                value={formatConfig.wildCardCount ?? 0}
+              />
+              <InfoRow
+                label="Bracket seeding"
+                value={formatSeedingRule(formatConfig.bracketSeedingRule)}
+              />
+            </>
+          )}
+
+          <InfoRow
+            label="Total capacity"
+            value={`${formatConfig.totalCapacity ?? enrolledTeamsCount} Teams`}
+          />
+          <InfoRow
+            label="Enrolled teams"
+            value={`${enrolledTeamsCount} Teams`}
+          />
+          <InfoRow
+            label="Total matches"
+            value={`${totalMatchesCount} Matches`}
+          />
         </div>
       </div>
     </section>

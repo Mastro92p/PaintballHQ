@@ -1,46 +1,96 @@
 import { formatDate } from "@/lib/utils";
-import type { FormatConfig } from "@/types";
-import type { TournamentDetail } from "@/types";
+import { InfoRow, StatusRow } from "@/components/tournaments/TournamentInfoRows";
+import type { FormatConfig, TournamentDetail } from "@/types";
 
 type Props = {
   data: TournamentDetail;
 };
 
+function formatTournamentType(type?: string | null) {
+  switch (type) {
+    case "round_robin":
+      return "Round Robin";
+    case "round_robin_classic":
+      return "Round Robin Classic";
+    case "group_and_bracket":
+      return "Group And Bracket";
+    case "single_elimination":
+      return "Single Elimination";
+    default:
+      return type ? type.replaceAll("_", " ") : "—";
+  }
+}
+
+function formatSeedingRule(rule?: string | null) {
+  if (!rule) return "—";
+  return rule
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function InfoTab({ data }: Props) {
-  const fc = data.formatConfig as FormatConfig | null;
+  const formatConfig = (data.formatConfig ?? {}) as FormatConfig & {
+    totalCapacity?: number;
+  };
+
+  const enrolledTeamsCount = data.teams?.length ?? 0;
+  const totalMatchesCount = data.matches?.length ?? 0;
 
   return (
     <section className="space-y-4">
-      <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Tournament Info</h2>
-      <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
-        <Row label="Name"     value={data.name} />
-        <Row label="Date"     value={formatDate(data.date)} />
-        <Row label="Location" value={data.location ?? "—"} />
-        <Row label="Division" value={data.division?.name ?? "Unassigned"} />
-        <Row label="Format"   value={(data.type ?? "round_robin").replace(/_/g, " ")} />
-        <Row label="Status"   value={data.status} />
-        {fc && (
-          <>
-            <Row label="Groups"             value={String(fc.groupCount)} />
-            <Row label="Teams per group"    value={String(fc.teamsPerGroup ?? "—")} />
-            <Row label="Qualifiers/group"   value={String(fc.qualifiersPerGroup ?? "—")} />
-            <Row label="Bracket seeding"    value={fc.bracketSeedingRule ?? "—"} />
-            <Row label="Total capacity"     value={`${(fc.groupCount ?? 0) * (fc.teamsPerGroup ?? 0)} teams`} />
-            <Row label="Advancing"          value={`${(fc.groupCount ?? 0) * (fc.qualifiersPerGroup ?? 0)} teams`} />
-          </>
-        )}
-        <Row label="Enrolled teams" value={`${data.teams.length} teams`} />
-        <Row label="Total matches"  value={`${data.matches.length} matches`} />
+      <div>
+        <h2 className="text-lg font-semibold text-white">Tournament Info</h2>
+        <p className="mt-1 text-sm text-slate-400">
+          General details, format settings, and participation numbers.
+        </p>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
+        <div className="divide-y divide-white/10">
+          <InfoRow label="Name" value={data.name ?? "—"} />
+          <InfoRow label="Date" value={data.date ? formatDate(data.date) : "—"} />
+          <InfoRow label="Location" value={data.location ?? "—"} />
+          <InfoRow label="Division" value={data.division?.name ?? "Unassigned"} />
+          <InfoRow label="Format" value={formatTournamentType(data.type)} />
+          <StatusRow status={data.status} />
+
+          {data.type === "group_and_bracket" && (
+            <>
+              <InfoRow label="Groups" value={formatConfig.groupCount ?? "—"} />
+              <InfoRow
+                label="Teams per group"
+                value={formatConfig.teamsPerGroup ?? "—"}
+              />
+              <InfoRow
+                label="Qualifiers/group"
+                value={formatConfig.qualifiersPerGroup ?? "—"}
+              />
+              <InfoRow
+                label="Wild cards"
+                value={formatConfig.wildCardCount ?? 0}
+              />
+              <InfoRow
+                label="Bracket seeding"
+                value={formatSeedingRule(formatConfig.bracketSeedingRule)}
+              />
+            </>
+          )}
+
+          <InfoRow
+            label="Total capacity"
+            value={`${formatConfig.totalCapacity ?? enrolledTeamsCount} Teams`}
+          />
+          <InfoRow
+            label="Enrolled teams"
+            value={`${enrolledTeamsCount} Teams`}
+          />
+          <InfoRow
+            label="Total matches"
+            value={`${totalMatchesCount} Matches`}
+          />
+        </div>
       </div>
     </section>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between px-4 py-3">
-      <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
-      <span className="text-sm font-medium text-gray-900 dark:text-gray-100 capitalize">{value}</span>
-    </div>
   );
 }

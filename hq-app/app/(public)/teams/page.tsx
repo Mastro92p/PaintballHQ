@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useFetch } from "@/hooks/use-fetch";
 import { WinRateBar } from "@/components/ui/WinRateBar";
 import type { Division, TeamWithStats } from "@/types";
+import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
 
 export default function TeamsPage() {
   const { data, loading, error } = useFetch<TeamWithStats[]>("/api/teams");
@@ -12,14 +13,38 @@ export default function TeamsPage() {
   const [search, setSearch] = useState("");
   const [divisionFilter, setDivisionFilter] = useState<string>("all");
 
+  useEffect(() => {
+    if (divisionFilter === "all" || divisionFilter === "unassigned") return;
+    if (!divisions) return;
+
+    const selectedDivision = divisions.find((d) => String(d.id) === divisionFilter);
+
+    if (!selectedDivision || selectedDivision.isActive === false) {
+      setDivisionFilter("all");
+    }
+  }, [divisionFilter, divisions]);
+
   const filtered = useMemo(() => {
     if (!data) return [];
+
     return data
       .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
       .filter((t) => {
-        if (divisionFilter === "all") return true;
-        if (divisionFilter === "unassigned") return t.divisionId == null;
-        return t.divisionId === Number(divisionFilter);
+        const hasInactiveDivision =
+          t.divisionId != null && t.division?.isActive === false;
+
+        if (divisionFilter === "all") {
+          return !hasInactiveDivision;
+        }
+
+        if (divisionFilter === "unassigned") {
+          return t.divisionId == null;
+        }
+
+        return (
+          t.divisionId === Number(divisionFilter) &&
+          t.division?.isActive !== false
+        );
       })
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [data, search, divisionFilter]);
@@ -58,46 +83,14 @@ export default function TeamsPage() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setDivisionFilter("all")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-              divisionFilter === "all"
-                ? "bg-teal-700 text-white border-teal-700"
-                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-            }`}
-          >
-            All
-          </button>
-
-          {divisions?.map((d) => (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => setDivisionFilter(String(d.id))}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                divisionFilter === String(d.id)
-                  ? "bg-teal-700 text-white border-teal-700"
-                  : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-              }`}
-            >
-              {d.name}
-            </button>
-          ))}
-
-          <button
-            type="button"
-            onClick={() => setDivisionFilter("unassigned")}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-              divisionFilter === "unassigned"
-                ? "bg-teal-700 text-white border-teal-700"
-                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-            }`}
-          >
-            Unassigned
-          </button>
-        </div>
+        <DivisionFilterChips
+          divisions={divisions}
+          value={divisionFilter}
+          onChange={setDivisionFilter}
+          includeAll
+          includeUnassigned
+          hideInactive
+        />
       </div>
 
       {loading && (

@@ -138,13 +138,14 @@ export default function ManageTeamsPage() {
           placeholder="Search teams..."
         />
 
-        <DivisionFilterChips
-          divisions={divisions}
-          value={divisionFilter}
-          onChange={setDivisionFilter}
-          includeAll
-          includeUnassigned
-        />
+      <DivisionFilterChips
+        divisions={divisions}
+        value={divisionFilter}
+        onChange={setDivisionFilter}
+        includeAll
+        includeUnassigned
+        highlightInactive
+      />
       </div>
 
       <AdminTeamTable

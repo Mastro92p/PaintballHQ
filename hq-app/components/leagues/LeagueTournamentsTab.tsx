@@ -4,13 +4,11 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
+import {
+  getTournamentStatusBadgeVariant,
+  getTournamentStatusLabel,
+} from "@/lib/tournamentStatusStyles";
 import type { TournamentWithDivision } from "@/types";
-
-const statusVariant: Record<string, "default" | "success" | "warning" | "muted"> = {
-  upcoming: "warning",
-  active: "default",
-  completed: "muted",
-};
 
 type LeagueTournamentsTabProps = {
   tournaments: TournamentWithDivision[];
@@ -37,17 +35,17 @@ export function LeagueTournamentsTab({
       </div>
 
       {tournaments.length === 0 ? (
-        <div className="text-center py-10 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-gray-400">
-          <p className="text-2xl mb-2">🏆</p>
+        <div className="rounded-lg border border-dashed border-gray-200 py-10 text-center text-gray-400 dark:border-gray-700">
+          <p className="mb-2 text-2xl">🏆</p>
           <p className="font-medium">No tournaments yet</p>
-          <p className="text-sm mt-1">
+          <p className="mt-1 text-sm">
             Assign existing tournaments or create new ones under this league
           </p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-wide">
+            <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-gray-800 dark:text-gray-400">
               <tr>
                 <th className="px-4 py-3 text-left">Name</th>
                 <th className="px-4 py-3 text-left">Division</th>
@@ -61,7 +59,7 @@ export function LeagueTournamentsTab({
               {tournaments.map((t) => (
                 <tr
                   key={t.id}
-                  className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="bg-white transition-colors hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800"
                 >
                   <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
                     {t.name}
@@ -72,11 +70,13 @@ export function LeagueTournamentsTab({
                   <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                     {formatDate(t.date)}
                   </td>
-                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 capitalize">
+                  <td className="px-4 py-3 capitalize text-gray-500 dark:text-gray-400">
                     {(t.type ?? "round_robin").replace(/_/g, " ")}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant={statusVariant[t.status] ?? "muted"}>{t.status}</Badge>
+                    <Badge variant={getTournamentStatusBadgeVariant(t.status)}>
+                      {getTournamentStatusLabel(t.status)}
+                    </Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">

@@ -13,10 +13,7 @@ import { LeagueNotFoundState } from "@/components/leagues/LeagueNotFoundState";
 import { handleMissingEntity } from "@/lib/handle-missing-entity";
 import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
 
-
-
 type Tab = "tournaments" | "teams" | "info";
-
 
 export default function ManageLeagueDetailPage({
   params,
@@ -86,28 +83,34 @@ export default function ManageLeagueDetailPage({
 
   const assignedDivisions = useMemo(() => {
     if (!localLeague?.tournaments) return [];
-    const map: Record<number, string> = {};
+
+    const map = new Map<
+      number,
+      { id: number; name: string; isActive?: boolean | null }
+    >();
 
     localLeague.tournaments.forEach((t) => {
-      if (t.division) map[t.division.id] = t.division.name;
+      if (t.division) {
+        map.set(t.division.id, {
+          id: t.division.id,
+          name: t.division.name,
+          isActive: t.division.isActive,
+        });
+      }
     });
 
-
-    return Object.entries(map)
-      .map(([divisionId, name]) => ({ id: Number(divisionId), name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [localLeague]);
 
-
   const filteredLeagueTournaments = useMemo(() => {
-      if (!localLeague?.tournaments) return [];
+    if (!localLeague?.tournaments) return [];
 
-      return localLeague.tournaments.filter((t) => {
-        if (divisionFilter === "all") return true;
-        if (divisionFilter === "unassigned") return t.divisionId == null;
-        return t.divisionId === Number(divisionFilter);
-      });
-    }, [localLeague, divisionFilter]);
+    return localLeague.tournaments.filter((t) => {
+      if (divisionFilter === "all") return true;
+      if (divisionFilter === "unassigned") return t.divisionId == null;
+      return t.divisionId === Number(divisionFilter);
+    });
+  }, [localLeague, divisionFilter]);
 
   const originalEnrolledIds = useMemo(
     () => new Set(localLeague?.teams.map((t) => t.teamId) ?? []),
@@ -317,7 +320,6 @@ export default function ManageLeagueDetailPage({
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
-      
       <LeaguePageHeader
         league={league}
         activeTab={activeTab}
@@ -333,6 +335,7 @@ export default function ManageLeagueDetailPage({
             onChange={setDivisionFilter}
             includeAll
             includeUnassigned
+            highlightInactive
           />
 
           <LeagueTournamentsTab
@@ -389,7 +392,6 @@ export default function ManageLeagueDetailPage({
         onChangeTournament={setSelectedTournamentId}
         onAssign={handleAssignTournament}
       />
-
     </main>
   );
 }

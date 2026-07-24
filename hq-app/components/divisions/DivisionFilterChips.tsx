@@ -1,7 +1,5 @@
 "use client";
 
-import type { Division } from "@/types";
-
 type DivisionFilterValue = "all" | "unassigned" | string;
 
 type DivisionOption = {
@@ -18,6 +16,7 @@ type DivisionFilterChipsProps = {
   includeUnassigned?: boolean;
   allLabel?: string;
   highlightInactive?: boolean;
+  hideInactive?: boolean;
 };
 
 export function DivisionFilterChips({
@@ -28,6 +27,7 @@ export function DivisionFilterChips({
   includeUnassigned = true,
   allLabel = "All",
   highlightInactive = false,
+  hideInactive = false,
 }: DivisionFilterChipsProps) {
   const baseCls =
     "px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors";
@@ -41,6 +41,10 @@ export function DivisionFilterChips({
   const inactiveDivisionActiveCls =
     "bg-orange-600 text-white border-orange-600 hover:bg-orange-700";
 
+  const visibleDivisions = hideInactive
+    ? divisions?.filter((d) => d.isActive !== false)
+    : divisions;
+
   return (
     <div className="flex flex-wrap gap-2">
       {includeAll && (
@@ -53,7 +57,7 @@ export function DivisionFilterChips({
         </button>
       )}
 
-      {divisions?.map((d) => {
+      {visibleDivisions?.map((d) => {
         const isSelected = value === String(d.id);
         const isInactiveDivision = highlightInactive && d.isActive === false;
 
