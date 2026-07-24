@@ -13,6 +13,10 @@ type SaveBracketEditInput = {
   scoreB?: number | null;
 };
 
+type GenerateBracketInput = {
+  advancingTeams?: number;
+};
+
 type Props = {
   matches: Match[];
   editableTeams?: Team[];
@@ -20,7 +24,8 @@ type Props = {
   generatingBracket?: boolean;
   resettingBracket?: boolean;
   bracketError?: string | null;
-  onGenerateBracket?: () => void;
+  managementMode?: "auto" | "manual";
+  onGenerateBracket?: (input?: GenerateBracketInput) => void;
   onResetBracket?: () => void;
   editingBracketMatch?: Match | null;
   bracketEditSaving?: boolean;
@@ -136,28 +141,116 @@ function MatchCard({
   onOpen?: (match: Match) => void;
   interactive: boolean;
 }) {
-  const { match, x, y } = item;
+  const { match, x, y, phase } = item;
   const palette = getCardPalette(variant);
 
   const scoreA = match.scoreA ?? null;
   const scoreB = match.scoreB ?? null;
 
-  const aWins =
-    match.status === "completed" &&
-    scoreA != null &&
-    scoreB != null &&
-    scoreA > scoreB;
+  const isCompleted =
+    match.status === "completed" && scoreA != null && scoreB != null;
 
-  const bWins =
-    match.status === "completed" &&
-    scoreA != null &&
-    scoreB != null &&
-    scoreB > scoreA;
+  const aWins = isCompleted && scoreA > scoreB;
+  const bWins = isCompleted && scoreB > scoreA;
+  const isDraw = isCompleted && scoreA === scoreB;
 
-  const winnerRowStyle = {
-    background:
-      "linear-gradient(90deg, rgba(22,101,52,0.30) 0%, rgba(22,101,52,0.14) 72%, rgba(22,101,52,0.03) 100%)",
-  };
+  const isFinal = phase === "final";
+  const isThirdPlace = phase === "third_place";
+
+  const winnerStyles = isFinal
+    ? {
+        row: {
+          background:
+            "linear-gradient(90deg, rgba(234,179,8,0.30) 0%, rgba(234,179,8,0.14) 72%, rgba(234,179,8,0.03) 100%)",
+        },
+        text: "#fde68a",
+        score: "#facc15",
+        accent: "rgba(234,179,8,0.95)",
+      }
+    : isThirdPlace
+    ? {
+        row: {
+          background:
+            "linear-gradient(90deg, rgba(180,83,9,0.28) 0%, rgba(180,83,9,0.14) 72%, rgba(180,83,9,0.03) 100%)",
+        },
+        text: "#fdba74",
+        score: "#fb923c",
+        accent: "rgba(249,115,22,0.95)",
+      }
+    : {
+        row: {
+          background:
+            "linear-gradient(90deg, rgba(22,101,52,0.30) 0%, rgba(22,101,52,0.14) 72%, rgba(22,101,52,0.03) 100%)",
+        },
+        text: "#bbf7d0",
+        score: "#34d399",
+        accent: "rgba(31,214,162,0.95)",
+      };
+
+  const loserStyles = isFinal
+    ? {
+        row: {
+          background:
+            "linear-gradient(90deg, rgba(148,163,184,0.22) 0%, rgba(148,163,184,0.10) 72%, rgba(148,163,184,0.03) 100%)",
+        },
+        text: "#e2e8f0",
+        score: "#cbd5e1",
+      }
+    : isThirdPlace
+    ? {
+        row: undefined,
+        text: "#f1f5f9",
+        score: "rgb(226 232 240)",
+      }
+    : {
+        row: {
+          background:
+            "linear-gradient(90deg, rgba(127,29,29,0.26) 0%, rgba(127,29,29,0.12) 72%, rgba(127,29,29,0.03) 100%)",
+        },
+        text: "#fecaca",
+        score: "#f87171",
+      };
+
+  const rowAStyle = aWins
+    ? winnerStyles.row
+    : bWins
+    ? loserStyles.row
+    : undefined;
+
+  const rowBStyle = bWins
+    ? winnerStyles.row
+    : aWins
+    ? loserStyles.row
+    : undefined;
+
+  const nameAClass = !match.teamA ? "text-slate-300" : !isCompleted ? "text-slate-100" : "";
+  const nameBClass = !match.teamB ? "text-slate-300" : !isCompleted ? "text-slate-100" : "";
+
+  const teamAInlineColor = aWins
+    ? winnerStyles.text
+    : bWins
+    ? loserStyles.text
+    : undefined;
+
+  const teamBInlineColor = bWins
+    ? winnerStyles.text
+    : aWins
+    ? loserStyles.text
+    : undefined;
+
+  const scoreAColor = aWins
+    ? winnerStyles.score
+    : bWins
+    ? loserStyles.score
+    : "rgb(226 232 240)";
+
+  const scoreBColor = bWins
+    ? winnerStyles.score
+    : aWins
+    ? loserStyles.score
+    : "rgb(226 232 240)";
+
+  const showAccentBar = (aWins || bWins) && !isDraw;
 
   const content = (
     <>
@@ -170,10 +263,10 @@ function MatchCard({
         }}
       />
 
-      {(aWins || bWins) && (
+      {showAccentBar && (
         <div
           className="absolute left-0 top-0 h-full w-[2px]"
-          style={{ background: "rgba(31, 214, 162, 0.95)" }}
+          style={{ background: winnerStyles.accent }}
         />
       )}
 
@@ -182,14 +275,13 @@ function MatchCard({
           className="flex flex-1 items-center"
           style={{
             borderBottom: "1px solid rgba(57,62,70,0.95)",
-            ...(aWins ? winnerRowStyle : {}),
+            ...(rowAStyle ?? {}),
           }}
         >
           <div className="min-w-0 flex-1 px-2.5">
             <div
-              className={`truncate text-[11px] font-semibold leading-none ${
-                aWins ? "text-emerald-200" : "text-slate-100"
-              }`}
+              className={`truncate text-[11px] font-semibold leading-none ${nameAClass}`}
+              style={teamAInlineColor ? { color: teamAInlineColor } : undefined}
             >
               {getTeamDisplay(match.teamA)}
             </div>
@@ -198,26 +290,18 @@ function MatchCard({
             className="flex h-full items-center justify-center text-[11px] font-semibold"
             style={{
               width: SCORE_COL_WIDTH,
-              color: aWins ? "#34d399" : "rgb(226 232 240)",
+              color: scoreAColor,
             }}
           >
             {scoreA ?? ""}
           </div>
         </div>
 
-        <div
-          className="flex flex-1 items-center"
-          style={bWins ? winnerRowStyle : undefined}
-        >
+        <div className="flex flex-1 items-center" style={rowBStyle}>
           <div className="min-w-0 flex-1 px-2.5">
             <div
-              className={`truncate text-[11px] font-semibold leading-none ${
-                !match.teamB
-                  ? "text-slate-300"
-                  : bWins
-                  ? "text-emerald-200"
-                  : "text-slate-100"
-              }`}
+              className={`truncate text-[11px] font-semibold leading-none ${nameBClass}`}
+              style={teamBInlineColor ? { color: teamBInlineColor } : undefined}
             >
               {getTeamDisplay(match.teamB)}
             </div>
@@ -226,7 +310,7 @@ function MatchCard({
             className="flex h-full items-center justify-center text-[11px] font-semibold"
             style={{
               width: SCORE_COL_WIDTH,
-              color: bWins ? "#34d399" : "rgb(226 232 240)",
+              color: scoreBColor,
             }}
           >
             {scoreB ?? ""}
@@ -374,6 +458,114 @@ function ConnectorSet({
   );
 }
 
+function ManualAdvancingTeamsModal({
+  open,
+  teamCount,
+  loading,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  teamCount: number;
+  loading: boolean;
+  onClose: () => void;
+  onConfirm: (advancingTeams: number) => void;
+}) {
+  const [advancingTeams, setAdvancingTeams] = useState<number>(Math.min(teamCount, 2));
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setAdvancingTeams(Math.min(Math.max(2, teamCount), teamCount));
+    setError(null);
+  }, [open, teamCount]);
+
+  if (!open) return null;
+
+  const projectedBracketSize =
+    advancingTeams >= 2 ? 2 ** Math.ceil(Math.log2(advancingTeams)) : 0;
+  const projectedByes =
+    advancingTeams >= 2 ? projectedBracketSize - advancingTeams : 0;
+
+  const handleSubmit = () => {
+    if (!Number.isInteger(advancingTeams) || advancingTeams < 2) {
+      setError("Advancing teams must be at least 2.");
+      return;
+    }
+
+    if (advancingTeams > teamCount) {
+      setError("Advancing teams cannot exceed enrolled teams.");
+      return;
+    }
+
+    setError(null);
+    onConfirm(advancingTeams);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-800 dark:bg-gray-950">
+        <div className="space-y-1">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            Generate Manual Bracket
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Choose how many teams advance. You currently have {teamCount} enrolled teams.
+          </p>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          <label
+            htmlFor="manual-advancing-teams"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Advancing teams
+          </label>
+          <input
+            id="manual-advancing-teams"
+            type="number"
+            min={2}
+            max={teamCount}
+            step={1}
+            value={advancingTeams}
+            onChange={(e) => setAdvancingTeams(Number(e.target.value))}
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+          />
+
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-300">
+            This will create a {projectedBracketSize}-slot bracket with {projectedByes}{" "}
+            {projectedByes === 1 ? "bye" : "byes"} if needed.
+          </div>
+
+          {error && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+              {error}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            loading={loading}
+            onClick={handleSubmit}
+          >
+            Generate
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function BracketTab({
   matches,
   editableTeams = [],
@@ -381,6 +573,7 @@ export function BracketTab({
   generatingBracket = false,
   resettingBracket = false,
   bracketError = null,
+  managementMode = "auto",
   onGenerateBracket,
   onResetBracket,
   editingBracketMatch = null,
@@ -394,6 +587,7 @@ export function BracketTab({
   const [fitScale, setFitScale] = useState(1);
   const [zoom, setZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
+  const [manualModalOpen, setManualModalOpen] = useState(false);
 
   const panStateRef = useRef({
     active: false,
@@ -486,8 +680,10 @@ export function BracketTab({
 
         if (incomingMatches.length > 0) {
           const centerAverage =
-            incomingMatches.reduce((sum, source) => sum + source.y + CARD_HEIGHT / 2, 0) /
-            incomingMatches.length;
+            incomingMatches.reduce(
+              (sum, source) => sum + source.y + CARD_HEIGHT / 2,
+              0
+            ) / incomingMatches.length;
           idealY = centerAverage - CARD_HEIGHT / 2;
         } else {
           idealY = startY + index * (CARD_HEIGHT + ROUND_MIN_GAP);
@@ -636,6 +832,24 @@ export function BracketTab({
   const scaledWidth = canvasWidth * scale;
   const scaledHeight = canvasHeight * scale;
   const canPan = scale > fitScale + 0.01;
+  const isManual = managementMode === "manual";
+  const canGenerate = editableTeams.length >= 2 && !hasBracketMatches && !generatingBracket;
+
+  const handleGenerateClick = () => {
+    if (!onGenerateBracket || !canGenerate) return;
+
+    if (isManual) {
+      setManualModalOpen(true);
+      return;
+    }
+
+    onGenerateBracket();
+  };
+
+  const handleConfirmManualGenerate = (advancingTeams: number) => {
+    onGenerateBracket?.({ advancingTeams });
+    setManualModalOpen(false);
+  };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!canPan || !wrapperRef.current) return;
@@ -686,7 +900,9 @@ export function BracketTab({
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {readonly
               ? "knockout bracket."
-              : "knockout bracket with direct match editing."}
+              : isManual
+              ? "Manual knockout bracket with direct match editing and automatic byes."
+              : "Knockout bracket with direct match editing."}
           </p>
         </div>
 
@@ -706,15 +922,17 @@ export function BracketTab({
             <Button
               size="sm"
               loading={generatingBracket}
-              disabled={generatingBracket || hasBracketMatches}
+              disabled={!canGenerate}
               title={
                 hasBracketMatches
                   ? "Reset the bracket first"
                   : editableTeams.length < 2
                   ? "Enroll at least 2 teams first"
+                  : isManual
+                  ? "Choose how many teams advance"
                   : ""
               }
-              onClick={onGenerateBracket}
+              onClick={handleGenerateClick}
             >
               Generate Bracket
             </Button>
@@ -737,6 +955,8 @@ export function BracketTab({
           <p className="mt-1 text-sm">
             {readonly
               ? "The knockout stage will appear here once it has been generated."
+              : isManual
+              ? "Generate the bracket and choose how many teams advance to start the knockout stage."
               : "Generate the bracket to start the knockout stage."}
           </p>
         </div>
@@ -871,6 +1091,16 @@ export function BracketTab({
           loading={bracketEditSaving}
           onClose={onCloseBracketEdit}
           onSave={onSaveBracketEdit}
+        />
+      )}
+
+      {!readonly && (
+        <ManualAdvancingTeamsModal
+          open={manualModalOpen}
+          teamCount={editableTeams.length}
+          loading={generatingBracket}
+          onClose={() => setManualModalOpen(false)}
+          onConfirm={handleConfirmManualGenerate}
         />
       )}
     </section>

@@ -180,7 +180,9 @@ export async function PATCH(
     const derivedStatus: MatchStatus =
       body.status ?? deriveMatchStatus(nextScoreA ?? undefined, nextScoreB ?? undefined);
 
-    const updatedMatch = await prisma.$transaction(async (tx) => {
+    const updatedMatches = await prisma.$transaction(async (tx) => {
+      const affectedIds = new Set<number>([matchId]);
+
       const match = await tx.match.update({
         where: { id: matchId },
         data: {
@@ -217,52 +219,52 @@ export async function PATCH(
         include: { teamA: true, teamB: true, group: true },
       });
 
-      if (!isKnockoutPhase(match.phase)) {
-        return match;
-      }
-
       if (
-        match.scoreA == null ||
-        match.scoreB == null ||
-        match.teamAId == null ||
-        match.teamBId == null
+        isKnockoutPhase(match.phase) &&
+        match.scoreA != null &&
+        match.scoreB != null &&
+        match.teamAId != null &&
+        match.teamBId != null &&
+        match.scoreA !== match.scoreB &&
+        match.phase !== "final"
       ) {
-        return match;
+        const winnerId = match.scoreA > match.scoreB ? match.teamAId : match.teamBId;
+        const loserId = match.scoreA > match.scoreB ? match.teamBId : match.teamAId;
+
+        if (match.nextMatchId && match.nextSlot) {
+          await tx.match.update({
+            where: { id: match.nextMatchId },
+            data: {
+              [match.nextSlot]: winnerId,
+            },
+          });
+          affectedIds.add(match.nextMatchId);
+        }
+
+        if (match.loserNextMatchId && match.loserNextSlot) {
+          await tx.match.update({
+            where: { id: match.loserNextMatchId },
+            data: {
+              [match.loserNextSlot]: loserId,
+            },
+          });
+          affectedIds.add(match.loserNextMatchId);
+        }
       }
 
-      if (match.scoreA === match.scoreB) {
-        return match;
-      }
-
-      if (match.phase === "final") {
-        return match;
-      }
-
-      const winnerId = match.scoreA > match.scoreB ? match.teamAId : match.teamBId;
-      const loserId = match.scoreA > match.scoreB ? match.teamBId : match.teamAId;
-
-      if (match.nextMatchId && match.nextSlot) {
-        await tx.match.update({
-          where: { id: match.nextMatchId },
-          data: {
-            [match.nextSlot]: winnerId,
-          },
-        });
-      }
-
-      if (match.loserNextMatchId && match.loserNextSlot) {
-        await tx.match.update({
-          where: { id: match.loserNextMatchId },
-          data: {
-            [match.loserNextSlot]: loserId,
-          },
-        });
-      }
-
-      return match;
+      return tx.match.findMany({
+        where: {
+          id: { in: Array.from(affectedIds) },
+        },
+        include: {
+          teamA: true,
+          teamB: true,
+          group: true,
+        },
+      });
     });
 
-    return Response.json(updatedMatch);
+    return Response.json({ updatedMatches });
   } catch (error) {
     console.error("Error updating match:", error);
     return Response.json({ error: "Failed to update match" }, { status: 500 });

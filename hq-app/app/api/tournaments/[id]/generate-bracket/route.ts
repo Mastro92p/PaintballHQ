@@ -67,6 +67,10 @@ type MatchCreateData = {
   groupId?: number | null;
 };
 
+type GenerateBracketBody = {
+  advancingTeams?: number;
+};
+
 function nextPowerOf2(n: number): number {
   let p = 1;
   while (p < n) p *= 2;
@@ -265,59 +269,55 @@ async function getAutoSeededTeamIds(tournament: any): Promise<number[]> {
   return tournament.teams.map((tt: any) => tt.teamId);
 }
 
-function getBracketSize(
+function getRequestedAdvancingTeams(
   tournament: any,
   placementMode: PlacementMode,
-  seededTeamIds: number[]
+  availableTeamIds: number[],
+  requestedAdvancingTeams?: number
 ): number {
+  const maxTeams = availableTeamIds.length;
+
+  if (maxTeams < 2) {
+    throw new Error("At least 2 teams are required to generate a bracket.");
+  }
+
   if (placementMode === "auto") {
-    if (seededTeamIds.length < 2) {
-      throw new Error("At least 2 teams are required to generate a bracket");
+    if (requestedAdvancingTeams == null) {
+      return maxTeams;
     }
-    return nextPowerOf2(seededTeamIds.length);
+
+    if (!Number.isInteger(requestedAdvancingTeams) || requestedAdvancingTeams < 2) {
+      throw new Error("Advancing teams must be an integer of at least 2.");
+    }
+
+    if (requestedAdvancingTeams > maxTeams) {
+      throw new Error("Advancing teams cannot exceed the number of qualified teams.");
+    }
+
+    return requestedAdvancingTeams;
   }
 
-  const fc = (tournament.formatConfig ?? {}) as {
-    qualifiersPerGroup?: number;
-    wildCardCount?: number;
-  };
-
-  let slotCount = 0;
-
-  if (tournament.type === "group_and_bracket") {
-    const qualifiersPerGroup = fc.qualifiersPerGroup ?? 2;
-    const wildCardCount = fc.wildCardCount ?? 0;
-    const groupCount = tournament.groups?.length ?? 0;
-
-    slotCount =
-      groupCount > 0
-        ? groupCount * qualifiersPerGroup + wildCardCount
-        : tournament.teams.length;
-  } else {
-    slotCount = tournament.teams.length;
+  if (requestedAdvancingTeams == null) {
+    throw new Error("Advancing teams is required for manual bracket generation.");
   }
 
-  if (slotCount < 2) {
-    throw new Error("At least 2 teams are required to generate a bracket");
+  if (!Number.isInteger(requestedAdvancingTeams) || requestedAdvancingTeams < 2) {
+    throw new Error("Advancing teams must be an integer of at least 2.");
   }
 
-  return nextPowerOf2(slotCount);
+  if (requestedAdvancingTeams > maxTeams) {
+    throw new Error("Advancing teams cannot exceed the number of enrolled teams.");
+  }
+
+  return requestedAdvancingTeams;
 }
 
 function buildInitialPairs(
   bracketSize: number,
-  placementMode: PlacementMode,
   seededTeamIds: number[]
 ): InitialPair[] {
-  if (placementMode === "manual") {
-    return Array.from({ length: bracketSize / 2 }, () => ({
-      teamAId: null,
-      teamBId: null,
-      autoAdvanceTeamId: null,
-    }));
-  }
-
   const positions = buildBracketPositions(bracketSize);
+
   const paddedSeeds: (number | null)[] = [
     ...seededTeamIds,
     ...Array(bracketSize - seededTeamIds.length).fill(null),
@@ -336,6 +336,12 @@ function buildInitialPairs(
     const isBye =
       (teamAId !== null && teamBId === null) ||
       (teamAId === null && teamBId !== null);
+
+    const isCompletelyEmpty = teamAId === null && teamBId === null;
+
+    if (isCompletelyEmpty) {
+      continue;
+    }
 
     pairs.push({
       teamAId: isBye ? null : teamAId,
@@ -379,6 +385,10 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (isNaN(tournamentId)) {
     return NextResponse.json({ error: "Invalid tournament id" }, { status: 400 });
   }
+
+  const body = (await req.json().catch(() => ({}))) as GenerateBracketBody;
+  const requestedAdvancingTeams =
+    typeof body?.advancingTeams === "number" ? body.advancingTeams : undefined;
 
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
@@ -431,18 +441,20 @@ export async function POST(req: NextRequest, { params }: Params) {
   };
   const wantsThirdPlace = fc.thirdPlaceMatch === true;
 
-  let seededTeamIds: number[] = [];
+  let availableTeamIds: number[] = [];
 
   try {
     if (placementMode === "auto") {
-      seededTeamIds = await getAutoSeededTeamIds(tournament);
+      availableTeamIds = await getAutoSeededTeamIds(tournament);
 
-      if (seededTeamIds.length === 0) {
+      if (availableTeamIds.length === 0) {
         return NextResponse.json(
           { error: "No teams qualified for the bracket." },
           { status: 400 }
         );
       }
+    } else {
+      availableTeamIds = tournament.teams.map((tt: any) => tt.teamId);
     }
   } catch (err) {
     return NextResponse.json(
@@ -456,19 +468,35 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
+  let advancingTeams: number;
   let bracketSize: number;
 
   try {
-    bracketSize = getBracketSize(tournament, placementMode, seededTeamIds);
+    advancingTeams = getRequestedAdvancingTeams(
+      tournament,
+      placementMode,
+      availableTeamIds,
+      requestedAdvancingTeams
+    );
+    bracketSize = nextPowerOf2(advancingTeams);
   } catch (err) {
     return NextResponse.json(
       {
         error:
-          err instanceof Error ? err.message : "Invalid bracket size.",
+          err instanceof Error ? err.message : "Invalid advancing team count.",
       },
       { status: 400 }
     );
   }
+
+  if (bracketSize > 32) {
+    return NextResponse.json(
+      { error: `Unsupported bracket size: ${bracketSize} (max 32 teams)` },
+      { status: 400 }
+    );
+  }
+
+  const seededTeamIds = availableTeamIds.slice(0, advancingTeams);
 
   const firstPhase = PHASE_BY_SIZE[bracketSize];
   if (!firstPhase) {
@@ -483,26 +511,22 @@ export async function POST(req: NextRequest, { params }: Params) {
     return entry !== undefined && Number(entry[0]) <= bracketSize;
   });
 
-  const initialPairs = buildInitialPairs(bracketSize, placementMode, seededTeamIds);
+  const initialPairs = buildInitialPairs(bracketSize, seededTeamIds);
 
   const allMatchData: MatchCreateData[] = [];
 
   const nextRoundPhase = PHASE_BY_SIZE[bracketSize / 2];
 
   const nextRoundTop: (number | null)[] =
-    nextRoundPhase && placementMode === "auto"
-      ? Array(bracketSize / 4).fill(null)
-      : [];
+    nextRoundPhase ? Array(bracketSize / 4).fill(null) : [];
 
   const nextRoundBot: (number | null)[] =
-    nextRoundPhase && placementMode === "auto"
-      ? Array(bracketSize / 4).fill(null)
-      : [];
+    nextRoundPhase ? Array(bracketSize / 4).fill(null) : [];
 
   for (let i = 0; i < initialPairs.length; i++) {
     const pair = initialPairs[i];
 
-    if (placementMode === "auto" && pair.autoAdvanceTeamId != null && nextRoundPhase) {
+    if (pair.autoAdvanceTeamId != null && nextRoundPhase) {
       const nextIdx = Math.floor(i / 2);
       const isTop = i % 2 === 0;
 
@@ -514,8 +538,8 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     allMatchData.push({
       tournamentId,
-      teamAId: pair.teamAId,
-      teamBId: pair.teamBId,
+      teamAId: placementMode === "manual" ? null : pair.teamAId,
+      teamBId: placementMode === "manual" ? null : pair.teamBId,
       phase: firstPhase,
       round: 1,
       status: "pending",
@@ -530,8 +554,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     for (let i = 0; i < bracketSize / 4; i++) {
       allMatchData.push({
         tournamentId,
-        teamAId: placementMode === "auto" ? nextRoundTop[i] : null,
-        teamBId: placementMode === "auto" ? nextRoundBot[i] : null,
+        teamAId: placementMode === "manual" ? null : nextRoundTop[i],
+        teamBId: placementMode === "manual" ? null : nextRoundBot[i],
         phase: nextRoundPhase,
         round: 1,
         status: "pending",
@@ -666,12 +690,14 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   return NextResponse.json({
     created: allMatchData.length + (thirdPlaceCreated ? 1 : 0),
+    advancingTeams,
     bracketSize,
     firstPhase: allPhases[0],
     placementMode,
     teamsSeeded: seededTeamIds.length,
+    availableTeams: availableTeamIds.length,
     phases: allPhases,
-    seededTeamIds,
+    seededTeamIds: placementMode === "manual" ? [] : seededTeamIds,
     thirdPlaceCreated,
   });
 }

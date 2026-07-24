@@ -394,31 +394,39 @@ export function useTournamentMatchesState({
         throw new Error(body.error ?? "Failed to update bracket match");
       }
 
-      const returnedMatch = body.match ?? body;
+      const updatedMatches: Match[] = Array.isArray(body.updatedMatches)
+        ? body.updatedMatches
+        : body.match
+        ? [body.match]
+        : body?.id
+        ? [body as Match]
+        : [];
 
-      if (returnedMatch) {
-        updateMatches((prev) =>
-          prev.map((match) =>
-            match.id === matchId
-              ? {
-                  ...match,
-                  ...returnedMatch,
-                  teamA:
-                    returnedMatch.teamA ??
-                    (returnedMatch.teamAId != null
-                      ? enrolledTeams.find((team) => team.id === returnedMatch.teamAId) ??
-                        null
-                      : null),
-                  teamB:
-                    returnedMatch.teamB ??
-                    (returnedMatch.teamBId != null
-                      ? enrolledTeams.find((team) => team.id === returnedMatch.teamBId) ??
-                        null
-                      : null),
-                }
-              : match
-          )
-        );
+      if (updatedMatches.length > 0) {
+        updateMatches((prev) => {
+          const map = new Map(prev.map((match) => [match.id, match]));
+
+          for (const updated of updatedMatches) {
+            const previous = map.get(updated.id);
+
+            map.set(updated.id, {
+              ...(previous ?? updated),
+              ...updated,
+              teamA:
+                updated.teamA ??
+                (updated.teamAId != null
+                  ? enrolledTeams.find((team) => team.id === updated.teamAId) ?? null
+                  : null),
+              teamB:
+                updated.teamB ??
+                (updated.teamBId != null
+                  ? enrolledTeams.find((team) => team.id === updated.teamBId) ?? null
+                  : null),
+            });
+          }
+
+          return Array.from(map.values());
+        });
       }
 
       setEditingBracketMatch(null);

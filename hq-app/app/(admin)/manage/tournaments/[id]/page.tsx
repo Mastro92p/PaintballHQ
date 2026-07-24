@@ -23,6 +23,10 @@ import type { Team, TournamentDetail, Tournament, Division } from "@/types";
 
 type Tab = "teams" | "matches" | "bracket" | "info";
 
+type GenerateBracketInput = {
+  advancingTeams?: number;
+};
+
 export default function ManageTournamentDetailPage({
   params,
 }: {
@@ -40,6 +44,7 @@ export default function ManageTournamentDetailPage({
   const [localTournament, setLocalTournament] = useState<TournamentDetail | null>(null);
 
   const tournament = localTournament;
+  
 
   useEffect(() => {
     if (!data) return;
@@ -184,7 +189,7 @@ export default function ManageTournamentDetailPage({
     refetch();
   }
 
-  async function handleGenerateBracket() {
+  async function handleGenerateBracket(input?: GenerateBracketInput) {
     if (!tournament) return;
 
     if (
@@ -195,8 +200,12 @@ export default function ManageTournamentDetailPage({
       return;
     }
 
-    if (!confirm("Generate bracket from current standings? This cannot be undone.")) {
-      return;
+    const isManual = (tournament.managementMode ?? "auto") === "manual";
+
+    if (!isManual) {
+      if (!confirm("Generate bracket from current standings? This cannot be undone.")) {
+        return;
+      }
     }
 
     setGeneratingBracket(true);
@@ -204,6 +213,16 @@ export default function ManageTournamentDetailPage({
 
     const res = await fetch(`/api/tournaments/${id}/generate-bracket`, {
       method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(
+        isManual
+          ? { advancingTeams: input?.advancingTeams }
+          : input?.advancingTeams != null
+          ? { advancingTeams: input.advancingTeams }
+          : {}
+      ),
     });
 
     if (!res.ok) {
@@ -245,7 +264,7 @@ export default function ManageTournamentDetailPage({
   ];
 
   const pageWidthClass =
-    activeTab === "bracket" ? "max-w-[1500px]" : "max-w-4xl"; // to be used
+    activeTab === "bracket" ? "max-w-[1500px]" : "max-w-4xl";
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
@@ -318,6 +337,7 @@ export default function ManageTournamentDetailPage({
           bracketError={bracketError}
           editingBracketMatch={editingBracketMatch}
           bracketEditSaving={bracketEditSaving}
+          managementMode={tournament.managementMode ?? "auto"}
           onGenerateBracket={handleGenerateBracket}
           onResetBracket={handleResetBracket}
           onOpenBracketEdit={openBracketEdit}
