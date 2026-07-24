@@ -13,7 +13,7 @@ export default function TeamDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data, loading, error } = useFetch<TeamWithStats>(`/api/teams/${id}`);
+  const { data, loading, error } = useFetch<TeamWithStats>(`/api/public/teams/${id}`);
 
   if (loading) {
     return (

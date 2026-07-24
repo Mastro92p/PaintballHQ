@@ -8,7 +8,7 @@ import type { Division, TeamWithStats } from "@/types";
 import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
 
 export default function TeamsPage() {
-  const { data, loading, error } = useFetch<TeamWithStats[]>("/api/teams");
+  const { data, loading, error } = useFetch<TeamWithStats[]>("/api/public/teams");
   const { data: divisions } = useFetch<Division[]>("/api/divisions");
   const [search, setSearch] = useState("");
   const [divisionFilter, setDivisionFilter] = useState<string>("all");
