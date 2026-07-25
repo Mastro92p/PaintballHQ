@@ -210,6 +210,7 @@ export type DivisionWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Division"> | Date | string
   teams?: Prisma.TeamListRelationFilter
   tournaments?: Prisma.TournamentListRelationFilter
+  manualStandingTables?: Prisma.LeagueManualStandingTableListRelationFilter
 }
 
 export type DivisionOrderByWithRelationInput = {
@@ -219,6 +220,7 @@ export type DivisionOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   teams?: Prisma.TeamOrderByRelationAggregateInput
   tournaments?: Prisma.TournamentOrderByRelationAggregateInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableOrderByRelationAggregateInput
 }
 
 export type DivisionWhereUniqueInput = Prisma.AtLeast<{
@@ -231,6 +233,7 @@ export type DivisionWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Division"> | Date | string
   teams?: Prisma.TeamListRelationFilter
   tournaments?: Prisma.TournamentListRelationFilter
+  manualStandingTables?: Prisma.LeagueManualStandingTableListRelationFilter
 }, "id" | "name">
 
 export type DivisionOrderByWithAggregationInput = {
@@ -261,6 +264,7 @@ export type DivisionCreateInput = {
   createdAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutDivisionInput
   tournaments?: Prisma.TournamentCreateNestedManyWithoutDivisionInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableCreateNestedManyWithoutDivisionInput
 }
 
 export type DivisionUncheckedCreateInput = {
@@ -270,6 +274,7 @@ export type DivisionUncheckedCreateInput = {
   createdAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutDivisionInput
   tournaments?: Prisma.TournamentUncheckedCreateNestedManyWithoutDivisionInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedCreateNestedManyWithoutDivisionInput
 }
 
 export type DivisionUpdateInput = {
@@ -278,6 +283,7 @@ export type DivisionUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutDivisionNestedInput
   tournaments?: Prisma.TournamentUpdateManyWithoutDivisionNestedInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableUpdateManyWithoutDivisionNestedInput
 }
 
 export type DivisionUncheckedUpdateInput = {
@@ -287,6 +293,7 @@ export type DivisionUncheckedUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutDivisionNestedInput
   tournaments?: Prisma.TournamentUncheckedUpdateManyWithoutDivisionNestedInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedUpdateManyWithoutDivisionNestedInput
 }
 
 export type DivisionCreateManyInput = {
@@ -343,8 +350,9 @@ export type DivisionNullableScalarRelationFilter = {
   isNot?: Prisma.DivisionWhereInput | null
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
+export type DivisionScalarRelationFilter = {
+  is?: Prisma.DivisionWhereInput
+  isNot?: Prisma.DivisionWhereInput
 }
 
 export type DivisionCreateNestedOneWithoutTournamentsInput = {
@@ -379,11 +387,26 @@ export type DivisionUpdateOneWithoutTeamsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.DivisionUpdateToOneWithWhereWithoutTeamsInput, Prisma.DivisionUpdateWithoutTeamsInput>, Prisma.DivisionUncheckedUpdateWithoutTeamsInput>
 }
 
+export type DivisionCreateNestedOneWithoutManualStandingTablesInput = {
+  create?: Prisma.XOR<Prisma.DivisionCreateWithoutManualStandingTablesInput, Prisma.DivisionUncheckedCreateWithoutManualStandingTablesInput>
+  connectOrCreate?: Prisma.DivisionCreateOrConnectWithoutManualStandingTablesInput
+  connect?: Prisma.DivisionWhereUniqueInput
+}
+
+export type DivisionUpdateOneRequiredWithoutManualStandingTablesNestedInput = {
+  create?: Prisma.XOR<Prisma.DivisionCreateWithoutManualStandingTablesInput, Prisma.DivisionUncheckedCreateWithoutManualStandingTablesInput>
+  connectOrCreate?: Prisma.DivisionCreateOrConnectWithoutManualStandingTablesInput
+  upsert?: Prisma.DivisionUpsertWithoutManualStandingTablesInput
+  connect?: Prisma.DivisionWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.DivisionUpdateToOneWithWhereWithoutManualStandingTablesInput, Prisma.DivisionUpdateWithoutManualStandingTablesInput>, Prisma.DivisionUncheckedUpdateWithoutManualStandingTablesInput>
+}
+
 export type DivisionCreateWithoutTournamentsInput = {
   name: string
   isActive?: boolean
   createdAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutDivisionInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableCreateNestedManyWithoutDivisionInput
 }
 
 export type DivisionUncheckedCreateWithoutTournamentsInput = {
@@ -392,6 +415,7 @@ export type DivisionUncheckedCreateWithoutTournamentsInput = {
   isActive?: boolean
   createdAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutDivisionInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedCreateNestedManyWithoutDivisionInput
 }
 
 export type DivisionCreateOrConnectWithoutTournamentsInput = {
@@ -415,6 +439,7 @@ export type DivisionUpdateWithoutTournamentsInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutDivisionNestedInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableUpdateManyWithoutDivisionNestedInput
 }
 
 export type DivisionUncheckedUpdateWithoutTournamentsInput = {
@@ -423,6 +448,7 @@ export type DivisionUncheckedUpdateWithoutTournamentsInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutDivisionNestedInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedUpdateManyWithoutDivisionNestedInput
 }
 
 export type DivisionCreateWithoutTeamsInput = {
@@ -430,6 +456,7 @@ export type DivisionCreateWithoutTeamsInput = {
   isActive?: boolean
   createdAt?: Date | string
   tournaments?: Prisma.TournamentCreateNestedManyWithoutDivisionInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableCreateNestedManyWithoutDivisionInput
 }
 
 export type DivisionUncheckedCreateWithoutTeamsInput = {
@@ -438,6 +465,7 @@ export type DivisionUncheckedCreateWithoutTeamsInput = {
   isActive?: boolean
   createdAt?: Date | string
   tournaments?: Prisma.TournamentUncheckedCreateNestedManyWithoutDivisionInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedCreateNestedManyWithoutDivisionInput
 }
 
 export type DivisionCreateOrConnectWithoutTeamsInput = {
@@ -461,6 +489,7 @@ export type DivisionUpdateWithoutTeamsInput = {
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tournaments?: Prisma.TournamentUpdateManyWithoutDivisionNestedInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableUpdateManyWithoutDivisionNestedInput
 }
 
 export type DivisionUncheckedUpdateWithoutTeamsInput = {
@@ -468,6 +497,57 @@ export type DivisionUncheckedUpdateWithoutTeamsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  tournaments?: Prisma.TournamentUncheckedUpdateManyWithoutDivisionNestedInput
+  manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedUpdateManyWithoutDivisionNestedInput
+}
+
+export type DivisionCreateWithoutManualStandingTablesInput = {
+  name: string
+  isActive?: boolean
+  createdAt?: Date | string
+  teams?: Prisma.TeamCreateNestedManyWithoutDivisionInput
+  tournaments?: Prisma.TournamentCreateNestedManyWithoutDivisionInput
+}
+
+export type DivisionUncheckedCreateWithoutManualStandingTablesInput = {
+  id?: number
+  name: string
+  isActive?: boolean
+  createdAt?: Date | string
+  teams?: Prisma.TeamUncheckedCreateNestedManyWithoutDivisionInput
+  tournaments?: Prisma.TournamentUncheckedCreateNestedManyWithoutDivisionInput
+}
+
+export type DivisionCreateOrConnectWithoutManualStandingTablesInput = {
+  where: Prisma.DivisionWhereUniqueInput
+  create: Prisma.XOR<Prisma.DivisionCreateWithoutManualStandingTablesInput, Prisma.DivisionUncheckedCreateWithoutManualStandingTablesInput>
+}
+
+export type DivisionUpsertWithoutManualStandingTablesInput = {
+  update: Prisma.XOR<Prisma.DivisionUpdateWithoutManualStandingTablesInput, Prisma.DivisionUncheckedUpdateWithoutManualStandingTablesInput>
+  create: Prisma.XOR<Prisma.DivisionCreateWithoutManualStandingTablesInput, Prisma.DivisionUncheckedCreateWithoutManualStandingTablesInput>
+  where?: Prisma.DivisionWhereInput
+}
+
+export type DivisionUpdateToOneWithWhereWithoutManualStandingTablesInput = {
+  where?: Prisma.DivisionWhereInput
+  data: Prisma.XOR<Prisma.DivisionUpdateWithoutManualStandingTablesInput, Prisma.DivisionUncheckedUpdateWithoutManualStandingTablesInput>
+}
+
+export type DivisionUpdateWithoutManualStandingTablesInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teams?: Prisma.TeamUpdateManyWithoutDivisionNestedInput
+  tournaments?: Prisma.TournamentUpdateManyWithoutDivisionNestedInput
+}
+
+export type DivisionUncheckedUpdateWithoutManualStandingTablesInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  teams?: Prisma.TeamUncheckedUpdateManyWithoutDivisionNestedInput
   tournaments?: Prisma.TournamentUncheckedUpdateManyWithoutDivisionNestedInput
 }
 
@@ -479,11 +559,13 @@ export type DivisionUncheckedUpdateWithoutTeamsInput = {
 export type DivisionCountOutputType = {
   teams: number
   tournaments: number
+  manualStandingTables: number
 }
 
 export type DivisionCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   teams?: boolean | DivisionCountOutputTypeCountTeamsArgs
   tournaments?: boolean | DivisionCountOutputTypeCountTournamentsArgs
+  manualStandingTables?: boolean | DivisionCountOutputTypeCountManualStandingTablesArgs
 }
 
 /**
@@ -510,6 +592,13 @@ export type DivisionCountOutputTypeCountTournamentsArgs<ExtArgs extends runtime.
   where?: Prisma.TournamentWhereInput
 }
 
+/**
+ * DivisionCountOutputType without action
+ */
+export type DivisionCountOutputTypeCountManualStandingTablesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.LeagueManualStandingTableWhereInput
+}
+
 
 export type DivisionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -518,6 +607,7 @@ export type DivisionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   createdAt?: boolean
   teams?: boolean | Prisma.Division$teamsArgs<ExtArgs>
   tournaments?: boolean | Prisma.Division$tournamentsArgs<ExtArgs>
+  manualStandingTables?: boolean | Prisma.Division$manualStandingTablesArgs<ExtArgs>
   _count?: boolean | Prisma.DivisionCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["division"]>
 
@@ -546,6 +636,7 @@ export type DivisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs =
 export type DivisionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   teams?: boolean | Prisma.Division$teamsArgs<ExtArgs>
   tournaments?: boolean | Prisma.Division$tournamentsArgs<ExtArgs>
+  manualStandingTables?: boolean | Prisma.Division$manualStandingTablesArgs<ExtArgs>
   _count?: boolean | Prisma.DivisionCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type DivisionIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -556,6 +647,7 @@ export type $DivisionPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   objects: {
     teams: Prisma.$TeamPayload<ExtArgs>[]
     tournaments: Prisma.$TournamentPayload<ExtArgs>[]
+    manualStandingTables: Prisma.$LeagueManualStandingTablePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -958,6 +1050,7 @@ export interface Prisma__DivisionClient<T, Null = never, ExtArgs extends runtime
   readonly [Symbol.toStringTag]: "PrismaPromise"
   teams<T extends Prisma.Division$teamsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Division$teamsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TeamPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   tournaments<T extends Prisma.Division$tournamentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Division$tournamentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$TournamentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  manualStandingTables<T extends Prisma.Division$manualStandingTablesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Division$manualStandingTablesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$LeagueManualStandingTablePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1429,6 +1522,30 @@ export type Division$tournamentsArgs<ExtArgs extends runtime.Types.Extensions.In
   take?: number
   skip?: number
   distinct?: Prisma.TournamentScalarFieldEnum | Prisma.TournamentScalarFieldEnum[]
+}
+
+/**
+ * Division.manualStandingTables
+ */
+export type Division$manualStandingTablesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the LeagueManualStandingTable
+   */
+  select?: Prisma.LeagueManualStandingTableSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the LeagueManualStandingTable
+   */
+  omit?: Prisma.LeagueManualStandingTableOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.LeagueManualStandingTableInclude<ExtArgs> | null
+  where?: Prisma.LeagueManualStandingTableWhereInput
+  orderBy?: Prisma.LeagueManualStandingTableOrderByWithRelationInput | Prisma.LeagueManualStandingTableOrderByWithRelationInput[]
+  cursor?: Prisma.LeagueManualStandingTableWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.LeagueManualStandingTableScalarFieldEnum | Prisma.LeagueManualStandingTableScalarFieldEnum[]
 }
 
 /**

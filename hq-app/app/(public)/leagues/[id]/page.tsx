@@ -3,29 +3,12 @@
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFetch } from "@/hooks/use-fetch";
-import { formatDate, calcStandings } from "@/lib/utils";
 import type {
-  League,
-  Tournament,
-  Match,
-  LeagueTeam,
-  TournamentWithMatches,
   LeagueDetailResponse,
+  LeagueManualStandingTable,
 } from "@/types";
-import {
-  computeRoundRobinStandings,
-  applyClassicScoring,
-  StandingRow,
-  TournamentTeam,
-} from "@/lib/standings";
-import LeagueStandingsTable from "@/components/leagues/LeagueStandingsTable";
 
-const statusVariant: Record<string, "default" | "success" | "warning" | "muted"> = {
-  upcoming: "warning",
-  active: "default",
-  to_check: "warning",
-  completed: "muted",
-};
+import LeagueManualStandingsPublicTable from "@/components/leagues/LeagueManualStandingsPublicTable";
 
 const STATUS_LABELS: Record<string, string> = {
   active: "Active",
@@ -58,6 +41,15 @@ function formatDateBlock(dateStr: string) {
     day: d.getDate(),
     year: d.getFullYear(),
   };
+}
+
+function formatDateShort(value: string) {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+  });
 }
 
 function DivisionPills({
@@ -107,7 +99,7 @@ export default function LeagueDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data, loading, error } = useFetch<LeagueDetailResponse>(`/api/leagues/${id}`);
+  const { data, loading, error } = useFetch<LeagueDetailResponse>(`/api/public/leagues/${id}`);
   const [activeTab, setActiveTab] = useState<Tab>("tournaments");
   const [tournamentDivFilter, setTournamentDivFilter] = useState<DivFilter>("all");
   const [teamDivFilter, setTeamDivFilter] = useState<DivFilter>("all");
@@ -125,6 +117,10 @@ export default function LeagueDetailPage({
 
     data.teams?.forEach((lt) => {
       if (lt.team?.division) map[lt.team.division.id] = lt.team.division.name;
+    });
+
+    data.manualStandingTables?.forEach((table) => {
+      if (table.division) map[table.division.id] = table.division.name;
     });
 
     return Object.entries(map)
@@ -147,78 +143,83 @@ export default function LeagueDetailPage({
     return data.teams.filter((lt) => lt.team?.divisionId === teamDivFilter);
   }, [data, teamDivFilter]);
 
-  const standingsByDivision = useMemo(() => {
-    if (!data?.tournaments) return [];
+  const manualStandingsByDivision = useMemo(() => {
+    if (!data?.manualStandingTables) return [];
 
-    type Group = {
-      divisionId: number | null;
-      divisionName: string;
-      tournaments: TournamentWithMatches[];
-    };
+    return data.manualStandingTables
+      .filter((table) => table.divisionId != null)
+      .map((table) => {
+        const teams =
+          data.teams
+            ?.filter((lt) => lt.team?.divisionId === table.divisionId)
+            .map((lt) => lt.team)
+            .filter(Boolean) ?? [];
 
-    const groups: Record<string, Group> = {};
+        const scoreMap = new Map<string, { score: number | null; eventRank: number | null }>();
 
-    data.tournaments.forEach((t) => {
-      const divId = t.divisionId ?? t.division?.id ?? null;
-      const key = divId != null ? String(divId) : "unassigned";
+        table.days.forEach((day) => {
+          day.scores.forEach((score) => {
+            scoreMap.set(`${day.id}:${score.teamId}`, {
+              score: score.score,
+              eventRank: score.eventRank ?? null,
+            });
+          });
+        });
 
-      if (!groups[key]) {
-        groups[key] = {
-          divisionId: divId,
-          divisionName: t.division?.name ?? "Unassigned",
-          tournaments: [],
-        };
-      }
+        const rows = teams.map((team) => {
+          let totalScore = 0;
+          let hasAnyScore = false;
 
-      groups[key].tournaments.push(t);
-    });
+          const cells = table.days.map((day) => {
+            const saved = scoreMap.get(`${day.id}:${team!.id}`);
 
-    return Object.values(groups)
-      .sort((a, b) => a.divisionName.localeCompare(b.divisionName))
-      .map((group) => {
-        const teamsMap: Record<number, TournamentTeam> = {};
-        const allMatches: Match[] = [];
-
-        group.tournaments.forEach((t) => {
-          t.teams?.forEach((tt) => {
-            if (tt.team) {
-              teamsMap[tt.teamId] = { teamId: tt.teamId, team: tt.team };
+            if (saved?.score != null) {
+              totalScore += saved.score;
+              hasAnyScore = true;
             }
+
+            return {
+              dayId: day.id,
+              savedScore: saved?.score ?? null,
+              savedEventRank: saved?.eventRank ?? null,
+            };
           });
 
-          t.matches?.forEach((m) => allMatches.push(m));
+          return {
+            team: team!,
+            totalScore: hasAnyScore ? totalScore : null,
+            hasAnyScore,
+            cells,
+          };
         });
 
-        const enrolledTeams =
-          data.teams?.filter((lt) => (lt.team?.divisionId ?? null) === group.divisionId) ?? [];
-
-        enrolledTeams.forEach((lt) => {
-          if (lt.team && !teamsMap[lt.teamId]) {
-            teamsMap[lt.teamId] = { teamId: lt.teamId, team: lt.team };
-          }
+        rows.sort((a, b) => {
+          const aScore = a.totalScore ?? -1;
+          const bScore = b.totalScore ?? -1;
+          if (bScore !== aScore) return bScore - aScore;
+          return a.team.name.localeCompare(b.team.name);
         });
 
-        const teamsList = Object.values(teamsMap);
-        const isClassic = group.tournaments.some((t) => t.type === "round_robin_classic");
-
-        let standings = computeRoundRobinStandings(teamsList, allMatches);
-        if (isClassic) {
-          standings = applyClassicScoring(standings, allMatches);
-        }
+        const rankedRows = rows.map((row, index) => ({
+          ...row,
+          place: row.hasAnyScore ? index + 1 : null,
+        }));
 
         return {
-          divisionName: group.divisionName,
-          standings,
-          showBodyCount: isClassic,
+          table,
+          divisionId: table.divisionId,
+          divisionName: table.division?.name ?? "Unassigned",
+          rows: rankedRows,
         };
       });
   }, [data]);
 
   const visibleStandingsGroups = useMemo(() => {
-    if (standingsDivFilter === "all") return standingsByDivision;
-    const selectedName = divisions.find((d) => d.id === standingsDivFilter)?.name;
-    return standingsByDivision.filter((g) => g.divisionName === selectedName);
-  }, [standingsByDivision, standingsDivFilter, divisions]);
+    if (standingsDivFilter === "all") return manualStandingsByDivision;
+    return manualStandingsByDivision.filter(
+      (group) => group.divisionId === standingsDivFilter
+    );
+  }, [manualStandingsByDivision, standingsDivFilter]);
 
   if (loading) {
     return (
@@ -252,7 +253,7 @@ export default function LeagueDetailPage({
 
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "tournaments", label: "Tournaments", count: data.tournaments?.length ?? 0 },
-    { key: "standings", label: "Standings", count: standingsByDivision.length },
+    { key: "standings", label: "Standings", count: manualStandingsByDivision.length },
     { key: "teams", label: "Teams", count: data.teams?.length ?? 0 },
   ];
 
@@ -480,7 +481,7 @@ export default function LeagueDetailPage({
       )}
 
       {activeTab === "standings" && (
-        <section className="space-y-10">
+        <section className="space-y-6">
           <DivisionPills
             divisions={divisions}
             value={standingsDivFilter}
@@ -491,33 +492,20 @@ export default function LeagueDetailPage({
             <div className="text-center py-12 text-gray-400 dark:text-gray-500">
               <p className="text-4xl mb-3">🏆</p>
               <p className="text-lg font-medium">No standings yet</p>
-              <p className="text-sm mt-1">Standings will appear once matches are played</p>
+              <p className="text-sm mt-1">
+                Standings will appear once manual rankings are added
+              </p>
             </div>
           ) : (
             visibleStandingsGroups.map((group) => (
-              <div key={group.divisionName} className="space-y-2">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  {group.divisionName}
-                </h3>
-                {group.standings.length === 0 ? (
-                  <p className="text-sm text-gray-400 dark:text-gray-500">
-                    No matches played yet
-                  </p>
-                ) : (
-                  <LeagueStandingsTable
-                    standings={group.standings}
-                    showBodyCount={group.showBodyCount}
-                  />
-                )}
-              </div>
-            ))
-          )}
-
-          {visibleStandingsGroups.length > 0 && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              Points: Win = 3 · Draw = 1 · Loss = 0
-            </p>
-          )}
+            <LeagueManualStandingsPublicTable
+              key={group.divisionId}
+              divisionName={group.divisionName}
+              days={group.table.days}
+              rows={group.rows}
+            />
+          )
+          ))}
         </section>
       )}
 

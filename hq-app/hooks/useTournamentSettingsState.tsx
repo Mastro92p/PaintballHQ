@@ -107,30 +107,31 @@ export function useTournamentSettingsState({
     return Object.keys(errors).length === 0;
   }
 
-  function openTournamentSettings() {
-    if (!tournament) return;
+function openTournamentSettings() {
+  if (!tournament) return;
 
-    const fc = (tournament.formatConfig ?? {}) as Partial<FormatConfig>;
+  const fc = (tournament.formatConfig ?? {}) as Partial<FormatConfig>;
 
-    setSettingsForm({
-      name: tournament.name ?? "",
-      date: tournament.date?.slice(0, 10) ?? "",
-      location: tournament.location ?? "",
-      status: tournament.status ?? "upcoming",
-      type: (tournament.type as Tournament["type"]) ?? "round_robin",
-      divisionId: tournament.divisionId != null ? String(tournament.divisionId) : "",
-      managementMode: tournament.managementMode ?? "auto",
-      groupCount: String(fc.groupCount ?? 2),
-      teamsPerGroup: String(fc.teamsPerGroup ?? 4),
-      qualifiersPerGroup: String(fc.qualifiersPerGroup ?? 2),
-      wildCardCount: String(fc.wildCardCount ?? 2),
-      bracketSeedingRule: fc.bracketSeedingRule ?? "crossover",
-      thirdPlaceMatch: fc.thirdPlaceMatch ?? false,
-    });
+  setSettingsForm({
+    name: tournament.name ?? "",
+    date: tournament.date?.slice(0, 10) ?? "",
+    location: tournament.location ?? "",
+    status: tournament.status ?? "upcoming",
+    type: (tournament.type as Tournament["type"]) ?? "round_robin",
+    divisionId: tournament.divisionId != null ? String(tournament.divisionId) : "",
+    managementMode: tournament.managementMode ?? "auto",
+    groupCount: String(fc.groupCount ?? 2),
+    teamsPerGroup: String(fc.teamsPerGroup ?? 4),
+    qualifiersPerGroup: String(fc.qualifiersPerGroup ?? 2),
+    wildCardCount: String(fc.wildCardCount ?? 2),
+    bracketSeedingRule: fc.bracketSeedingRule ?? "crossover",
+    thirdPlaceMatch: fc.thirdPlaceMatch ?? false,
+    isHidden: tournament.isHidden ?? false,
+  });
 
-    setSettingsErrors({});
-    setSettingsOpen(true);
-  }
+  setSettingsErrors({});
+  setSettingsOpen(true);
+}
 
   async function handleSaveTournamentSettings() {
     if (!tournament) return;
@@ -148,6 +149,7 @@ export function useTournamentSettingsState({
       status: settingsForm.status,
       type: settingsForm.type,
       divisionId: settingsForm.divisionId ? Number(settingsForm.divisionId) : null,
+      isHidden: settingsForm.isHidden,
       ...(settingsForm.type === "group_and_bracket" && {
         managementMode: settingsForm.managementMode,
       }),

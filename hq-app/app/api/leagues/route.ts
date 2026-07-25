@@ -19,26 +19,29 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body: CreateLeagueBody = await req.json()
+    const body: CreateLeagueBody = await req.json();
     if (!body.name?.trim()) {
       return apiError("League name is required");
     }
+
     const league = await prisma.league.create({
       data: {
         name: body.name.trim(),
         description: body.description?.trim() ?? null,
         logoUrl: body.logoUrl?.trim() ?? null,
+        isHidden: body.isHidden ?? false,
         teams: body.teamIds?.length
-          ? { create: body.teamIds.map(teamId => ({ teamId })) }
+          ? { create: body.teamIds.map((teamId) => ({ teamId })) }
           : undefined,
       },
       include: {
         tournaments: true,
         teams: { include: { team: true } },
       },
-    })
-    return Response.json(league, { status: 201 })
+    });
+
+    return Response.json(league, { status: 201 });
   } catch {
-    return apiError('Failed to create league', 500)
+    return apiError("Failed to create league", 500);
   }
 }

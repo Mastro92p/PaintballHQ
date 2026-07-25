@@ -61,7 +61,10 @@ export const ModelName = {
   Match: 'Match',
   User: 'User',
   TournamentGroup: 'TournamentGroup',
-  TournamentTeamGroup: 'TournamentTeamGroup'
+  TournamentTeamGroup: 'TournamentTeamGroup',
+  LeagueManualStandingTable: 'LeagueManualStandingTable',
+  LeagueManualStandingDay: 'LeagueManualStandingDay',
+  LeagueManualStandingScore: 'LeagueManualStandingScore'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -85,7 +88,8 @@ export const LeagueScalarFieldEnum = {
   name: 'name',
   description: 'description',
   logoUrl: 'logoUrl',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  isHidden: 'isHidden'
 } as const
 
 export type LeagueScalarFieldEnum = (typeof LeagueScalarFieldEnum)[keyof typeof LeagueScalarFieldEnum]
@@ -122,7 +126,8 @@ export const TournamentScalarFieldEnum = {
   type: 'type',
   formatConfig: 'formatConfig',
   divisionId: 'divisionId',
-  managementMode: 'managementMode'
+  managementMode: 'managementMode',
+  isHidden: 'isHidden'
 } as const
 
 export type TournamentScalarFieldEnum = (typeof TournamentScalarFieldEnum)[keyof typeof TournamentScalarFieldEnum]
@@ -219,6 +224,44 @@ export const TournamentTeamGroupScalarFieldEnum = {
 } as const
 
 export type TournamentTeamGroupScalarFieldEnum = (typeof TournamentTeamGroupScalarFieldEnum)[keyof typeof TournamentTeamGroupScalarFieldEnum]
+
+
+export const LeagueManualStandingTableScalarFieldEnum = {
+  id: 'id',
+  leagueId: 'leagueId',
+  divisionId: 'divisionId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeagueManualStandingTableScalarFieldEnum = (typeof LeagueManualStandingTableScalarFieldEnum)[keyof typeof LeagueManualStandingTableScalarFieldEnum]
+
+
+export const LeagueManualStandingDayScalarFieldEnum = {
+  id: 'id',
+  tableId: 'tableId',
+  tournamentId: 'tournamentId',
+  label: 'label',
+  date: 'date',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeagueManualStandingDayScalarFieldEnum = (typeof LeagueManualStandingDayScalarFieldEnum)[keyof typeof LeagueManualStandingDayScalarFieldEnum]
+
+
+export const LeagueManualStandingScoreScalarFieldEnum = {
+  id: 'id',
+  dayId: 'dayId',
+  teamId: 'teamId',
+  score: 'score',
+  eventRank: 'eventRank',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeagueManualStandingScoreScalarFieldEnum = (typeof LeagueManualStandingScoreScalarFieldEnum)[keyof typeof LeagueManualStandingScoreScalarFieldEnum]
 
 
 export const SortOrder = {

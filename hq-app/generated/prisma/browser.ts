@@ -72,3 +72,18 @@ export type TournamentGroup = Prisma.TournamentGroupModel
  * 
  */
 export type TournamentTeamGroup = Prisma.TournamentTeamGroupModel
+/**
+ * Model LeagueManualStandingTable
+ * 
+ */
+export type LeagueManualStandingTable = Prisma.LeagueManualStandingTableModel
+/**
+ * Model LeagueManualStandingDay
+ * 
+ */
+export type LeagueManualStandingDay = Prisma.LeagueManualStandingDayModel
+/**
+ * Model LeagueManualStandingScore
+ * 
+ */
+export type LeagueManualStandingScore = Prisma.LeagueManualStandingScoreModel

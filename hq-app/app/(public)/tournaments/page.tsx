@@ -14,7 +14,7 @@ import type { Division } from "@/types";
 import type { TournamentWithDetails } from "@/lib/tournamentList";
 
 export default function TournamentsPage() {
-  const { data, loading, error } = useFetch<TournamentWithDetails[]>("/api/tournaments");
+  const { data, loading, error } = useFetch<TournamentWithDetails[]>("/api/public/tournaments");
   const { data: divisions } = useFetch<Division[]>("/api/divisions");
   const router = useRouter();
 

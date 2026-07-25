@@ -92,6 +92,7 @@ export async function PATCH(
         ...(body.formatConfig !== undefined && { formatConfig: body.formatConfig ?? null }),
         ...(body.teamsToAdvance !== undefined && { teamsToAdvance: body.teamsToAdvance }),
         ...(body.leagueId !== undefined && { leagueId: body.leagueId ?? null }),
+        ...(body.isHidden !== undefined && { isHidden: body.isHidden }),
         ...(divisionId !== undefined && { divisionId }),
       },
       include: {

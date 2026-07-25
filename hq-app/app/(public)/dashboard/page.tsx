@@ -23,19 +23,83 @@ const statusBadge: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches] =
-    await Promise.all([
-      prisma.tournament.findMany({ orderBy: { date: "desc" } }),
-      prisma.team.count(),
-      prisma.match.count({ where: { status: "completed" } }),
-      prisma.match.count({ where: { status: "pending" } }),
-      prisma.match.findMany({
-        where: { status: "completed" },
-        orderBy: { createdAt: "desc" },
-        take: 5,
-        include: { teamA: true, teamB: true, tournament: true },
-      }),
-    ]);
+const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches] =
+  await Promise.all([
+    prisma.tournament.findMany({
+      where: {
+        isHidden: false,
+        OR: [
+          { leagueId: null },
+          {
+            league: {
+              is: {
+                isHidden: false,
+              },
+            },
+          },
+        ],
+      },
+      orderBy: { date: "desc" },
+    }),
+    prisma.team.count(),
+    prisma.match.count({
+      where: {
+        status: "completed",
+        tournament: {
+          isHidden: false,
+          OR: [
+            { leagueId: null },
+            {
+              league: {
+                is: {
+                  isHidden: false,
+                },
+              },
+            },
+          ],
+        },
+      },
+    }),
+    prisma.match.count({
+      where: {
+        status: "pending",
+        tournament: {
+          isHidden: false,
+          OR: [
+            { leagueId: null },
+            {
+              league: {
+                is: {
+                  isHidden: false,
+                },
+              },
+            },
+          ],
+        },
+      },
+    }),
+    prisma.match.findMany({
+      where: {
+        status: "completed",
+        tournament: {
+          isHidden: false,
+          OR: [
+            { leagueId: null },
+            {
+              league: {
+                is: {
+                  isHidden: false,
+                },
+              },
+            },
+          ],
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { teamA: true, teamB: true, tournament: true },
+    }),
+  ]);
 
   const activeCount = allTournaments.filter((t) => t.status === "active").length;
   const upcomingCount = allTournaments.filter((t) => t.status === "upcoming").length;

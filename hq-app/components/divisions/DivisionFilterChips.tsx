@@ -24,7 +24,7 @@ export function DivisionFilterChips({
   value,
   onChange,
   includeAll = true,
-  includeUnassigned = true,
+  includeUnassigned = false,
   allLabel = "All",
   highlightInactive = false,
   hideInactive = false,

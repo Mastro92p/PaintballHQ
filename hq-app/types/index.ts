@@ -6,6 +6,7 @@ export type TournamentType =
   | "round_robin"
   | "round_robin_classic"
   | "bracket"
+  | "groups"
   | "group_and_bracket";
 
 export type ManagementMode = "auto" | "manual";
@@ -39,6 +40,7 @@ export interface Tournament {
   divisionId: number | null;
   division?: Division | null;
   managementMode: ManagementMode;
+  isHidden: boolean;
 }
 
 export interface Team {
@@ -139,6 +141,7 @@ export interface CreateTournamentBody {
   divisionId?: number | string | null;
   teamIds?: number[];
   formatConfig?: FormatConfig;
+  isHidden?: boolean;
 }
 
 export interface UpdateTournamentBody {
@@ -153,6 +156,7 @@ export interface UpdateTournamentBody {
   divisionId?: number | string | null;
   teamIds?: number[];
   formatConfig?: FormatConfig;
+  isHidden?: boolean;
 }
 
 export interface CreateTeamBody {
@@ -231,6 +235,7 @@ export interface CreateLeagueBody {
   description?: string;
   logoUrl?: string;
   teamIds?: number[];
+  isHidden?: boolean;
 }
 
 export interface UpdateLeagueBody {
@@ -238,6 +243,7 @@ export interface UpdateLeagueBody {
   description?: string | null;
   logoUrl?: string | null;
   teamIds?: number[];
+  isHidden?: boolean;
 }
 
 export interface League {
@@ -246,6 +252,7 @@ export interface League {
   description: string | null;
   logoUrl: string | null;
   createdAt: string;
+  isHidden: boolean;
   tournaments?: Tournament[];
   teams?: { teamId: number; team: Team }[];
 }
@@ -353,6 +360,7 @@ export type TournamentWithMatches = Tournament & {
 export type LeagueDetailResponse = Omit<League, "tournaments" | "teams"> & {
   tournaments: TournamentWithMatches[];
   teams: LeagueTeam[];
+  manualStandingTables: LeagueManualStandingTable[];
 };
 
 export interface AssignTeamGroupBody {
@@ -364,11 +372,13 @@ export type LeagueFormState = {
   name: string;
   description: string;
   logoUrl: string;
+  isHidden: boolean;
 };
 
 export type LeagueDetail = League & {
   tournaments: TournamentWithDivision[];
   teams: EnrolledTeam[];
+  manualStandingTables?: LeagueManualStandingTable[];
 };
 
 export type TournamentWithDivision = Tournament & {
@@ -378,3 +388,45 @@ export type TournamentWithDivision = Tournament & {
 };
 
 export type LeagueFormErrors = Partial<Record<keyof LeagueFormState, string>>;
+export type LeagueDetailTab = "tournaments" | "teams" | "manual-standings" | "info";
+
+export type LeagueManualStandingScore = {
+  id: number;
+  dayId: number;
+  teamId: number;
+  score: number | null;
+  eventRank: number | null;
+  createdAt: string;
+  updatedAt: string;
+  team?: Team;
+};
+
+export type LeagueManualStandingDay = {
+  id: number;
+  tableId: number;
+  tournamentId: number;
+  label: string;
+  date: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  tournament?: Tournament;
+  scores: LeagueManualStandingScore[];
+};
+
+export type LeagueManualStandingTable = {
+  id: number;
+  leagueId: number;
+  divisionId: number;
+  createdAt: string;
+  updatedAt: string;
+  division?: Division;
+  days: LeagueManualStandingDay[];
+};
+
+export type LeagueManualStandingCellInput = {
+  dayId: number;
+  teamId: number;
+  score: number | null;
+  eventRank?: number | null;
+};

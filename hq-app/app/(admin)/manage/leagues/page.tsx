@@ -15,19 +15,23 @@ import { ManageLeaguesHeader } from "@/components/leagues/ManageLeaguesHeader";
 import { LeaguesTable } from "@/components/leagues/LeaguesTable";
 import { LeagueFormModal } from "@/components/leagues/LeagueFormModal";
 
-
-const emptyForm: LeagueFormState = { name: "", description: "", logoUrl: "" };
+const emptyForm: LeagueFormState = {
+  name: "",
+  description: "",
+  logoUrl: "",
+  isHidden: false,
+};
 
 export default function ManageLeaguesPage() {
   const { data, loading, error } = useFetch<League[]>("/api/leagues");
 
-  const [modalOpen, setModalOpen]     = useState(false);
-  const [editing, setEditing]         = useState<League | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<League | null>(null);
   const [form, setForm] = useState<LeagueFormState>(emptyForm);
   const [formErrors, setFormErrors] = useState<LeagueFormErrors>({});
-  const [saving, setSaving]           = useState(false);
-  const [deleting, setDeleting]       = useState<number | null>(null);
-  const [search, setSearch]           = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
   const [localLeagues, setLocalLeagues] = useState<League[]>([]);
 
   useEffect(() => {
@@ -51,9 +55,10 @@ export default function ManageLeaguesPage() {
   function openEdit(l: League) {
     setEditing(l);
     setForm({
-      name:        l.name,
+      name: l.name,
       description: l.description ?? "",
-      logoUrl:     l.logoUrl ?? "",
+      logoUrl: l.logoUrl ?? "",
+      isHidden: l.isHidden ?? false,
     });
     setFormErrors({});
     setModalOpen(true);
@@ -90,6 +95,7 @@ export default function ManageLeaguesPage() {
       name: form.name,
       description: form.description || undefined,
       logoUrl: form.logoUrl || undefined,
+      isHidden: form.isHidden,
     };
 
     try {
@@ -209,16 +215,13 @@ export default function ManageLeaguesPage() {
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
-      {/* Header */}
       <ManageLeaguesHeader onCreate={openCreate} />
 
-      {/* Search */}
       <SearchInput
         value={search}
         onChange={setSearch}
         placeholder="Search leagues..."
       />
-
 
       <LeaguesTable
         leagues={filtered}
@@ -229,7 +232,6 @@ export default function ManageLeaguesPage() {
         onDelete={handleDelete}
       />
 
-      {/* Modal */}
       <LeagueFormModal
         open={modalOpen}
         editing={editing}

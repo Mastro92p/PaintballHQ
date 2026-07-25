@@ -1,12 +1,14 @@
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/utils";
-import type { UpdateLeagueBody } from "@/types";
 
 async function ensureManualStandingTablesForLeague(leagueId: number) {
   const league = await prisma.league.findUnique({
     where: { id: leagueId },
     include: {
       tournaments: {
+        where: {
+          isHidden: false,
+        },
         include: {
           division: true,
         },
@@ -105,9 +107,7 @@ async function ensureManualStandingTablesForLeague(leagueId: number) {
     }
 
     const tournamentIds = new Set(tournaments.map((t) => t.id));
-    const staleDays = existingDays.filter((day) => {
-      return !tournamentIds.has(day.tournamentId);
-    });
+    const staleDays = existingDays.filter((day) => !tournamentIds.has(day.tournamentId));
 
     if (staleDays.length > 0) {
       await prisma.leagueManualStandingDay.deleteMany({
@@ -123,11 +123,17 @@ async function ensureManualStandingTablesForLeague(leagueId: number) {
   return true;
 }
 
-async function getLeagueDetail(id: number) {
-  return prisma.league.findUnique({
-    where: { id },
+async function getPublicLeagueDetail(id: number) {
+  return prisma.league.findFirst({
+    where: {
+      id,
+      isHidden: false,
+    },
     include: {
       tournaments: {
+        where: {
+          isHidden: false,
+        },
         include: {
           division: true,
           teams: {
@@ -190,8 +196,11 @@ export async function GET(
       return apiError("Invalid league id", 400);
     }
 
-    const existingLeague = await prisma.league.findUnique({
-      where: { id },
+    const existingLeague = await prisma.league.findFirst({
+      where: {
+        id,
+        isHidden: false,
+      },
       select: { id: true },
     });
 
@@ -201,7 +210,7 @@ export async function GET(
 
     await ensureManualStandingTablesForLeague(id);
 
-    const league = await getLeagueDetail(id);
+    const league = await getPublicLeagueDetail(id);
 
     if (!league) {
       return apiError("League not found", 404);
@@ -210,103 +219,5 @@ export async function GET(
     return Response.json(league);
   } catch {
     return apiError("Failed to fetch league", 500);
-  }
-}
-
-export async function PATCH(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id: rawId } = await params;
-    const id = parseInt(rawId, 10);
-    const body: UpdateLeagueBody = await req.json();
-
-    if (Number.isNaN(id)) {
-      return apiError("Invalid league id", 400);
-    }
-
-    if (body.name !== undefined && !body.name.trim()) {
-      return apiError("League name is required", 400);
-    }
-
-    const existingLeague = await prisma.league.findUnique({
-      where: { id },
-    });
-
-    if (!existingLeague) {
-      return apiError("League not found", 404);
-    }
-
-    if (body.teamIds !== undefined) {
-      await prisma.leagueTeam.deleteMany({
-        where: { leagueId: id },
-      });
-
-      if (body.teamIds.length > 0) {
-        await prisma.leagueTeam.createMany({
-          data: body.teamIds.map((teamId) => ({
-            leagueId: id,
-            teamId,
-          })),
-        });
-      }
-    }
-
-    await prisma.league.update({
-      where: { id },
-      data: {
-        ...(body.name !== undefined && { name: body.name.trim() }),
-        ...(body.description !== undefined && {
-          description: body.description?.trim() ?? null,
-        }),
-        ...(body.isHidden !== undefined && { isHidden: body.isHidden }),
-        ...(body.logoUrl !== undefined && {
-          logoUrl: body.logoUrl?.trim() ?? null,
-        }),
-      },
-    });
-
-    await ensureManualStandingTablesForLeague(id);
-
-    const league = await getLeagueDetail(id);
-
-    if (!league) {
-      return apiError("League not found", 404);
-    }
-
-    return Response.json(league);
-  } catch {
-    return apiError("Failed to update league", 500);
-  }
-}
-
-export async function DELETE(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id: rawId } = await params;
-    const id = parseInt(rawId, 10);
-
-    if (Number.isNaN(id)) {
-      return apiError("Invalid league id", 400);
-    }
-
-    const existingLeague = await prisma.league.findUnique({
-      where: { id },
-    });
-
-    if (!existingLeague) {
-      return apiError("League not found", 404);
-    }
-
-    await prisma.league.delete({
-      where: { id },
-    });
-
-    return Response.json({ success: true });
-  } catch {
-    return apiError("Failed to delete league", 500);
   }
 }

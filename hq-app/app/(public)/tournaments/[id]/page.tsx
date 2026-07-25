@@ -23,7 +23,7 @@ export default function TournamentPublicPage({
   const [activeTab, setActiveTab] = useState<Tab>("groupStage");
   const [activeBracketId, setActiveBracketId] = useState<number | null>(null);
 
-  const { data, loading, error } = useFetch<TournamentDetail>(`/api/tournaments/${id}`);
+  const { data, loading, error } = useFetch<TournamentDetail>(`/api/public/tournaments/${id}`);
   //const { data: allTeams } = useFetch<Team[]>("/api/teams");
 
   const isRoundRobin = useMemo(
@@ -163,6 +163,8 @@ export default function TournamentPublicPage({
           {activeTab === "groupStage" && (
             <PublicGroupStage
               matches={data.matches}
+              groups={data.groups ?? []}
+              teams={data.teams}
               isGroupAndBracket={isGroupAndBracket}
               hasGroupMatches={hasGroupMatches}
               tournamentType={data.type}

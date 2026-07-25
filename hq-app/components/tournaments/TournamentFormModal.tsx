@@ -39,6 +39,7 @@ export type TournamentFormState = {
   wildCardCount: string;
   bracketSeedingRule: FormatConfig["bracketSeedingRule"];
   thirdPlaceMatch: boolean;
+  isHidden: boolean;
 };
 
 export type TournamentFormErrors = Partial<Record<keyof TournamentFormState, string>>;
@@ -241,22 +242,57 @@ export function TournamentFormModal({
             </Section>
 
             <Section title="Status">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Status
-                </label>
-                <select
-                  value={form.status}
-                  onChange={(e) => setField("status", e.target.value as TournamentStatus)}
-                  className={inputCls("status")}
-                >
-                  {STATUS_OPTIONS.map((s) => (
-                    <option key={s} value={s}>
-                      {STATUS_LABELS[s]}
-                    </option>
-                  ))}
-                </select>
-                <FieldError message={formErrors.status} />
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Status
+                  </label>
+                  <select
+                    value={form.status}
+                    onChange={(e) => setField("status", e.target.value as TournamentStatus)}
+                    className={inputCls("status")}
+                  >
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_LABELS[s]}
+                      </option>
+                    ))}
+                  </select>
+                  <FieldError message={formErrors.status} />
+                </div>
+
+                <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                  <div className="space-y-0.5 pr-4">
+                    <label
+                      htmlFor="tournamentHidden"
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Hidden from public
+                    </label>
+                    <p className="text-xs text-gray-400">
+                      Hidden tournaments are visible only in admin and won’t appear on public pages.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    id="tournamentHidden"
+                    role="switch"
+                    aria-checked={form.isHidden}
+                    onClick={() => setField("isHidden", !form.isHidden)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 ${
+                      form.isHidden
+                        ? "bg-teal-600"
+                        : "bg-gray-200 dark:bg-gray-700"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        form.isHidden ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
             </Section>
           </div>

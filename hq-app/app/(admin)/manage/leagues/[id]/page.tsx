@@ -12,8 +12,9 @@ import { LeagueDetailSkeleton } from "@/components/leagues/LeagueDetailSkeleton"
 import { LeagueNotFoundState } from "@/components/leagues/LeagueNotFoundState";
 import { handleMissingEntity } from "@/lib/handle-missing-entity";
 import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
+import LeagueManualStandingsTab from "@/components/leagues/LeagueManualStandingsTab";
 
-type Tab = "tournaments" | "teams" | "info";
+type Tab = "tournaments" | "teams" | "manual-standings" | "info";
 
 export default function ManageLeagueDetailPage({
   params,
@@ -32,6 +33,7 @@ export default function ManageLeagueDetailPage({
     name: "",
     description: "",
     logoUrl: "",
+    isHidden: false
   });
   const [infoSaving, setInfoSaving] = useState(false);
   const [infoEditing, setInfoEditing] = useState(false);
@@ -66,6 +68,7 @@ export default function ManageLeagueDetailPage({
       name: localLeague.name,
       description: localLeague.description ?? "",
       logoUrl: localLeague.logoUrl ?? "",
+      isHidden: false
     });
   }, [localLeague]);
 
@@ -315,6 +318,11 @@ export default function ManageLeagueDetailPage({
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "tournaments", label: "Tournaments", count: league.tournaments.length },
     { key: "teams", label: "Teams", count: league.teams.length },
+    {
+      key: "manual-standings",
+      label: "Manual standings",
+      count: league.manualStandingTables?.length ?? 0,
+    },
     { key: "info", label: "Info" },
   ];
 
@@ -361,6 +369,15 @@ export default function ManageLeagueDetailPage({
           onRemoveAll={removeAll}
           onReset={resetTeamChanges}
           onSave={handleTeamBulkSave}
+        />
+      )}
+
+      {activeTab === "manual-standings" && (
+        <LeagueManualStandingsTab
+          leagueId={league.id}
+          tables={league.manualStandingTables ?? []}
+          leagueTeams={league.teams}
+          onUpdated={reloadLeague}
         />
       )}
 

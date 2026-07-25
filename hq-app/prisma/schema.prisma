@@ -14,8 +14,11 @@ model League {
   logoUrl     String?
   createdAt   DateTime     @default(now())
 
+  isHidden    Boolean  @default(false)
+
   teams       LeagueTeam[]
   tournaments Tournament[]
+  manualStandingTables LeagueManualStandingTable[]
 }
 
 model LeagueTeam {
@@ -37,6 +40,7 @@ model Division {
 
   teams       Team[]
   tournaments Tournament[]
+  manualStandingTables LeagueManualStandingTable[]
 }
 
 model Tournament {
@@ -53,12 +57,15 @@ model Tournament {
   divisionId     Int?
   managementMode String   @default("auto")
 
-  matches  Match[]
-  division Division? @relation(fields: [divisionId], references: [id])
-  league   League?   @relation(fields: [leagueId], references: [id])
-  groups   TournamentGroup[]
-  teams    TournamentTeam[]
-  brackets TournamentBracket[]
+  isHidden    Boolean  @default(false)
+
+  matches            Match[]
+  division           Division? @relation(fields: [divisionId], references: [id])
+  league             League?   @relation(fields: [leagueId], references: [id])
+  groups             TournamentGroup[]
+  teams              TournamentTeam[]
+  brackets           TournamentBracket[]
+  manualStandingDays LeagueManualStandingDay[]
 }
 
 model Team {
@@ -74,6 +81,7 @@ model Team {
   matchesB    Match[] @relation("TeamB")
   division    Division? @relation(fields: [divisionId], references: [id])
   tournaments TournamentTeam[]
+  manualStandingScores LeagueManualStandingScore[]
 }
 
 model TournamentTeam {
@@ -173,4 +181,55 @@ model TournamentTeamGroup {
   tournamentTeam TournamentTeam  @relation(fields: [tournamentId, teamId], references: [tournamentId, teamId], onDelete: Cascade)
 
   @@id([tournamentId, teamId, groupId])
+}
+
+model LeagueManualStandingTable {
+  id         Int    @id @default(autoincrement())
+  leagueId   Int
+  divisionId Int
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  league     League   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  division   Division @relation(fields: [divisionId], references: [id], onDelete: Cascade)
+  days       LeagueManualStandingDay[]
+
+  @@unique([leagueId, divisionId])
+  @@index([leagueId])
+  @@index([divisionId])
+}
+
+model LeagueManualStandingDay {
+  id           Int                       @id @default(autoincrement())
+  tableId       Int
+  tournamentId  Int
+  label         String
+  date          String
+  sortOrder     Int
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+
+  table         LeagueManualStandingTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  tournament    Tournament                @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  scores        LeagueManualStandingScore[]
+
+  @@unique([tableId, tournamentId])
+}
+
+model LeagueManualStandingScore {
+  id         Int  @id @default(autoincrement())
+  dayId       Int
+  teamId      Int
+  score       Int?
+  eventRank   Int?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  day         LeagueManualStandingDay @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  team        Team                    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([dayId, teamId])
+  @@index([teamId])
 }

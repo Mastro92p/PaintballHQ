@@ -78,6 +78,24 @@ export function LeagueFormModal({
             />
           </div>
 
+                    <label className="flex items-start justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Hidden from public
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Hidden leagues are visible only in admin and won’t appear on public pages.
+              </p>
+            </div>
+
+            <input
+              type="checkbox"
+              checked={form.isHidden}
+              onChange={(e) => onChange({ isHidden: e.target.checked })}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-teal-600 focus:ring-teal-600"
+            />
+          </label>
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" type="button" onClick={onClose}>
               Cancel

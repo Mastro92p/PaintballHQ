@@ -11,7 +11,7 @@ type LeagueWithDetails = League & {
 };
 
 export default function LeaguesPage() {
-  const { data, loading, error } = useFetch<LeagueWithDetails[]>("/api/leagues");
+  const { data, loading, error } = useFetch<LeagueWithDetails[]>("/api/public/leagues");
   const [search, setSearch] = useState("");
   const router = useRouter();
 

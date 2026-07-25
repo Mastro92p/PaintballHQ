@@ -1,11 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Match } from "@/types";
+import type { Match, Team } from "@/types";
 import { getClassicMatchResult } from "@/lib/utils";
+
+type GroupLike = {
+  id: number;
+  name: string;
+  order?: number | null;
+};
+
+type TournamentTeamLike = {
+  teamId: number;
+  team?: Team | null;
+  groupLinks?: Array<{
+    groupId: number;
+  }> | null;
+};
 
 type PublicGroupStageProps = {
   matches: Match[];
+  groups: GroupLike[];
+  teams: TournamentTeamLike[];
   isGroupAndBracket: boolean;
   tournamentType:
     | "round_robin"
@@ -38,6 +54,8 @@ function getPublicRoundHeading(round: number, matches: Match[]) {
 
 export default function PublicGroupStage({
   matches,
+  groups,
+  teams,
   isGroupAndBracket,
   hasGroupMatches,
   tournamentType,
@@ -46,6 +64,56 @@ export default function PublicGroupStage({
   const isRoundRobin =
     isRoundRobinProp ?? ROUND_ROBIN_TYPES.includes(tournamentType);
   const isClassic = tournamentType === "round_robin_classic";
+
+  const groupDefinitions = useMemo(() => {
+    if (isRoundRobin) {
+      return [{ id: 0, name: "All", order: 0 }];
+    }
+
+    return [...groups].sort(
+      (a, b) =>
+        (a.order ?? Number.MAX_SAFE_INTEGER) -
+          (b.order ?? Number.MAX_SAFE_INTEGER) || a.name.localeCompare(b.name)
+    );
+  }, [groups, isRoundRobin]);
+
+  const teamsByGroup = useMemo(() => {
+    if (isRoundRobin) {
+      return {
+        All: teams
+          .map((entry) => entry.team)
+          .filter((team): team is Team => Boolean(team))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      };
+    }
+
+    const acc: Record<string, Team[]> = {};
+
+    for (const group of groupDefinitions) {
+      acc[group.name] = [];
+    }
+
+    for (const entry of teams) {
+      if (!entry.team) continue;
+
+      const linkIds = (entry.groupLinks ?? [])
+        .map((link) => link.groupId)
+        .filter((id): id is number => typeof id === "number");
+
+      for (const groupId of linkIds) {
+        const group = groupDefinitions.find((g) => g.id === groupId);
+        if (!group) continue;
+        acc[group.name] ??= [];
+        acc[group.name].push(entry.team);
+      }
+    }
+
+    for (const key of Object.keys(acc)) {
+      acc[key] = acc[key].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return acc;
+  }, [teams, groupDefinitions, isRoundRobin]);
 
   const groupMatchesByGroup = useMemo(() => {
     const groupPhaseMatches = matches.filter((m) => m.phase === "group");
@@ -59,23 +127,32 @@ export default function PublicGroupStage({
       };
     }
 
-    return groupPhaseMatches.reduce<
+    const seeded = groupDefinitions.reduce<
       Record<string, { order: number; matches: Match[] }>
-    >((acc, m) => {
-      const groupName = m.group?.name?.trim() || "Ungrouped";
-      const groupOrder = m.group?.order ?? Number.MAX_SAFE_INTEGER;
+    >((acc, group) => {
+      acc[group.name] = {
+        order: group.order ?? Number.MAX_SAFE_INTEGER,
+        matches: [],
+      };
+      return acc;
+    }, {});
 
-      if (!acc[groupName]) {
-        acc[groupName] = {
+    for (const match of groupPhaseMatches) {
+      const groupName = match.group?.name?.trim() || "Ungrouped";
+      const groupOrder = match.group?.order ?? Number.MAX_SAFE_INTEGER;
+
+      if (!seeded[groupName]) {
+        seeded[groupName] = {
           order: groupOrder,
           matches: [],
         };
       }
 
-      acc[groupName].matches.push(m);
-      return acc;
-    }, {});
-  }, [matches, isRoundRobin]);
+      seeded[groupName].matches.push(match);
+    }
+
+    return seeded;
+  }, [matches, groupDefinitions, isRoundRobin]);
 
   const groupTabs = useMemo(
     () =>
@@ -103,6 +180,14 @@ export default function PublicGroupStage({
       (a, b) => (a.round ?? 0) - (b.round ?? 0) || a.id - b.id
     );
   }, [activeGroup, groupMatchesByGroup]);
+
+  const activeTeams = useMemo(() => {
+    if (isRoundRobin) {
+      return teamsByGroup.All ?? [];
+    }
+
+    return activeGroup ? teamsByGroup[activeGroup] ?? [] : [];
+  }, [activeGroup, teamsByGroup, isRoundRobin]);
 
   const matchesByRound = useMemo(() => {
     if (!isRoundRobin) return {};
@@ -137,6 +222,23 @@ export default function PublicGroupStage({
         bodyCount: number;
       }
     > = {};
+
+    for (const team of activeTeams) {
+      rows[team.id] = {
+        teamId: team.id,
+        teamName: team.name,
+        teamLogoUrl: team.logoUrl ?? null,
+        played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        gf: 0,
+        ga: 0,
+        gd: 0,
+        points: 0,
+        bodyCount: 0,
+      };
+    }
 
     for (const match of activeMatches) {
       if (match.teamAId && !rows[match.teamAId]) {
@@ -243,7 +345,7 @@ export default function PublicGroupStage({
           b.gf - a.gf ||
           a.teamName.localeCompare(b.teamName)
       );
-  }, [activeMatches, isClassic]);
+  }, [activeMatches, activeTeams, isClassic]);
 
   if (groupTabs.length === 0) {
     return (
@@ -253,7 +355,7 @@ export default function PublicGroupStage({
             {isRoundRobin ? "Standings & Matches" : "Group Stage"}
           </h2>
           <p className="mt-1 text-sm text-slate-400">
-            No {isRoundRobin ? "matches" : "group stage matches"} available yet.
+            No groups or matches available yet.
           </p>
         </div>
       </section>
@@ -415,7 +517,7 @@ export default function PublicGroupStage({
         <p className="mt-1 text-sm text-slate-400">
           {isRoundRobin
             ? "Full round robin standings and fixtures."
-            : "Browse matches by group."}
+            : "Browse groups, standings, and fixtures."}
         </p>
       </div>
 
@@ -425,6 +527,7 @@ export default function PublicGroupStage({
             {groupTabs.map((group) => {
               const isActive = activeGroup === group;
               const count = groupMatchesByGroup[group]?.matches.length ?? 0;
+              const teamCount = teamsByGroup[group]?.length ?? 0;
 
               return (
                 <button
@@ -437,7 +540,7 @@ export default function PublicGroupStage({
                       : "text-slate-300 hover:bg-white/5 hover:text-white",
                   ].join(" ")}
                 >
-                  <span>{`${group}`}</span>
+                  <span>{group}</span>
                   <span
                     className={[
                       "rounded-full px-1.5 py-0.5 text-xs tabular-nums",
@@ -446,7 +549,7 @@ export default function PublicGroupStage({
                         : "bg-white/10 text-slate-400",
                     ].join(" ")}
                   >
-                    {count}
+                    {teamCount}T / {count}M
                   </span>
                 </button>
               );
@@ -481,13 +584,12 @@ export default function PublicGroupStage({
                   <th className="px-3 py-3 text-left font-medium">#</th>
                   <th className="px-3 py-3 text-left font-medium">Team</th>
                   <th className="px-3 py-3 text-right font-medium">P</th>
-                  <th className="px-3 py-3 text-right font-medium text-emerald-400/80">
-                    W
-                  </th>
+                  <th className="px-3 py-3 text-right font-medium text-emerald-400/80">W</th>
                   <th className="px-3 py-3 text-right font-medium">D</th>
-                  <th className="px-3 py-3 text-right font-medium text-red-400/80">
-                    L
-                  </th>
+                  <th className="px-3 py-3 text-right font-medium text-red-400/80">L</th>
+                  <th className="px-3 py-3 text-right font-medium">GF</th>
+                  <th className="px-3 py-3 text-right font-medium">GA</th>
+                  <th className="px-3 py-3 text-right font-medium">GD</th>
                   {isClassic && (
                     <th className="px-3 py-3 text-right font-medium text-sky-400/80">
                       BC
@@ -522,17 +624,14 @@ export default function PublicGroupStage({
                         <span>{row.teamName}</span>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-right text-slate-300">
-                      {row.played}
-                    </td>
-                    <td className="px-3 py-3 text-right font-semibold text-emerald-400">
-                      {row.wins}
-                    </td>
-                    <td className="px-3 py-3 text-right text-slate-300">
-                      {row.draws}
-                    </td>
-                    <td className="px-3 py-3 text-right font-semibold text-red-400">
-                      {row.losses}
+                    <td className="px-3 py-3 text-right text-slate-300">{row.played}</td>
+                    <td className="px-3 py-3 text-right font-semibold text-emerald-400">{row.wins}</td>
+                    <td className="px-3 py-3 text-right text-slate-300">{row.draws}</td>
+                    <td className="px-3 py-3 text-right font-semibold text-red-400">{row.losses}</td>
+                    <td className="px-3 py-3 text-right text-slate-300 tabular-nums">{row.gf}</td>
+                    <td className="px-3 py-3 text-right text-slate-300 tabular-nums">{row.ga}</td>
+                    <td className="px-3 py-3 text-right text-slate-300 tabular-nums">
+                      {row.gd > 0 ? `+${row.gd}` : row.gd}
                     </td>
                     {isClassic && (
                       <td className="px-3 py-3 text-right text-sky-400 tabular-nums">
@@ -551,21 +650,35 @@ export default function PublicGroupStage({
 
         {isRoundRobin ? (
           <div className="mt-4 space-y-6">
-            {roundKeys.map((round) => (
-              <div key={round} className="space-y-3">
-                <h4 className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
-                  <span>{getPublicRoundHeading(round, matchesByRound[round])}</span>
-                  <span className="h-px flex-1 bg-white/10" />
-                </h4>
-                <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                  {matchesByRound[round].map((match) => renderMatchCard(match))}
+            {roundKeys.length > 0 ? (
+              roundKeys.map((round) => (
+                <div key={round} className="space-y-3">
+                  <h4 className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                    <span>{getPublicRoundHeading(round, matchesByRound[round])}</span>
+                    <span className="h-px flex-1 bg-white/10" />
+                  </h4>
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    {matchesByRound[round].map((match) => renderMatchCard(match))}
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-6 text-sm text-slate-400">
+                No fixtures available yet.
               </div>
-            ))}
+            )}
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {activeMatches.map((match) => renderMatchCard(match))}
+          <div className="mt-4">
+            {activeMatches.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                {activeMatches.map((match) => renderMatchCard(match))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-6 text-sm text-slate-400">
+                No matches scheduled for this group yet.
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -394,7 +394,10 @@ export const ModelName = {
   Match: 'Match',
   User: 'User',
   TournamentGroup: 'TournamentGroup',
-  TournamentTeamGroup: 'TournamentTeamGroup'
+  TournamentTeamGroup: 'TournamentTeamGroup',
+  LeagueManualStandingTable: 'LeagueManualStandingTable',
+  LeagueManualStandingDay: 'LeagueManualStandingDay',
+  LeagueManualStandingScore: 'LeagueManualStandingScore'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -410,7 +413,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "league" | "leagueTeam" | "division" | "tournament" | "team" | "tournamentTeam" | "tournamentBracket" | "match" | "user" | "tournamentGroup" | "tournamentTeamGroup"
+    modelProps: "league" | "leagueTeam" | "division" | "tournament" | "team" | "tournamentTeam" | "tournamentBracket" | "match" | "user" | "tournamentGroup" | "tournamentTeamGroup" | "leagueManualStandingTable" | "leagueManualStandingDay" | "leagueManualStandingScore"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1228,6 +1231,228 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    LeagueManualStandingTable: {
+      payload: Prisma.$LeagueManualStandingTablePayload<ExtArgs>
+      fields: Prisma.LeagueManualStandingTableFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LeagueManualStandingTableFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LeagueManualStandingTableFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload>
+        }
+        findFirst: {
+          args: Prisma.LeagueManualStandingTableFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LeagueManualStandingTableFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload>
+        }
+        findMany: {
+          args: Prisma.LeagueManualStandingTableFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload>[]
+        }
+        create: {
+          args: Prisma.LeagueManualStandingTableCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload>
+        }
+        createMany: {
+          args: Prisma.LeagueManualStandingTableCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LeagueManualStandingTableCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload>[]
+        }
+        delete: {
+          args: Prisma.LeagueManualStandingTableDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload>
+        }
+        update: {
+          args: Prisma.LeagueManualStandingTableUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload>
+        }
+        deleteMany: {
+          args: Prisma.LeagueManualStandingTableDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LeagueManualStandingTableUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LeagueManualStandingTableUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload>[]
+        }
+        upsert: {
+          args: Prisma.LeagueManualStandingTableUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingTablePayload>
+        }
+        aggregate: {
+          args: Prisma.LeagueManualStandingTableAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLeagueManualStandingTable>
+        }
+        groupBy: {
+          args: Prisma.LeagueManualStandingTableGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeagueManualStandingTableGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LeagueManualStandingTableCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeagueManualStandingTableCountAggregateOutputType> | number
+        }
+      }
+    }
+    LeagueManualStandingDay: {
+      payload: Prisma.$LeagueManualStandingDayPayload<ExtArgs>
+      fields: Prisma.LeagueManualStandingDayFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LeagueManualStandingDayFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LeagueManualStandingDayFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload>
+        }
+        findFirst: {
+          args: Prisma.LeagueManualStandingDayFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LeagueManualStandingDayFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload>
+        }
+        findMany: {
+          args: Prisma.LeagueManualStandingDayFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload>[]
+        }
+        create: {
+          args: Prisma.LeagueManualStandingDayCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload>
+        }
+        createMany: {
+          args: Prisma.LeagueManualStandingDayCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LeagueManualStandingDayCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload>[]
+        }
+        delete: {
+          args: Prisma.LeagueManualStandingDayDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload>
+        }
+        update: {
+          args: Prisma.LeagueManualStandingDayUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload>
+        }
+        deleteMany: {
+          args: Prisma.LeagueManualStandingDayDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LeagueManualStandingDayUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LeagueManualStandingDayUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload>[]
+        }
+        upsert: {
+          args: Prisma.LeagueManualStandingDayUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingDayPayload>
+        }
+        aggregate: {
+          args: Prisma.LeagueManualStandingDayAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLeagueManualStandingDay>
+        }
+        groupBy: {
+          args: Prisma.LeagueManualStandingDayGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeagueManualStandingDayGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LeagueManualStandingDayCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeagueManualStandingDayCountAggregateOutputType> | number
+        }
+      }
+    }
+    LeagueManualStandingScore: {
+      payload: Prisma.$LeagueManualStandingScorePayload<ExtArgs>
+      fields: Prisma.LeagueManualStandingScoreFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.LeagueManualStandingScoreFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.LeagueManualStandingScoreFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload>
+        }
+        findFirst: {
+          args: Prisma.LeagueManualStandingScoreFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.LeagueManualStandingScoreFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload>
+        }
+        findMany: {
+          args: Prisma.LeagueManualStandingScoreFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload>[]
+        }
+        create: {
+          args: Prisma.LeagueManualStandingScoreCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload>
+        }
+        createMany: {
+          args: Prisma.LeagueManualStandingScoreCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.LeagueManualStandingScoreCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload>[]
+        }
+        delete: {
+          args: Prisma.LeagueManualStandingScoreDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload>
+        }
+        update: {
+          args: Prisma.LeagueManualStandingScoreUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload>
+        }
+        deleteMany: {
+          args: Prisma.LeagueManualStandingScoreDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.LeagueManualStandingScoreUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.LeagueManualStandingScoreUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload>[]
+        }
+        upsert: {
+          args: Prisma.LeagueManualStandingScoreUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$LeagueManualStandingScorePayload>
+        }
+        aggregate: {
+          args: Prisma.LeagueManualStandingScoreAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateLeagueManualStandingScore>
+        }
+        groupBy: {
+          args: Prisma.LeagueManualStandingScoreGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeagueManualStandingScoreGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.LeagueManualStandingScoreCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.LeagueManualStandingScoreCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -1272,7 +1497,8 @@ export const LeagueScalarFieldEnum = {
   name: 'name',
   description: 'description',
   logoUrl: 'logoUrl',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  isHidden: 'isHidden'
 } as const
 
 export type LeagueScalarFieldEnum = (typeof LeagueScalarFieldEnum)[keyof typeof LeagueScalarFieldEnum]
@@ -1309,7 +1535,8 @@ export const TournamentScalarFieldEnum = {
   type: 'type',
   formatConfig: 'formatConfig',
   divisionId: 'divisionId',
-  managementMode: 'managementMode'
+  managementMode: 'managementMode',
+  isHidden: 'isHidden'
 } as const
 
 export type TournamentScalarFieldEnum = (typeof TournamentScalarFieldEnum)[keyof typeof TournamentScalarFieldEnum]
@@ -1406,6 +1633,44 @@ export const TournamentTeamGroupScalarFieldEnum = {
 } as const
 
 export type TournamentTeamGroupScalarFieldEnum = (typeof TournamentTeamGroupScalarFieldEnum)[keyof typeof TournamentTeamGroupScalarFieldEnum]
+
+
+export const LeagueManualStandingTableScalarFieldEnum = {
+  id: 'id',
+  leagueId: 'leagueId',
+  divisionId: 'divisionId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeagueManualStandingTableScalarFieldEnum = (typeof LeagueManualStandingTableScalarFieldEnum)[keyof typeof LeagueManualStandingTableScalarFieldEnum]
+
+
+export const LeagueManualStandingDayScalarFieldEnum = {
+  id: 'id',
+  tableId: 'tableId',
+  tournamentId: 'tournamentId',
+  label: 'label',
+  date: 'date',
+  sortOrder: 'sortOrder',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeagueManualStandingDayScalarFieldEnum = (typeof LeagueManualStandingDayScalarFieldEnum)[keyof typeof LeagueManualStandingDayScalarFieldEnum]
+
+
+export const LeagueManualStandingScoreScalarFieldEnum = {
+  id: 'id',
+  dayId: 'dayId',
+  teamId: 'teamId',
+  score: 'score',
+  eventRank: 'eventRank',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type LeagueManualStandingScoreScalarFieldEnum = (typeof LeagueManualStandingScoreScalarFieldEnum)[keyof typeof LeagueManualStandingScoreScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1652,6 +1917,9 @@ export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   tournamentGroup?: Prisma.TournamentGroupOmit
   tournamentTeamGroup?: Prisma.TournamentTeamGroupOmit
+  leagueManualStandingTable?: Prisma.LeagueManualStandingTableOmit
+  leagueManualStandingDay?: Prisma.LeagueManualStandingDayOmit
+  leagueManualStandingScore?: Prisma.LeagueManualStandingScoreOmit
 }
 
 /* Types for Logging */

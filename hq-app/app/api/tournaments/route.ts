@@ -69,6 +69,7 @@ export async function POST(req: Request) {
         leagueId: body.leagueId ?? null,
         divisionId,
         formatConfig: body.formatConfig ?? undefined,
+        isHidden: body.isHidden ?? false,
         teams: body.teamIds?.length
           ? { create: body.teamIds.map((teamId) => ({ teamId })) }
           : undefined,
