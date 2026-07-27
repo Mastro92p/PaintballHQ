@@ -356,46 +356,49 @@ const standingsByDivision = useMemo(() => {
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
-      <section className="space-y-2">
-        <div className="flex items-center gap-4 flex-wrap">
-          {data.logoUrl && (
-            <img
-              src={data.logoUrl}
-              alt={data.name}
-              width={48}
-              height={48}
-              loading="lazy"
-              className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-gray-700"
-            />
-          )}
-
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            {data.name}
-          </h1>
-
-          {activeCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              {activeCount} active
-            </span>
-          )}
-
-          {toCheckCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-              {toCheckCount} to check
-            </span>
-          )}
-        </div>
-
-        {data.description && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">{data.description}</p>
+      <section className="relative overflow-hidden rounded-2xl">
+        {data.logoUrl && (
+          <img
+            src={data.logoUrl}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover opacity-45 dark:opacity-40"
+          />
         )}
+        <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/60 to-white dark:from-gray-900/10 dark:via-gray-900/60 dark:to-gray-900" />
 
-        <div className="flex gap-4 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
-          <span>🏆 {data.tournaments?.length ?? 0} tournaments</span>
-          <span>👥 {data.teams?.length ?? 0} teams</span>
-          <span>🎮 {totalMatches} matches</span>
+        <div className="relative z-10 px-5 py-6 sm:px-8 sm:py-8 space-y-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white [text-shadow:0_1px_2px_rgba(255,255,255,0.6)] dark:[text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+              {data.name}
+            </h1>
+
+            {activeCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                {activeCount} active
+              </span>
+            )}
+
+            {toCheckCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400">
+                <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                {toCheckCount} to check
+              </span>
+            )}
+          </div>
+
+          {data.description && (
+            <p className="text-sm text-gray-700 dark:text-gray-300 [text-shadow:0_1px_2px_rgba(255,255,255,0.6)] dark:[text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+              {data.description}
+            </p>
+          )}
+
+          <div className="flex gap-4 text-sm text-gray-700 dark:text-gray-300 flex-wrap [text-shadow:0_1px_2px_rgba(255,255,255,0.6)] dark:[text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+            <span>🏆 {data.tournaments?.length ?? 0} tournaments</span>
+            <span>👥 {data.teams?.length ?? 0} teams</span>
+            <span>🎮 {totalMatches} matches</span>
+          </div>
         </div>
       </section>
 

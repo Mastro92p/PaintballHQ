@@ -14,6 +14,9 @@ export async function GET() {
             isHidden: false,
           },
           orderBy: { date: "desc" },
+          include: {
+            division: true,
+          },
         },
         teams: {
           include: {

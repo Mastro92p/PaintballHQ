@@ -89,12 +89,14 @@ export default function LeagueManualStandingsPublicTable({
 return (
   <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
     <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-        {divisionName}
-      </h3>
-      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-        Tournament-day points and total
-      </p>
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+          {divisionName}
+        </h3>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          Tournament-day points and total
+        </p>
+      </div>
     </div>
 
     {days.length === 0 ? (

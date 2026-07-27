@@ -6,7 +6,7 @@ import { useFetch } from "@/hooks/use-fetch";
 import type { League, Tournament } from "@/types";
 
 type LeagueWithDetails = League & {
-  tournaments: Tournament[];
+  tournaments: (Tournament & { division: { id: number; name: string } | null })[];
   teams: { teamId: number; team: { id: number; name: string } | null }[];
 };
 
@@ -90,6 +90,9 @@ export default function LeaguesPage() {
                   l.tournaments?.filter((t) => t.status === "active").length ?? 0;
                 const toCheckCount =
                   l.tournaments?.filter((t) => t.status === "to_check").length ?? 0;
+                const divisionCount = new Set(
+                  l.tournaments?.map((t) => t.division?.id).filter((id): id is number => id != null)
+                ).size;
 
                 return (
                   <button
@@ -97,21 +100,19 @@ export default function LeaguesPage() {
                     onClick={() => router.push(`/leagues/${l.id}`)}
                     className="w-full text-left flex items-center gap-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors overflow-hidden group"
                   >
-                    <div className="flex flex-col items-center justify-center w-20 shrink-0 px-3 py-4 border-r border-gray-100 dark:border-gray-800 self-stretch">
+                    <div className="relative flex-1 min-w-0 self-stretch overflow-hidden">
                       {l.logoUrl ? (
                         <img
                           src={l.logoUrl}
-                          alt={l.name}
-                          width={40}
-                          height={40}
+                          alt=""
                           loading="lazy"
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="absolute inset-0 h-full w-full object-cover opacity-45 dark:opacity-40"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center">
+                        <div className="absolute inset-0 flex items-center justify-center bg-teal-100 dark:bg-teal-900/30">
                           <svg
-                            width="20"
-                            height="20"
+                            width="28"
+                            height="28"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
@@ -124,53 +125,62 @@ export default function LeaguesPage() {
                           </svg>
                         </div>
                       )}
-                    </div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/60 to-white dark:from-gray-900/10 dark:via-gray-900/60 dark:to-gray-900" />
 
-                    <div className="flex-1 min-w-0 px-5 py-4">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-gray-900 dark:text-gray-100 text-base">
-                          {l.name}
-                        </span>
-
-                        {activeCount > 0 && (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                            {activeCount} active
+                      <div className="relative z-10 px-5 py-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-gray-900 dark:text-gray-100 text-base">
+                            {l.name}
                           </span>
+
+                          {activeCount > 0 && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                              {activeCount} active
+                            </span>
+                          )}
+
+                          {toCheckCount > 0 && (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+                              {toCheckCount} to check
+                            </span>
+                          )}
+                        </div>
+
+                        {l.description && (
+                          <p className="hidden sm:block text-xs text-white-700 dark:text-white-300 mt-1 truncate max-w-md [text-shadow:0_1px_2px_rgba(255,255,255,0.6)] dark:[text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+                            {l.description}
+                          </p>
                         )}
 
-                        {toCheckCount > 0 && (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-                            {toCheckCount} to check
+                        <div className="flex sm:hidden items-center gap-2 mt-2 flex-wrap">
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
+                              {tournamentCount}
+                            </span>{" "}
+                            tournaments
                           </span>
-                        )}
-                      </div>
-
-                      {l.description && (
-                        <p className="hidden sm:block text-xs text-gray-500 dark:text-gray-400 mt-1 truncate max-w-md">
-                          {l.description}
-                        </p>
-                      )}
-
-                      <div className="flex sm:hidden items-center gap-2 mt-2 flex-wrap">
-                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                          <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
-                            {tournamentCount}
-                          </span>{" "}
-                          tournaments
-                        </span>
-                        <span className="text-gray-300 dark:text-gray-700">·</span>
-                        <span className="text-xs text-gray-400 dark:text-gray-500">
-                          <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
-                            {teamCount}
-                          </span>{" "}
-                          teams
-                        </span>
+                          <span className="text-gray-300 dark:text-gray-700">·</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
+                              {teamCount}
+                            </span>{" "}
+                            teams
+                          </span>
+                        </div>
                       </div>
                     </div>
 
                     <div className="hidden sm:flex items-center gap-8 px-6 py-4 border-l border-gray-100 dark:border-gray-800 shrink-0">
+                      <div className="text-center">
+                        <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">
+                          Divisions
+                        </p>
+                        <p className="text-base font-bold text-gray-900 dark:text-gray-100 tabular-nums">
+                          {divisionCount}
+                        </p>
+                      </div>
                       <div className="text-center">
                         <p className="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-500 font-medium">
                           Tournaments

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useFetch } from "@/hooks/use-fetch";
 import { WinRateBar } from "@/components/ui/WinRateBar";
 import type { Division, TeamWithStats } from "@/types";
@@ -12,6 +12,7 @@ export default function TeamsPage() {
   const { data: divisions } = useFetch<Division[]>("/api/divisions");
   const [search, setSearch] = useState("");
   const [divisionFilter, setDivisionFilter] = useState<string>("all");
+  const router = useRouter();
 
   useEffect(() => {
     if (divisionFilter === "all" || divisionFilter === "unassigned") return;
@@ -123,7 +124,7 @@ export default function TeamsPage() {
                     <th className="hidden sm:table-cell px-5 py-3 text-left">Tournaments</th>
                     <th className="hidden sm:table-cell px-5 py-3 text-left">Total Matches</th>
                     <th className="px-3 py-3 sm:px-5 text-left">Win Rate</th>
-                    <th className="px-3 py-3 sm:px-5 text-right">Actions</th>
+                    <th className="w-8 px-3 py-3 sm:px-5" aria-hidden="true" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -135,24 +136,29 @@ export default function TeamsPage() {
                     return (
                       <tr
                         key={t.id}
-                        className="bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        onClick={() => router.push(`/teams/${t.id}`)}
+                        tabIndex={0}
+                        role="link"
+                        aria-label={`View ${t.name}`}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            router.push(`/teams/${t.id}`);
+                          }
+                        }}
+                        className="cursor-pointer bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:bg-gray-50 dark:focus-visible:bg-gray-800"
                       >
-                        <td className="px-3 py-4 sm:px-5 font-semibold text-gray-900 dark:text-gray-100">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
-                              {t.logoUrl ? (
-                                <img
-                                  src={t.logoUrl}
-                                  alt={`${t.name} logo`}
-                                  className="w-full h-full object-cover"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <span className="text-[9px] text-gray-400">—</span>
-                              )}
-                            </div>
-                            <span>{t.name}</span>
-                          </div>
+                        <td className="relative p-0 font-semibold text-gray-900 dark:text-gray-100 overflow-hidden">
+                          {t.logoUrl && (
+                            <img
+                              src={t.logoUrl}
+                              alt=""
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover opacity-45 dark:opacity-40"
+                            />
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/60 to-white dark:from-gray-900/10 dark:via-gray-900/60 dark:to-gray-900" />
+                          <span className="relative z-10 block px-3 py-4 sm:px-5">{t.name}</span>
                         </td>
                         <td className="hidden sm:table-cell px-5 py-4 text-gray-700 dark:text-gray-300">
                           {t.division?.name ?? "—"}
@@ -166,24 +172,17 @@ export default function TeamsPage() {
                         <td className="px-3 py-4 sm:px-5">
                           <WinRateBar wins={wins} total={totalMatches} />
                         </td>
-                        <td className="px-3 py-4 sm:px-5 text-right">
-                          <Link
-                            href={`/teams/${t.id}`}
-                            className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                        <td className="px-3 py-4 sm:px-5 text-right text-gray-300 dark:text-gray-600">
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
                           >
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
-                            View
-                          </Link>
+                            <path d="m9 18 6-6-6-6" />
+                          </svg>
                         </td>
                       </tr>
                     );

@@ -30,9 +30,9 @@ export default function LeagueStandingsTable({ standings, showBodyCount = false 
           {standings.map((s, i) => {
             const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null;
             const rowBg =
-              i === 0 ? "bg-yellow-50/60 dark:bg-yellow-900/10" :
-              i === 1 ? "bg-gray-100/60 dark:bg-gray-700/20" :
-              i === 2 ? "bg-orange-50/60 dark:bg-orange-900/10" :
+              i === 0 ? "bg-amber-500/12 dark:bg-amber-500/12" :
+              i === 1 ? "bg-slate-300/12 dark:bg-slate-300/12" :
+              i === 2 ? "bg-orange-600/12 dark:bg-orange-600/12" :
               "bg-white dark:bg-gray-900";
 
             return (
