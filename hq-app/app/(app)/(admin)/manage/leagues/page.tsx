@@ -11,6 +11,7 @@ import type {
 } from "@/types";
 import { handleMissingEntity } from "@/lib/handle-missing-entity";
 import { SearchInput } from "@/components/ui/SearchInput";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ManageLeaguesHeader } from "@/components/leagues/ManageLeaguesHeader";
 import { LeaguesTable } from "@/components/leagues/LeaguesTable";
 import { LeagueFormModal } from "@/components/leagues/LeagueFormModal";
@@ -33,6 +34,7 @@ export default function ManageLeaguesPage() {
   const [deleting, setDeleting] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [localLeagues, setLocalLeagues] = useState<League[]>([]);
+  const [leagueIdToDelete, setLeagueIdToDelete] = useState<number | null>(null);
 
   useEffect(() => {
     if (!data) return;
@@ -44,6 +46,11 @@ export default function ManageLeaguesPage() {
       l.name.toLowerCase().includes(search.toLowerCase())
     );
   }, [localLeagues, search]);
+
+  const leagueToDelete =
+    leagueIdToDelete != null
+      ? localLeagues.find((l) => l.id === leagueIdToDelete) ?? null
+      : null;
 
   function openCreate() {
     setEditing(null);
@@ -173,8 +180,6 @@ export default function ManageLeaguesPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Delete this league? All associated tournaments will be unlinked.")) return;
-
     const previous = localLeagues;
     setDeleting(id);
     setLocalLeagues((prev) => prev.filter((l) => l.id !== id));
@@ -189,7 +194,7 @@ export default function ManageLeaguesPage() {
           reload: reloadLeagues,
         })
       ) {
-        return;
+        return true;
       }
 
       const result = await res.json().catch(() => null);
@@ -197,11 +202,24 @@ export default function ManageLeaguesPage() {
       if (!res.ok) {
         throw new Error(result?.error ?? "Failed to delete league");
       }
+
+      return true;
     } catch (err) {
       console.error(err);
       setLocalLeagues(previous);
+      return false;
     } finally {
       setDeleting(null);
+    }
+  }
+
+  async function confirmDeleteLeague() {
+    if (leagueIdToDelete == null) return;
+
+    const ok = await handleDelete(leagueIdToDelete);
+
+    if (ok) {
+      setLeagueIdToDelete(null);
     }
   }
 
@@ -229,7 +247,27 @@ export default function ManageLeaguesPage() {
         error={error}
         deleting={deleting}
         onEdit={openEdit}
-        onDelete={handleDelete}
+        onDelete={setLeagueIdToDelete}
+      />
+
+      <ConfirmModal
+        open={leagueIdToDelete != null}
+        title={
+          leagueToDelete
+            ? `Delete league "${leagueToDelete.name}"?`
+            : "Delete league?"
+        }
+        description="All associated tournaments will be unlinked. This action cannot be undone."
+        confirmLabel="Delete league"
+        cancelLabel="Cancel"
+        danger
+        requireText="DELETE"
+        loading={deleting != null}
+        onCancel={() => {
+          if (deleting != null) return;
+          setLeagueIdToDelete(null);
+        }}
+        onConfirm={confirmDeleteLeague}
       />
 
       <LeagueFormModal

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 
 type ConfirmModalProps = {
@@ -12,6 +13,8 @@ type ConfirmModalProps = {
   danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  requireText?: string;
+  requireTextLabel?: string;
 };
 
 export function ConfirmModal({
@@ -24,15 +27,54 @@ export function ConfirmModal({
   danger = false,
   onConfirm,
   onCancel,
+  requireText,
+  requireTextLabel,
 }: ConfirmModalProps) {
+  const [typedValue, setTypedValue] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setTypedValue("");
+    }
+  }, [open]);
+
+  const needsTypedConfirmation = Boolean(requireText);
+  const confirmDisabled =
+    loading || (needsTypedConfirmation && typedValue !== requireText);
+
   return (
     <Modal open={open} onClose={onCancel} title={title} size="sm">
       <div className="px-5 py-4">
-        <div className="space-y-3">
+        <div className="space-y-4">
           {description ? (
             <p className="text-sm leading-6 text-gray-500 dark:text-gray-400">
               {description}
             </p>
+          ) : null}
+
+          {needsTypedConfirmation ? (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {requireTextLabel ?? (
+                  <>
+                    Type{" "}
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {requireText}
+                    </span>{" "}
+                    to confirm
+                  </>
+                )}
+              </label>
+
+              <input
+                type="text"
+                value={typedValue}
+                onChange={(e) => setTypedValue(e.target.value)}
+                placeholder={requireText}
+                autoFocus
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
+              />
+            </div>
           ) : null}
 
           <div className="flex items-center justify-end gap-3 pt-2">
@@ -48,8 +90,8 @@ export function ConfirmModal({
             <button
               type="button"
               onClick={onConfirm}
-              disabled={loading}
-              className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
+              disabled={confirmDisabled}
+              className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                 danger
                   ? "bg-red-600 hover:bg-red-500"
                   : "bg-teal-600 hover:bg-teal-500"

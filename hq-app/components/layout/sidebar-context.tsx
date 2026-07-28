@@ -1,42 +1,90 @@
-// components/layout/sidebar-context.tsx
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-type SidebarContextType = { collapsed: boolean; toggle: () => void; isMobile: boolean };
+type SidebarContextValue = {
+  collapsed: boolean;
+  effectiveCollapsed: boolean;
+  isMobile: boolean;
+  hydrated: boolean;
+  toggle: () => void;
+  setCollapsed: (value: boolean) => void;
+};
 
-const SidebarContext = createContext<SidebarContextType>({
-  collapsed: false,
-  toggle: () => {},
-  isMobile: false,
-});
+const SidebarContext = createContext<SidebarContextValue | null>(null);
+
+const STORAGE_KEY = "paintballhq:sidebar-collapsed";
+const MOBILE_BREAKPOINT = 1024;
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
+  const [collapsed, setCollapsedState] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    function check() {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) setCollapsed(true);
-    }
+    const media = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
 
-    check(); // run on mount
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+    const updateMobile = () => {
+      setIsMobile(media.matches);
+    };
+
+    updateMobile();
+
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored === "true") setCollapsedState(true);
+    if (stored === "false") setCollapsedState(false);
+
+    setHydrated(true);
+
+    media.addEventListener("change", updateMobile);
+    return () => media.removeEventListener("change", updateMobile);
   }, []);
 
-  function toggle() {
-    if (isMobile) return; // ← locked on mobile, do nothing
-    setCollapsed((c) => !c);
-  }
+  const setCollapsed = useCallback((value: boolean) => {
+    setCollapsedState(value);
+    window.localStorage.setItem(STORAGE_KEY, String(value));
+  }, []);
+
+  const toggle = useCallback(() => {
+    if (isMobile) return;
+
+    setCollapsedState((prev: boolean) => {
+      const next = !prev;
+      window.localStorage.setItem(STORAGE_KEY, String(next));
+      return next;
+    });
+  }, [isMobile]);
+
+  const effectiveCollapsed = isMobile ? true : collapsed;
+
+  const value = useMemo(
+    () => ({
+      collapsed,
+      effectiveCollapsed,
+      isMobile,
+      hydrated,
+      toggle,
+      setCollapsed,
+    }),
+    [collapsed, effectiveCollapsed, isMobile, hydrated, toggle, setCollapsed]
+  );
 
   return (
-    <SidebarContext.Provider value={{ collapsed, toggle, isMobile }}>
-      {children}
-    </SidebarContext.Provider>
+    <SidebarContext.Provider value={value}>{children}</SidebarContext.Provider>
   );
 }
 
-export const useSidebar = () => useContext(SidebarContext);
+export function useSidebar() {
+  const ctx = useContext(SidebarContext);
+  if (!ctx) {
+    throw new Error("useSidebar must be used within SidebarProvider");
+  }
+  return ctx;
+}

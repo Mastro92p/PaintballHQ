@@ -71,6 +71,44 @@ export function useTournamentGroupsState({
     return Object.fromEntries(localGroups.map((g) => [g.id, g.name]));
   }, [localGroups]);
 
+  async function confirmResetGroups() {
+    setResettingGroups(true);
+    setGroupsError(null);
+
+    try {
+      const res = await fetch(`/api/tournaments/${id}/generate-groups`, {
+        method: "DELETE",
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to reset groups");
+      }
+
+      const nextGroups = body.groups ?? [];
+      const nextMatches = body.matches ?? [];
+      const nextTeamGroups = body.teamGroups ?? {};
+
+      setLocalGroups(nextGroups);
+      setTeamGroups(nextTeamGroups);
+
+      onGroupsUpdated?.(nextGroups);
+      onMatchesUpdated?.(nextMatches);
+
+      if (body.status) {
+        onStatusUpdated?.(body.status);
+      }
+    } catch (error) {
+      console.error(error);
+      setGroupsError(
+        error instanceof Error ? error.message : "Failed to reset groups"
+      );
+    } finally {
+      setResettingGroups(false);
+    }
+  }
+
   async function handleResetGroups() {
     if (
       !confirm(
@@ -387,7 +425,7 @@ export function useTournamentGroupsState({
     savingGroups,
     groupsError,
     groupNameById,
-    handleResetGroups,
+    confirmResetGroups,
     handleAssignGroup,
     handleAddGroup,
     handleRenameGroup,

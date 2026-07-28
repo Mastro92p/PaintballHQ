@@ -18,13 +18,20 @@ const statusLabel: Record<string, string> = {
 const statusBadge: Record<string, string> = {
   active: "border-green-500/30 text-green-500 bg-green-500/10",
   upcoming: "border-orange-400/30 text-orange-400 bg-orange-400/10",
-  to_check: "border-yellow-400/30 text-yellow-600 bg-yellow-400/10 dark:text-yellow-400",
+  to_check:
+    "border-yellow-400/30 text-yellow-600 bg-yellow-400/10 dark:text-yellow-400",
   completed: "border-gray-400/30 text-gray-400 bg-gray-400/10",
 };
 
 export default async function DashboardPage() {
-const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches] =
-  await Promise.all([
+  const [
+    allTournaments,
+    recentTournaments,
+    teamsCount,
+    matchesPlayed,
+    pendingMatches,
+    recentMatches,
+  ] = await Promise.all([
     prisma.tournament.findMany({
       where: {
         isHidden: false,
@@ -40,6 +47,23 @@ const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches]
         ],
       },
       orderBy: { date: "desc" },
+    }),
+    prisma.tournament.findMany({
+      where: {
+        isHidden: false,
+        OR: [
+          { leagueId: null },
+          {
+            league: {
+              is: {
+                isHidden: false,
+              },
+            },
+          },
+        ],
+      },
+      orderBy: { date: "desc" },
+      take: 8,
     }),
     prisma.team.count(),
     prisma.match.count({
@@ -96,7 +120,7 @@ const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches]
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 5,
+      take: 8,
       include: { teamA: true, teamB: true, tournament: true },
     }),
   ]);
@@ -134,59 +158,59 @@ const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches]
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">
           Dashboard
         </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           Welcome back to PaintballHQ
         </p>
       </div>
 
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {kpis.map((k) => (
           <div
             key={k.label}
-            className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-5"
+            className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900"
           >
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
               {k.label}
             </p>
-            <p className="text-4xl font-bold text-gray-900 dark:text-gray-100 mt-1 tabular-nums">
+            <p className="mt-1 text-4xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
               {k.value}
             </p>
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
               {k.sub}
             </p>
           </div>
         ))}
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
             <h2 className="font-semibold text-gray-900 dark:text-gray-100">
               Tournaments
             </h2>
             <Link
               href="/tournaments"
-              className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              className="text-xs text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
             >
               View all
             </Link>
           </div>
 
-          {allTournaments.length === 0 ? (
+          {recentTournaments.length === 0 ? (
             <div className="py-12 text-center text-gray-400 dark:text-gray-500">
-              <p className="text-2xl mb-2">🏆</p>
+              <p className="mb-2 text-2xl">🏆</p>
               <p className="text-sm font-medium">No tournaments yet</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
-              {allTournaments.map((t) => (
+              {recentTournaments.map((t) => (
                 <Link
                   key={t.id}
                   href={`/tournaments/${t.id}`}
-                  className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                  className="group flex items-center justify-between px-5 py-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   <div className="min-w-0 space-y-0.5">
-                    <p className="font-semibold text-sm text-gray-900 dark:text-gray-100 truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                    <p className="truncate text-sm font-semibold text-gray-900 transition-colors group-hover:text-teal-600 dark:text-gray-100 dark:group-hover:text-teal-400">
                       {t.name}
                     </p>
                     <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -195,14 +219,15 @@ const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches]
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                  <div className="ml-4 flex shrink-0 items-center gap-2">
                     <span
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                        statusBadge[t.status] ?? "border-gray-400/30 text-gray-400 bg-gray-400/10"
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+                        statusBadge[t.status] ??
+                        "border-gray-400/30 text-gray-400 bg-gray-400/10"
                       }`}
                     >
                       <span
-                        className={`w-1.5 h-1.5 rounded-full ${
+                        className={`h-1.5 w-1.5 rounded-full ${
                           statusDot[t.status] ?? "bg-gray-400"
                         }`}
                       />
@@ -210,13 +235,17 @@ const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches]
                     </span>
 
                     <svg
-                      className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-teal-500 transition-colors"
+                      className="h-4 w-4 text-gray-300 transition-colors group-hover:text-teal-500 dark:text-gray-600"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                       strokeWidth={2}
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 5l7 7-7 7"
+                      />
                     </svg>
                   </div>
                 </Link>
@@ -225,8 +254,8 @@ const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches]
           )}
         </section>
 
-        <section className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+        <section className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-700">
             <h2 className="font-semibold text-gray-900 dark:text-gray-100">
               Recent Results
             </h2>
@@ -234,7 +263,7 @@ const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches]
 
           {recentMatches.length === 0 ? (
             <div className="py-12 text-center text-gray-400 dark:text-gray-500">
-              <p className="text-2xl mb-2">🎮</p>
+              <p className="mb-2 text-2xl">🎮</p>
               <p className="text-sm font-medium">No results yet</p>
             </div>
           ) : (
@@ -249,19 +278,23 @@ const [allTournaments, teamsCount, matchesPlayed, pendingMatches, recentMatches]
                   <Link
                     key={m.id}
                     href={`/tournaments/${m.tournamentId}`}
-                    className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    className="flex items-center justify-between px-5 py-3.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
-                    <p className="text-xs text-gray-400 dark:text-gray-500 shrink-0 w-36 truncate">
+                    <p className="w-36 shrink-0 truncate text-xs text-gray-400 dark:text-gray-500">
                       {m.tournament.name} · R{m.round}
                     </p>
-                    <p className="text-sm font-mono tabular-nums text-right text-gray-900 dark:text-gray-100">
-                      <span className={!aWon && !isDraw ? "text-gray-400 dark:text-gray-500" : ""}>
+                    <p className="text-right font-mono text-sm tabular-nums text-gray-900 dark:text-gray-100">
+                      <span
+                        className={!aWon && !isDraw ? "text-gray-400 dark:text-gray-500" : ""}
+                      >
                         {teamAName}
                       </span>{" "}
                       <span className="font-bold">
                         {m.scoreA}–{m.scoreB}
                       </span>{" "}
-                      <span className={aWon && !isDraw ? "text-gray-400 dark:text-gray-500" : ""}>
+                      <span
+                        className={aWon && !isDraw ? "text-gray-400 dark:text-gray-500" : ""}
+                      >
                         {teamBName}
                       </span>
                     </p>

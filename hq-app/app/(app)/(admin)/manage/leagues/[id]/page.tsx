@@ -13,6 +13,7 @@ import { LeagueNotFoundState } from "@/components/leagues/LeagueNotFoundState";
 import { handleMissingEntity } from "@/lib/handle-missing-entity";
 import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
 import LeagueManualStandingsTab from "@/components/leagues/LeagueManualStandingsTab";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 type Tab = "tournaments" | "teams" | "manual-standings" | "info";
 
@@ -33,7 +34,7 @@ export default function ManageLeagueDetailPage({
     name: "",
     description: "",
     logoUrl: "",
-    isHidden: false
+    isHidden: false,
   });
   const [infoSaving, setInfoSaving] = useState(false);
   const [infoEditing, setInfoEditing] = useState(false);
@@ -49,8 +50,17 @@ export default function ManageLeagueDetailPage({
   const [assigningSaving, setAssigningSaving] = useState(false);
   const [detaching, setDetaching] = useState<number | null>(null);
 
+  const [tournamentToDetachId, setTournamentToDetachId] = useState<number | null>(
+    null
+  );
+
   const [localAllTournaments, setLocalAllTournaments] = useState<Tournament[]>([]);
   const [divisionFilter, setDivisionFilter] = useState<string>("all");
+
+  const tournamentToDetach =
+    tournamentToDetachId != null && localLeague
+      ? localLeague.tournaments.find((t) => t.id === tournamentToDetachId) ?? null
+      : null;
 
   function closeTournamentModal() {
     setTournamentModalOpen(false);
@@ -68,7 +78,7 @@ export default function ManageLeagueDetailPage({
       name: localLeague.name,
       description: localLeague.description ?? "",
       logoUrl: localLeague.logoUrl ?? "",
-      isHidden: false
+      isHidden: false,
     });
   }, [localLeague]);
 
@@ -80,7 +90,9 @@ export default function ManageLeagueDetailPage({
   useEffect(() => {
     if (!localLeague || !allTeams) return;
     const enrolledIds = new Set(localLeague.teams.map((t) => t.teamId));
-    setLocalEnrolled(localLeague.teams.map((t) => t.team).filter(Boolean) as Team[]);
+    setLocalEnrolled(
+      localLeague.teams.map((t) => t.team).filter(Boolean) as Team[]
+    );
     setLocalAvailable(allTeams.filter((t) => !enrolledIds.has(t.id)));
   }, [localLeague, allTeams]);
 
@@ -132,7 +144,9 @@ export default function ManageLeagueDetailPage({
   const unassignedTournaments = useMemo(() => {
     if (!localLeague) return [];
     const assignedIds = new Set(localLeague.tournaments.map((t) => t.id));
-    return localAllTournaments.filter((t) => !assignedIds.has(t.id) && !t.leagueId);
+    return localAllTournaments.filter(
+      (t) => !assignedIds.has(t.id) && !t.leagueId
+    );
   }, [localAllTournaments, localLeague]);
 
   async function reloadLeague() {
@@ -191,7 +205,9 @@ export default function ManageLeagueDetailPage({
   function resetTeamChanges() {
     if (!localLeague || !allTeams) return;
     const enrolledIds = new Set(localLeague.teams.map((t) => t.teamId));
-    setLocalEnrolled(localLeague.teams.map((t) => t.team).filter(Boolean) as Team[]);
+    setLocalEnrolled(
+      localLeague.teams.map((t) => t.team).filter(Boolean) as Team[]
+    );
     setLocalAvailable(allTeams.filter((t) => !enrolledIds.has(t.id)));
   }
 
@@ -233,7 +249,9 @@ export default function ManageLeagueDetailPage({
           action: "update",
           reload: reloadLeague,
           onMissing: () => {
-            setLocalAllTournaments((prev) => prev.filter((t) => t.id !== tournamentId));
+            setLocalAllTournaments((prev) =>
+              prev.filter((t) => t.id !== tournamentId)
+            );
             closeTournamentModal();
           },
         })
@@ -259,9 +277,8 @@ export default function ManageLeagueDetailPage({
   }
 
   async function handleDetachTournament(tournamentId: number) {
-    if (!confirm("Remove this tournament from the league?")) return;
-
     setDetaching(tournamentId);
+
     try {
       const res = await fetch(`/api/tournaments/${tournamentId}`, {
         method: "PATCH",
@@ -275,11 +292,14 @@ export default function ManageLeagueDetailPage({
           action: "update",
           reload: reloadLeague,
           onMissing: () => {
-            setLocalAllTournaments((prev) => prev.filter((t) => t.id !== tournamentId));
+            setLocalAllTournaments((prev) =>
+              prev.filter((t) => t.id !== tournamentId)
+            );
+            setTournamentToDetachId(null);
           },
         })
       ) {
-        return;
+        return true;
       }
 
       const result = await res.json().catch(() => null);
@@ -289,12 +309,28 @@ export default function ManageLeagueDetailPage({
       }
 
       setLocalAllTournaments((prev) =>
-        prev.map((t) => (t.id === tournamentId ? { ...t, leagueId: null } : t))
+        prev.map((t) =>
+          t.id === tournamentId ? { ...t, leagueId: null } : t
+        )
       );
 
       await reloadLeague();
+      return true;
+    } catch (err) {
+      console.error(err);
+      return false;
     } finally {
       setDetaching(null);
+    }
+  }
+
+  async function confirmDetachTournament() {
+    if (tournamentToDetachId == null) return;
+
+    const ok = await handleDetachTournament(tournamentToDetachId);
+
+    if (ok) {
+      setTournamentToDetachId(null);
     }
   }
 
@@ -350,7 +386,7 @@ export default function ManageLeagueDetailPage({
             tournaments={filteredLeagueTournaments}
             detaching={detaching}
             onAssignClick={() => setTournamentModalOpen(true)}
-            onDetach={handleDetachTournament}
+            onDetach={setTournamentToDetachId}
           />
         </section>
       )}
@@ -408,6 +444,24 @@ export default function ManageLeagueDetailPage({
         onClose={closeTournamentModal}
         onChangeTournament={setSelectedTournamentId}
         onAssign={handleAssignTournament}
+      />
+
+      <ConfirmModal
+        open={tournamentToDetachId != null}
+        title={
+          tournamentToDetach
+            ? `Remove "${tournamentToDetach.name}" from this league?`
+            : "Remove tournament from this league?"
+        }
+        description="This will only detach the tournament from the league. The tournament itself will remain unchanged."
+        confirmLabel="Remove tournament"
+        cancelLabel="Cancel"
+        loading={detaching != null}
+        onCancel={() => {
+          if (detaching != null) return;
+          setTournamentToDetachId(null);
+        }}
+        onConfirm={confirmDetachTournament}
       />
     </main>
   );

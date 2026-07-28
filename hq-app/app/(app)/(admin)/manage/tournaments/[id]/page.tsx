@@ -44,6 +44,13 @@ export default function ManageTournamentDetailPage({
   const [localTournament, setLocalTournament] = useState<TournamentDetail | null>(null);
   const [activeBracketId, setActiveBracketId] = useState<number | null>(null);
 
+  const [resetGroupsConfirmOpen, setResetGroupsConfirmOpen] = useState(false);
+  const [resetBracketConfirmOpen, setResetBracketConfirmOpen] = useState(false);
+  const [generateBracketConfirmOpen, setGenerateBracketConfirmOpen] = useState(false);
+  const [pendingGenerateBracketInput, setPendingGenerateBracketInput] =
+    useState<GenerateBracketInput | undefined>(undefined);
+  const [bracketToDelete, setBracketToDelete] = useState<number | null>(null);
+
   const tournament = localTournament;
   const brackets = tournament?.brackets ?? [];
 
@@ -104,7 +111,7 @@ export default function ManageTournamentDetailPage({
     savingGroups,
     groupsError,
     groupNameById,
-    handleResetGroups,
+    confirmResetGroups, 
     handleAssignGroup,
     handleAddGroup,
     handleRenameGroup,
@@ -268,36 +275,46 @@ export default function ManageTournamentDetailPage({
     }
   }
 
-  async function handleResetBracket() {
+  function handleResetBracket() {
     if (activeBracketId == null) {
       setBracketError("Select a bracket first");
       return;
     }
 
-    if (!confirm("Delete the selected bracket? This cannot be undone.")) return;
+    setResetBracketConfirmOpen(true);
+  }
+
+  async function confirmResetBracket() {
+    if (activeBracketId == null) {
+      setBracketError("Select a bracket first");
+      return;
+    }
 
     setResettingBracket(true);
     setBracketError(null);
 
-    const res = await fetch(`/api/tournaments/${id}/generate-bracket`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ bracketId: activeBracketId }),
-    });
+    try {
+      const res = await fetch(`/api/tournaments/${id}/generate-bracket`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ bracketId: activeBracketId }),
+      });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setBracketError(body.error ?? "Failed to reset bracket");
-    } else {
-      refetch();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setBracketError(body.error ?? "Failed to reset bracket");
+      } else {
+        setResetBracketConfirmOpen(false);
+        refetch();
+      }
+    } finally {
+      setResettingBracket(false);
     }
-
-    setResettingBracket(false);
   }
 
-  async function handleGenerateBracket(input?: GenerateBracketInput) {
+  function handleGenerateBracket(input?: GenerateBracketInput) {
     if (!tournament) return;
 
     if (
@@ -316,39 +333,55 @@ export default function ManageTournamentDetailPage({
     const isManual = (tournament.managementMode ?? "auto") === "manual";
 
     if (!isManual) {
-      if (!confirm("Generate bracket from current standings? This cannot be undone.")) {
-        return;
-      }
+      setPendingGenerateBracketInput(input);
+      setGenerateBracketConfirmOpen(true);
+      return;
     }
+
+    return confirmGenerateBracket(input);
+  }
+
+  async function confirmGenerateBracket(input = pendingGenerateBracketInput) {
+    if (!tournament) return;
+
+    if (activeBracketId == null) {
+      setBracketError("Select a bracket first");
+      return;
+    }
+
+    const isManual = (tournament.managementMode ?? "auto") === "manual";
 
     setGeneratingBracket(true);
     setBracketError(null);
 
-    const res = await fetch(`/api/tournaments/${id}/generate-bracket`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        bracketId: activeBracketId,
-        ...(isManual
-          ? { advancingTeams: input?.advancingTeams }
-          : input?.advancingTeams != null
-          ? { advancingTeams: input.advancingTeams }
-          : {}),
-      }),
-    });
+    try {
+      const res = await fetch(`/api/tournaments/${id}/generate-bracket`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          bracketId: activeBracketId,
+          ...(isManual
+            ? { advancingTeams: input?.advancingTeams }
+            : input?.advancingTeams != null
+            ? { advancingTeams: input.advancingTeams }
+            : {}),
+        }),
+      });
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      setBracketError(body.error ?? "Failed to generate bracket");
-    } else {
-      refetch();
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setBracketError(body.error ?? "Failed to generate bracket");
+      } else {
+        setGenerateBracketConfirmOpen(false);
+        setPendingGenerateBracketInput(undefined);
+        refetch();
+      }
+    } finally {
+      setGeneratingBracket(false);
     }
-
-    setGeneratingBracket(false);
   }
-
 
   async function handleAddBracket() {
     setBracketError(null);
@@ -368,10 +401,7 @@ export default function ManageTournamentDetailPage({
       return;
     }
 
-    const nextBracket =
-      body.bracket ??
-      body.data ??
-      null;
+    const nextBracket = body.bracket ?? body.data ?? null;
 
     if (nextBracket) {
       setLocalTournament((prev) =>
@@ -379,7 +409,7 @@ export default function ManageTournamentDetailPage({
           ? {
               ...prev,
               brackets: (prev.brackets ?? []).some((b) => b.id === nextBracket.id)
-                ? (prev.brackets ?? [])
+                ? prev.brackets ?? []
                 : [...(prev.brackets ?? []), nextBracket],
             }
           : prev
@@ -391,16 +421,20 @@ export default function ManageTournamentDetailPage({
     await refetch();
   }
 
-  async function handleDeleteBracket(bracketId: number) {
-    if (!confirm("Reset the selected bracket? This will remove its matches.")) {
-      return;
-    }
+  function handleDeleteBracket(bracketId: number) {
+    setBracketToDelete(bracketId);
+  }
+
+  async function confirmDeleteBracket() {
+    if (bracketToDelete == null) return false;
+
+    const deletingId = bracketToDelete;
 
     setDeletingBracket(true);
     setBracketError(null);
 
     try {
-      const res = await fetch(`/api/tournaments/${id}/brackets/${bracketId}`, {
+      const res = await fetch(`/api/tournaments/${id}/brackets/${deletingId}`, {
         method: "DELETE",
       });
 
@@ -414,22 +448,26 @@ export default function ManageTournamentDetailPage({
         prev
           ? {
               ...prev,
-              brackets: (prev.brackets ?? []).filter((b) => b.id !== bracketId),
-              matches: (prev.matches ?? []).filter((m) => m.bracketId !== bracketId),
+              brackets: (prev.brackets ?? []).filter((b) => b.id !== deletingId),
+              matches: (prev.matches ?? []).filter((m) => m.bracketId !== deletingId),
             }
           : prev
       );
 
       setActiveBracketId((prev) => {
-        if (prev !== bracketId) return prev;
-        const remaining = brackets.filter((b) => b.id !== bracketId);
+        if (prev !== deletingId) return prev;
+        const remaining = brackets.filter((b) => b.id !== deletingId);
         return remaining[0]?.id ?? null;
       });
+
+      setBracketToDelete(null);
+      return true;
     } catch (error) {
       console.error(error);
       setBracketError(
         error instanceof Error ? error.message : "Failed to delete bracket"
       );
+      return false;
     } finally {
       setDeletingBracket(false);
     }
@@ -515,6 +553,11 @@ export default function ManageTournamentDetailPage({
     { key: "info", label: "Info" },
   ];
 
+  const bracketToDeleteName =
+    bracketToDelete != null
+      ? brackets.find((b) => b.id === bracketToDelete)?.name ?? "this bracket"
+      : null;
+
   return (
     <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
       <TournamentDetailHeader
@@ -564,7 +607,7 @@ export default function ManageTournamentDetailPage({
           groupsError={groupsError}
           deletingMatch={deletingMatch}
           onGenerateGroups={handleGenerateGroups}
-          onResetGroups={handleResetGroups}
+          onResetGroups={() => setResetGroupsConfirmOpen(true)}
           onAddGroup={handleAddGroup}
           onRenameGroup={handleRenameGroup}
           onDeleteGroup={handleDeleteGroup}
@@ -576,33 +619,33 @@ export default function ManageTournamentDetailPage({
         />
       )}
 
-    {activeTab === "bracket" && (
-      <BracketTab
-        brackets={brackets}
-        activeBracketId={activeBracketId}
-        onSelectBracket={setActiveBracketId}
-        onAddBracket={handleAddBracket}
-        onRenameBracket={handleRenameBracket}
-        onDeleteBracket={handleDeleteBracket}
-        onReorderBrackets={handleReorderBrackets}
-        renamingBracket={renamingBracket}
-        deletingBracket={deletingBracket}
-        matches={activeBracketMatches}
-        editableTeams={enrolledTeams}
-        hasBracketMatches={selectedBracketHasMatches}
-        generatingBracket={generatingBracket}
-        resettingBracket={resettingBracket}
-        bracketError={bracketError}
-        editingBracketMatch={editingBracketMatch}
-        bracketEditSaving={bracketEditSaving}
-        managementMode={tournament.managementMode ?? "auto"}
-        onGenerateBracket={handleGenerateBracket}
-        onResetBracket={handleResetBracket}
-        onOpenBracketEdit={openBracketEdit}
-        onCloseBracketEdit={closeBracketEdit}
-        onSaveBracketEdit={handleSaveBracketEdit}
-      />
-    )}
+      {activeTab === "bracket" && (
+        <BracketTab
+          brackets={brackets}
+          activeBracketId={activeBracketId}
+          onSelectBracket={setActiveBracketId}
+          onAddBracket={handleAddBracket}
+          onRenameBracket={handleRenameBracket}
+          onDeleteBracket={handleDeleteBracket}
+          onReorderBrackets={handleReorderBrackets}
+          renamingBracket={renamingBracket}
+          deletingBracket={deletingBracket}
+          matches={activeBracketMatches}
+          editableTeams={enrolledTeams}
+          hasBracketMatches={selectedBracketHasMatches}
+          generatingBracket={generatingBracket}
+          resettingBracket={resettingBracket}
+          bracketError={bracketError}
+          editingBracketMatch={editingBracketMatch}
+          bracketEditSaving={bracketEditSaving}
+          managementMode={tournament.managementMode ?? "auto"}
+          onGenerateBracket={handleGenerateBracket}
+          onResetBracket={handleResetBracket}
+          onOpenBracketEdit={openBracketEdit}
+          onCloseBracketEdit={closeBracketEdit}
+          onSaveBracketEdit={handleSaveBracketEdit}
+        />
+      )}
 
       {activeTab === "info" && <InfoTab data={tournament} />}
 
@@ -650,6 +693,7 @@ export default function ManageTournamentDetailPage({
         confirmLabel="Delete group"
         cancelLabel="Cancel"
         danger
+        requireText="DELETE"
         loading={deletingGroup != null}
         onCancel={() => {
           if (deletingGroup != null) return;
@@ -665,12 +709,90 @@ export default function ManageTournamentDetailPage({
         confirmLabel="Delete match"
         cancelLabel="Cancel"
         danger
+        requireText="DELETE"
         loading={deletingMatch != null}
         onCancel={() => {
           if (deletingMatch != null) return;
           setMatchToDelete(null);
         }}
         onConfirm={confirmDeleteMatch}
+      />
+
+      <ConfirmModal
+        open={resetBracketConfirmOpen}
+        title="Reset bracket?"
+        description="This will remove all matches from the selected bracket. This action cannot be undone."
+        confirmLabel="Reset bracket"
+        cancelLabel="Cancel"
+        danger
+        requireText="DELETE"
+        loading={resettingBracket}
+        onCancel={() => {
+          if (resettingBracket) return;
+          setResetBracketConfirmOpen(false);
+        }}
+        onConfirm={confirmResetBracket}
+      />
+
+      <ConfirmModal
+        open={generateBracketConfirmOpen}
+        title="Generate bracket from current standings?"
+        description="This will create or replace the bracket from the current standings."
+        confirmLabel="Generate bracket"
+        cancelLabel="Cancel"
+        danger
+        loading={generatingBracket}
+        onCancel={() => {
+          if (generatingBracket) return;
+          setGenerateBracketConfirmOpen(false);
+          setPendingGenerateBracketInput(undefined);
+        }}
+        onConfirm={() => confirmGenerateBracket()}
+      />
+
+      <ConfirmModal
+        open={bracketToDelete != null}
+        title={
+          bracketToDeleteName
+            ? `Delete bracket "${bracketToDeleteName}"?`
+            : "Delete bracket?"
+        }
+        description="This will remove the bracket and all of its matches."
+        confirmLabel="Delete bracket"
+        cancelLabel="Cancel"
+        danger
+        requireText="DELETE"
+        loading={deletingBracket}
+        onCancel={() => {
+          if (deletingBracket) return;
+          setBracketToDelete(null);
+        }}
+        onConfirm={async () => {
+          const ok = await confirmDeleteBracket();
+          if (ok) {
+            setBracketToDelete(null);
+          }
+        }}
+      />
+
+
+      <ConfirmModal
+        open={resetGroupsConfirmOpen}
+        title="Reset groups?"
+        description="This will delete all group stage matches and clear team group assignments. This action cannot be undone."
+        confirmLabel="Reset groups"
+        cancelLabel="Cancel"
+        danger
+        requireText="DELETE"
+        loading={resettingGroups}
+        onCancel={() => {
+          if (resettingGroups) return;
+          setResetGroupsConfirmOpen(false);
+        }}
+        onConfirm={async () => {
+          await confirmResetGroups();
+          setResetGroupsConfirmOpen(false);
+        }}
       />
 
       <TournamentFormModal

@@ -6,6 +6,7 @@ import { ManageTournamentsHeader } from "@/components/tournaments/ManageTourname
 import { TournamentsFilters } from "@/components/tournaments/TournamentsFilters";
 import { TournamentsTable } from "@/components/tournaments/TournamentsTable";
 import { TournamentFormModal } from "@/components/tournaments/TournamentFormModal";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import type { Tournament } from "@/types";
 
 function filterTournaments(
@@ -45,11 +46,22 @@ export default function ManageTournamentsPage() {
 
   const [search, setSearch] = useState("");
   const [divisionFilter, setDivisionFilter] = useState("all");
+  const [tournamentToDelete, setTournamentToDelete] = useState<Tournament | null>(null);
 
   const filtered = useMemo(
     () => filterTournaments(localTournaments, search, divisionFilter),
     [localTournaments, search, divisionFilter]
   );
+
+  async function confirmDeleteTournament() {
+    if (!tournamentToDelete) return;
+
+    const ok = await handleDelete(tournamentToDelete.id);
+
+    if (ok) {
+      setTournamentToDelete(null);
+    }
+  }
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
@@ -81,9 +93,32 @@ export default function ManageTournamentsPage() {
           tournaments={filtered}
           deleting={deleting}
           onEdit={openEdit}
-          onDelete={handleDelete}
+          onDelete={(id) => {
+            const tournament = localTournaments.find((t) => t.id === id) ?? null;
+            setTournamentToDelete(tournament);
+          }}
         />
       )}
+
+      <ConfirmModal
+        open={!!tournamentToDelete}
+        title={
+          tournamentToDelete
+            ? `Delete tournament "${tournamentToDelete.name}"?`
+            : "Delete tournament?"
+        }
+        description="This action cannot be undone."
+        confirmLabel="Delete tournament"
+        cancelLabel="Cancel"
+        danger
+        requireText="DELETE"
+        loading={deleting != null}
+        onCancel={() => {
+          if (deleting != null) return;
+          setTournamentToDelete(null);
+        }}
+        onConfirm={confirmDeleteTournament}
+      />
 
       <TournamentFormModal
         open={modalOpen}

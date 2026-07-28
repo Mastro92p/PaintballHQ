@@ -8,6 +8,7 @@ import { ManageTeamsHeader } from "@/components/teams/ManageTeamsHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
 import { AdminTeamTable } from "@/components/teams/AdminTeamTable";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { handleMissingEntity } from "@/lib/handle-missing-entity";
 
 function hydrateTeam(team: Team, divisions?: Division[] | null): Team {
@@ -32,9 +33,9 @@ export default function ManageTeamsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Team | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [teamIdToDelete, setTeamIdToDelete] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [divisionFilter, setDivisionFilter] = useState("all");
-  
 
   useEffect(() => {
     if (!data) return;
@@ -51,6 +52,11 @@ export default function ManageTeamsPage() {
       })
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [localTeams, search, divisionFilter]);
+
+  const teamToDelete =
+    teamIdToDelete != null
+      ? localTeams.find((team) => team.id === teamIdToDelete) ?? null
+      : null;
 
   function openCreate() {
     setEditing(null);
@@ -76,8 +82,6 @@ export default function ManageTeamsPage() {
   }, [divisions]);
 
   async function handleDelete(id: number) {
-    if (!confirm("Delete this team?")) return;
-
     const previous = localTeams;
     setDeleting(id);
     setLocalTeams((prev) => prev.filter((t) => t.id !== id));
@@ -93,18 +97,30 @@ export default function ManageTeamsPage() {
           reload: reloadTeams,
         })
       ) {
-        return;
+        return true;
       }
 
       if (!res.ok) {
         throw new Error(result?.error ?? "Failed to delete team");
       }
+
+      return true;
     } catch (error) {
       console.error(error);
       setLocalTeams(previous);
-      alert("Failed to delete team");
+      return false;
     } finally {
       setDeleting(null);
+    }
+  }
+
+  async function confirmDeleteTeam() {
+    if (teamIdToDelete == null) return;
+
+    const ok = await handleDelete(teamIdToDelete);
+
+    if (ok) {
+      setTeamIdToDelete(null);
     }
   }
 
@@ -138,14 +154,14 @@ export default function ManageTeamsPage() {
           placeholder="Search teams..."
         />
 
-      <DivisionFilterChips
-        divisions={divisions}
-        value={divisionFilter}
-        onChange={setDivisionFilter}
-        includeAll
-        includeUnassigned
-        highlightInactive
-      />
+        <DivisionFilterChips
+          divisions={divisions}
+          value={divisionFilter}
+          onChange={setDivisionFilter}
+          includeAll
+          includeUnassigned
+          highlightInactive
+        />
       </div>
 
       <AdminTeamTable
@@ -154,7 +170,27 @@ export default function ManageTeamsPage() {
         error={error}
         deleting={deleting}
         onEdit={openEdit}
-        onDelete={handleDelete}
+        onDelete={setTeamIdToDelete}
+      />
+
+      <ConfirmModal
+        open={teamIdToDelete != null}
+        title={
+          teamToDelete
+            ? `Delete team "${teamToDelete.name}"?`
+            : "Delete team?"
+        }
+        description="This action cannot be undone."
+        confirmLabel="Delete team"
+        cancelLabel="Cancel"
+        danger
+        requireText="DELETE"
+        loading={deleting != null}
+        onCancel={() => {
+          if (deleting != null) return;
+          setTeamIdToDelete(null);
+        }}
+        onConfirm={confirmDeleteTeam}
       />
 
       <TeamFormModal

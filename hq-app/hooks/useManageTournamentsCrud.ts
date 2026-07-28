@@ -256,8 +256,6 @@ export function useManageTournamentsCrud() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm("Delete this tournament?")) return;
-
     const previous = localTournaments;
     setDeleting(id);
     setLocalTournaments((prev) => prev.filter((t) => t.id !== id));
@@ -273,15 +271,18 @@ export function useManageTournamentsCrud() {
           reload: reloadTournaments,
         })
       ) {
-        return;
+        return true;
       }
 
       if (!res.ok) {
         throw new Error(result?.error ?? "Failed to delete tournament");
       }
+
+      return true;
     } catch (err) {
       console.error(err);
       setLocalTournaments(previous);
+      return false;
     } finally {
       setDeleting(null);
     }

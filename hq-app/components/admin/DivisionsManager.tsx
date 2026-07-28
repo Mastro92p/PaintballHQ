@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { handleMissingEntity } from "@/lib/handle-missing-entity";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 interface Division {
   id: number;
@@ -14,6 +15,8 @@ export default function DivisionsManager() {
   const [newName, setNewName] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState<number | null>(null);
+  const [divisionToDelete, setDivisionToDelete] = useState<Division | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function loadDivisions() {
@@ -35,7 +38,7 @@ export default function DivisionsManager() {
     loadDivisions();
   }, []);
 
-  async function handleCreate(e: React.SubmitEvent<HTMLFormElement>) {
+  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
     const name = newName.trim();
@@ -62,7 +65,9 @@ export default function DivisionsManager() {
 
       const created: Division = data?.division ?? data;
 
-      setDivisions((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setDivisions((prev) =>
+        [...prev, created].sort((a, b) => a.name.localeCompare(b.name))
+      );
       setNewName("");
     } catch (err) {
       console.error("create failed", err);
@@ -92,14 +97,14 @@ export default function DivisionsManager() {
       const data = await res.json().catch(() => ({}));
 
       if (
-          await handleMissingEntity(res, {
-            entityName: "division",
-            action: "update",
-            reload: loadDivisions,
-          })
-        ) {
-          return;
-        }
+        await handleMissingEntity(res, {
+          entityName: "division",
+          action: "update",
+          reload: loadDivisions,
+        })
+      ) {
+        return;
+      }
 
       if (!res.ok) {
         throw new Error(data?.error || "Failed to update division");
@@ -116,16 +121,21 @@ export default function DivisionsManager() {
     }
   }
 
-  async function handleDelete(division: Division) {
-    if (!confirm(`Delete "${division.name}"?`)) return;
+  async function handleDelete() {
+    if (!divisionToDelete) return false;
 
     setError(null);
 
+    const deletingDivision = divisionToDelete;
     const previous = divisions;
-    setDivisions((prev) => prev.filter((d) => d.id !== division.id));
+
+    setDeleting(deletingDivision.id);
+    setDivisions((prev) => prev.filter((d) => d.id !== deletingDivision.id));
 
     try {
-      const res = await fetch(`/api/divisions/${division.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/divisions/${deletingDivision.id}`, {
+        method: "DELETE",
+      });
 
       const handledMissing = await handleMissingEntity(res, {
         entityName: "division",
@@ -135,7 +145,8 @@ export default function DivisionsManager() {
       });
 
       if (handledMissing) {
-        return;
+        setDivisionToDelete(null);
+        return true;
       }
 
       const data = await res.json().catch(() => ({}));
@@ -143,9 +154,15 @@ export default function DivisionsManager() {
       if (!res.ok) {
         throw new Error(data?.error || "Failed to delete division");
       }
+
+      setDivisionToDelete(null);
+      return true;
     } catch (err) {
       setDivisions(previous);
       setError(err instanceof Error ? err.message : "Failed to delete division");
+      return false;
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -191,7 +208,6 @@ export default function DivisionsManager() {
         </div>
       ) : (
         <>
-          {/* Mobile: card list */}
           <div className="space-y-2 sm:hidden">
             {divisions.map((d) => (
               <div
@@ -213,13 +229,15 @@ export default function DivisionsManager() {
 
                 <div className="mt-3 flex gap-2">
                   <button
+                    type="button"
                     onClick={() => toggleActive(d)}
                     className="flex-1 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
                   >
                     {d.isActive ? "Deactivate" : "Activate"}
                   </button>
                   <button
-                    onClick={() => handleDelete(d)}
+                    type="button"
+                    onClick={() => setDivisionToDelete(d)}
                     className="flex-1 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300"
                   >
                     Delete
@@ -229,7 +247,6 @@ export default function DivisionsManager() {
             ))}
           </div>
 
-          {/* Desktop: table */}
           <div className="hidden sm:block overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
             <table className="min-w-full text-sm">
               <thead className="bg-white/5 text-slate-400">
@@ -256,13 +273,15 @@ export default function DivisionsManager() {
                     </td>
                     <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
                       <button
+                        type="button"
                         onClick={() => toggleActive(d)}
                         className="text-xs text-amber-300 hover:underline"
                       >
                         {d.isActive ? "Deactivate" : "Activate"}
                       </button>
                       <button
-                        onClick={() => handleDelete(d)}
+                        type="button"
+                        onClick={() => setDivisionToDelete(d)}
                         className="text-xs text-rose-400 hover:underline"
                       >
                         Delete
@@ -275,6 +294,28 @@ export default function DivisionsManager() {
           </div>
         </>
       )}
+
+      <ConfirmModal
+        open={!!divisionToDelete}
+        title={
+          divisionToDelete
+            ? `Delete division "${divisionToDelete.name}"?`
+            : "Delete division?"
+        }
+        description="This action cannot be undone."
+        confirmLabel="Delete division"
+        cancelLabel="Cancel"
+        danger
+        requireText="DELETE"
+        loading={deleting != null}
+        onCancel={() => {
+          if (deleting != null) return;
+          setDivisionToDelete(null);
+        }}
+        onConfirm={async () => {
+          await handleDelete();
+        }}
+      />
     </div>
   );
 }
