@@ -40,8 +40,13 @@ export default function LeagueStandingsTable({ standings, showBodyCount = false 
                 <td className="px-2 py-2 sm:px-4 sm:py-3 text-center text-base leading-none">
                   {medal ?? <span className="text-sm tabular-nums text-gray-400">{i + 1}</span>}
                 </td>
-                <td className="px-2 py-2 sm:px-4 sm:py-3 font-medium text-gray-900 dark:text-gray-100 max-w-[90px] sm:max-w-none truncate">
-                  {s.teamName}
+                <td className="px-2 py-2 sm:px-4 sm:py-3 font-medium text-gray-900 dark:text-gray-100 max-w-[130px] sm:max-w-none">
+                  <span
+                    className="block leading-tight line-clamp-2 text-[12px] sm:text-sm break-normal hyphens-none whitespace-normal"
+                    title={s.teamName}
+                  >
+                    {s.teamName}
+                  </span>
                 </td>
                 <td className="px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums text-gray-600 dark:text-gray-400">{s.played}</td>
                 <td className="px-2 py-2 sm:px-4 sm:py-3 text-center tabular-nums text-green-600 dark:text-green-400 font-medium">{s.wins}</td>

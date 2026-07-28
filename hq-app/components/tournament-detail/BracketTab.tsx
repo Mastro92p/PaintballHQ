@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { BracketMatchEditModal } from "@/components/tournament-detail/BracketMatchEditModal";
 import type { Match, Team, TournamentBracket } from "@/types";
+import { DragDropProvider } from "@dnd-kit/react";
+import { useSortable } from "@dnd-kit/react/sortable";
+import { move } from "@dnd-kit/helpers";
 
 type SaveBracketEditInput = {
   matchId: number;
@@ -24,6 +27,7 @@ type Props = {
   onAddBracket?: () => void;
   onRenameBracket?: (bracketId: number, name: string) => void;
   onDeleteBracket?: (bracketId: number) => void;
+  onReorderBrackets?: (bracketIds: number[]) => void | Promise<void>;
   renamingBracket?: boolean;
   deletingBracket?: boolean;
 
@@ -95,6 +99,43 @@ const OUTER_PADDING_Y = 20;
 const FIRST_ROUND_GAP = 18;
 const ROUND_MIN_GAP = 28;
 const LABEL_HEIGHT = 22;
+
+  function SortableBracketTabButton({
+    bracket,
+    index,
+    selected,
+    onSelect,
+    
+  }: {
+    bracket: TournamentBracket;
+    index: number;
+    selected: boolean;
+    onSelect: (bracketId: number) => void;
+    
+  }) {
+    const { ref, isDragging } = useSortable({
+      id: String(bracket.id),
+      index,
+      type: "bracket-tab",
+      accept: "bracket-tab",
+    });
+
+    return (
+      <button
+        ref={ref}
+        type="button"
+        onClick={() => onSelect(bracket.id)}
+        className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition touch-none ${
+          selected
+            ? "border-white/30 bg-white/10 text-white"
+            : "border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.06]"
+        } ${isDragging ? "opacity-60" : ""}`}
+        title={bracket.name ?? "Bracket"}
+      >
+        {bracket.name?.trim() || "Bracket"}
+      </button>
+    );
+  }
 
 function isPhaseKey(value: string): value is PhaseKey {
   return value in PHASE_ORDER;
@@ -600,6 +641,7 @@ export function BracketTab({
   onOpenBracketEdit,
   onCloseBracketEdit,
   onSaveBracketEdit,
+  onReorderBrackets,
   readonly = false,
 }: Props) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -610,6 +652,8 @@ export function BracketTab({
 
   const [isRenamingBracket, setIsRenamingBracket] = useState(false);
   const [bracketNameDraft, setBracketNameDraft] = useState("");
+  const [sortableBrackets, setSortableBrackets] = useState(brackets);
+  const [isDraggingBrackets, setIsDraggingBrackets] = useState(false);
 
   const panStateRef = useRef({
     active: false,
@@ -624,10 +668,22 @@ export function BracketTab({
     [brackets, activeBracketId]
   );
 
+
+  
+
   useEffect(() => {
     setIsRenamingBracket(false);
     setBracketNameDraft(activeBracket?.name?.trim() || "");
   }, [activeBracket?.id, activeBracket?.name]);
+
+
+  useEffect(() => {
+    if (!isDraggingBrackets) {
+      setSortableBrackets(
+        [...brackets].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      );
+    }
+  }, [brackets, isDraggingBrackets]);
 
   const {
     mainPhases,
@@ -826,6 +882,9 @@ export function BracketTab({
     };
   }, [canvasWidth]);
 
+
+  
+
   const connectors = useMemo(() => {
     const lines: Array<{
       key: string;
@@ -932,40 +991,82 @@ export function BracketTab({
     setIsPanning(false);
   };
 
+  const handleBracketsDragStart = useCallback(() => {
+  setIsDraggingBrackets(true);
+}, []);
+
+  const handleBracketsDragEnd = useCallback(
+    async (event: any) => {
+      setIsDraggingBrackets(false);
+
+      const nextBrackets = move(sortableBrackets, event);
+
+      if (
+        nextBrackets.length === sortableBrackets.length &&
+        nextBrackets.every((bracket, index) => bracket.id === sortableBrackets[index]?.id)
+      ) {
+        return;
+      }
+
+      setSortableBrackets(nextBrackets);
+
+      try {
+        await onReorderBrackets?.(nextBrackets.map((bracket) => bracket.id));
+      } catch (error) {
+        console.error(error);
+        setSortableBrackets(
+          [...brackets].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        );
+      }
+    },
+    [sortableBrackets, brackets, onReorderBrackets]
+  );
+
   return (
     <section className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        {brackets.map((bracket, index) => {
-          const isActive = bracket.id === activeBracketId;
+      <DragDropProvider
+        onDragStart={!readonly ? handleBracketsDragStart : undefined}
+        onDragEnd={!readonly ? handleBracketsDragEnd : undefined}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          {sortableBrackets.map((bracket, index) =>
+            !readonly ? (
+              <SortableBracketTabButton
+                key={bracket.id}
+                bracket={bracket}
+                index={index}
+                selected={bracket.id === activeBracketId}
+                onSelect={(bracketId) => onSelectBracket?.(bracketId)}
+              />
+            ) : (
+              <button
+                key={bracket.id}
+                type="button"
+                onClick={() => onSelectBracket?.(bracket.id)}
+                className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                  bracket.id === activeBracketId
+                    ? "border-white/30 bg-white/10 text-white"
+                    : "border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.06]"
+                }`}
+                title={bracket.name ?? `Bracket ${index + 1}`}
+              >
+                {bracket.name?.trim() || `B${index + 1}`}
+              </button>
+            )
+          )}
 
-          return (
-            <button
-              key={bracket.id}
+          {!readonly && (
+            <Button
               type="button"
-              onClick={() => onSelectBracket?.(bracket.id)}
-              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
-                isActive
-                  ? "border-white/30 bg-white/10 text-white"
-                  : "border-white/10 bg-white/[0.03] text-gray-300 hover:bg-white/[0.06]"
-              }`}
-              title={bracket.name ?? `Bracket ${index + 1}`}
+              size="sm"
+              variant="secondary"
+              onClick={onAddBracket}
             >
-              {bracket.name?.trim() || `B${index + 1}`}
-            </button>
-          );
-        })}
-
-        {!readonly && (
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={onAddBracket}
-          >
-            + Add
-          </Button>
-        )}
-      </div>
+              + Add
+            </Button>
+          )}
+        </div>
+      </DragDropProvider>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">

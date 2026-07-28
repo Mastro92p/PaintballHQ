@@ -402,12 +402,12 @@ const standingsByDivision = useMemo(() => {
         </div>
       </section>
 
-      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-fit">
+      <div className="grid grid-cols-2 sm:inline-flex sm:flex-row gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 sm:w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            className={`flex items-center justify-center sm:justify-start gap-1.5 px-3 sm:px-4 py-2 rounded-md text-sm font-medium transition-all ${
               activeTab === tab.key
                 ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
                 : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"

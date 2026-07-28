@@ -19,33 +19,36 @@ export function TournamentStatusTabs({ value, counts, onChange }: Props) {
     <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1 w-full sm:w-fit">
       {STATUS_TABS.map((tab) => {
         const isActive = value === tab.value;
+        const count = counts[tab.value] ?? 0;
 
         return (
           <button
             key={tab.value}
             onClick={() => onChange(tab.value)}
-            className={`flex items-center justify-center gap-1.5 py-2 rounded-md text-sm font-medium transition-all duration-200 overflow-hidden
-              sm:px-4 sm:flex-none
+            className={`flex items-center justify-center gap-1 py-2 rounded-md text-sm font-medium transition-all duration-200 overflow-hidden
+              sm:px-4 sm:flex-none sm:gap-1.5
               ${
                 isActive
-                  ? "flex-[2] px-3 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
-                  : "flex-[1] px-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  ? "flex-[3] px-2 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
+                  : "flex-1 px-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               }`}
           >
-            <span className={`truncate ${isActive ? "inline" : "hidden sm:inline"}`}>
+            <span
+              className={`whitespace-nowrap text-[13px] sm:text-sm ${
+                isActive ? "inline" : "hidden sm:inline"
+              }`}
+            >
               {tab.label}
             </span>
-            {counts[tab.value] !== undefined && (
-              <span
-                className={`text-xs tabular-nums px-1.5 py-0.5 rounded-full shrink-0 ${
-                  isActive
-                    ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                    : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500"
-                }`}
-              >
-                {counts[tab.value]}
-              </span>
-            )}
+            <span
+              className={`text-xs tabular-nums px-1.5 py-0.5 rounded-full shrink-0 ${
+                isActive
+                  ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                  : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500"
+              }`}
+            >
+              {count}
+            </span>
           </button>
         );
       })}

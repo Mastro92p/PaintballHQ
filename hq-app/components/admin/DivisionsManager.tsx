@@ -169,7 +169,7 @@ export default function DivisionsManager() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
         >
           {submitting ? "Adding..." : "Add"}
         </button>
@@ -181,63 +181,100 @@ export default function DivisionsManager() {
         </p>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
-        <table className="min-w-full text-sm">
-          <thead className="bg-white/5 text-slate-400">
-            <tr>
-              <th className="px-4 py-3 text-left font-medium">Name</th>
-              <th className="px-4 py-3 text-left font-medium">Status</th>
-              <th className="px-4 py-3 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
-                  Loading...
-                </td>
-              </tr>
-            ) : divisions.length === 0 ? (
-              <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-slate-500">
-                  No divisions yet.
-                </td>
-              </tr>
-            ) : (
-              divisions.map((d) => (
-                <tr key={d.id} className="border-t border-white/10 text-slate-200">
-                  <td className="px-4 py-3 font-medium text-white">{d.name}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs ${
-                        d.isActive
-                          ? "bg-emerald-500/10 text-emerald-300"
-                          : "bg-slate-500/10 text-slate-400"
-                      }`}
-                    >
-                      {d.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button
-                      onClick={() => toggleActive(d)}
-                      className="text-xs text-amber-300 hover:underline"
-                    >
-                      {d.isActive ? "Deactivate" : "Activate"}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(d)}
-                      className="text-xs text-rose-400 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
+      {loading ? (
+        <div className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-6 text-center text-sm text-slate-500">
+          Loading...
+        </div>
+      ) : divisions.length === 0 ? (
+        <div className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-6 text-center text-sm text-slate-500">
+          No divisions yet.
+        </div>
+      ) : (
+        <>
+          {/* Mobile: card list */}
+          <div className="space-y-2 sm:hidden">
+            {divisions.map((d) => (
+              <div
+                key={d.id}
+                className="rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-white truncate">{d.name}</span>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-1 text-xs ${
+                      d.isActive
+                        ? "bg-emerald-500/10 text-emerald-300"
+                        : "bg-slate-500/10 text-slate-400"
+                    }`}
+                  >
+                    {d.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => toggleActive(d)}
+                    className="flex-1 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
+                  >
+                    {d.isActive ? "Deactivate" : "Activate"}
+                  </button>
+                  <button
+                    onClick={() => handleDelete(d)}
+                    className="flex-1 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden sm:block overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
+            <table className="min-w-full text-sm">
+              <thead className="bg-white/5 text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Name</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-right font-medium">Actions</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              </thead>
+              <tbody>
+                {divisions.map((d) => (
+                  <tr key={d.id} className="border-t border-white/10 text-slate-200">
+                    <td className="px-4 py-3 font-medium text-white">{d.name}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs ${
+                          d.isActive
+                            ? "bg-emerald-500/10 text-emerald-300"
+                            : "bg-slate-500/10 text-slate-400"
+                        }`}
+                      >
+                        {d.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                      <button
+                        onClick={() => toggleActive(d)}
+                        className="text-xs text-amber-300 hover:underline"
+                      >
+                        {d.isActive ? "Deactivate" : "Activate"}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(d)}
+                        className="text-xs text-rose-400 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -154,21 +154,21 @@ export default function LeaguesPage() {
                           </p>
                         )}
 
-                        <div className="flex sm:hidden items-center gap-2 mt-2 flex-wrap">
-                          <span className="text-xs text-gray-400 dark:text-gray-500">
-                            <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
-                              {tournamentCount}
-                            </span>{" "}
-                            tournaments
-                          </span>
-                          <span className="text-gray-300 dark:text-gray-700">·</span>
-                          <span className="text-xs text-gray-400 dark:text-gray-500">
-                            <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
-                              {teamCount}
-                            </span>{" "}
-                            teams
-                          </span>
-                        </div>
+<div className="flex sm:hidden items-center gap-2 mt-2 flex-wrap [text-shadow:0_1px_2px_rgba(255,255,255,0.6)] dark:[text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+  <span className="text-xs text-gray-600 dark:text-gray-300">
+    <span className="font-semibold text-gray-900 dark:text-white tabular-nums">
+      {tournamentCount}
+    </span>{" "}
+    tournaments
+  </span>
+  <span className="text-gray-400 dark:text-gray-500">·</span>
+  <span className="text-xs text-gray-600 dark:text-gray-300">
+    <span className="font-semibold text-gray-900 dark:text-white tabular-nums">
+      {teamCount}
+    </span>{" "}
+    teams
+  </span>
+</div>
                       </div>
                     </div>
 

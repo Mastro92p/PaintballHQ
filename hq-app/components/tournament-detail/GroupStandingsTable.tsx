@@ -1,4 +1,6 @@
-type StandingRow = {
+"use client";
+
+export type StandingRow = {
   teamId: number;
   teamName: string;
   w: number;
@@ -11,72 +13,88 @@ type StandingRow = {
   bodyCount: number;
 };
 
-type Props = {
+type GroupStandingsTableProps = {
   rows: StandingRow[];
-  isClassic: boolean;
+  isClassic?: boolean;
 };
 
-export function GroupStandingsTable({ rows, isClassic }: Props) {
+export function GroupStandingsTable({
+  rows,
+  isClassic = false,
+}: GroupStandingsTableProps) {
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-4 py-8 text-center text-sm text-gray-400">
+        No standings yet.
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-xl border border-[#22314d] bg-[#0f1b34] overflow-hidden">
-      <table className="w-full text-xs">
-        <thead className="bg-white/5 text-gray-400 uppercase tracking-wide">
+    <div className="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
           <tr>
-            <th className="px-3 py-3 text-left w-6">#</th>
-            <th className="px-3 py-3 text-left">Team</th>
-            <th className="px-3 py-3 text-center w-8">P</th>
-            <th className="px-3 py-3 text-center w-8">W</th>
-            <th className="px-3 py-3 text-center w-8">D</th>
-            <th className="px-3 py-3 text-center w-8">L</th>
-            <th className="px-3 py-3 text-center w-10">GF</th>
-            <th className="px-3 py-3 text-center w-10">GA</th>
-            <th className="px-3 py-3 text-center w-12">GD</th>
+            <th className="px-2 sm:px-4 py-3 text-left font-medium w-10">#</th>
+            <th className="px-2 sm:px-4 py-3 text-left font-medium">Team</th>
+            <th className="px-2 sm:px-4 py-3 text-center font-medium w-10 sm:w-auto">W</th>
+            <th className="px-2 sm:px-4 py-3 text-center font-medium w-10 sm:w-auto">D</th>
+            <th className="px-2 sm:px-4 py-3 text-center font-medium w-10 sm:w-auto">L</th>
+
+            <th className="hidden sm:table-cell px-4 py-3 text-center font-medium">GF</th>
+            <th className="hidden sm:table-cell px-4 py-3 text-center font-medium">GA</th>
+            <th className="hidden sm:table-cell px-4 py-3 text-center font-medium">GD</th>
+
             {isClassic && (
-              <th className="px-3 py-3 text-center w-14">Bodies</th>
+              <th className="hidden sm:table-cell px-4 py-3 text-center font-medium">
+                Body
+              </th>
             )}
-            <th className="px-3 py-3 text-center w-10 font-bold text-amber-400">Pts</th>
+
+            <th className="px-2 sm:px-4 py-3 text-center font-medium w-12 sm:w-auto">Pts</th>
           </tr>
         </thead>
 
-        <tbody className="divide-y divide-[#22314d]">
-          {rows.map((row, idx) => {
-            const played = row.w + row.d + row.l;
+        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+          {rows.map((row, index) => (
+            <tr key={row.teamId} className="text-gray-700 dark:text-gray-300">
+              <td className="px-2 sm:px-4 py-3 tabular-nums text-gray-400 dark:text-gray-500">
+                {index + 1}
+              </td>
 
-            return (
-              <tr
-                key={row.teamId}
-                className={`bg-transparent ${idx === 0 ? "border-l-2 border-l-teal-400" : ""}`}
-              >
-                <td className="px-3 py-3 text-gray-400 tabular-nums">{idx + 1}</td>
-                <td className="px-3 py-3 font-medium text-gray-100">{row.teamName}</td>
-                <td className="px-3 py-3 text-center tabular-nums text-gray-300">{played}</td>
-                <td className="px-3 py-3 text-center tabular-nums font-semibold text-emerald-400">
-                  {row.w}
+              <td className="px-2 sm:px-4 py-3 min-w-0">
+                <div className="max-w-[120px] sm:max-w-none truncate font-medium text-gray-900 dark:text-gray-100">
+                  {row.teamName}
+                </div>
+              </td>
+
+              <td className="px-2 sm:px-4 py-3 text-center tabular-nums">{row.w}</td>
+              <td className="px-2 sm:px-4 py-3 text-center tabular-nums">{row.d}</td>
+              <td className="px-2 sm:px-4 py-3 text-center tabular-nums">{row.l}</td>
+
+              <td className="hidden sm:table-cell px-4 py-3 text-center tabular-nums">
+                {row.gf}
+              </td>
+              <td className="hidden sm:table-cell px-4 py-3 text-center tabular-nums">
+                {row.ga}
+              </td>
+              <td className="hidden sm:table-cell px-4 py-3 text-center tabular-nums">
+                {row.gd > 0 ? `+${row.gd}` : row.gd}
+              </td>
+
+              {isClassic && (
+                <td className="hidden sm:table-cell px-4 py-3 text-center tabular-nums">
+                  {row.bodyCount}
                 </td>
-                <td className="px-3 py-3 text-center tabular-nums text-gray-300">{row.d}</td>
-                <td className="px-3 py-3 text-center tabular-nums font-semibold text-rose-400">
-                  {row.l}
-                </td>
-                <td className="px-3 py-3 text-center tabular-nums text-gray-300">{row.gf}</td>
-                <td className="px-3 py-3 text-center tabular-nums text-gray-300">{row.ga}</td>
-                <td className="px-3 py-3 text-center tabular-nums text-gray-400">
-                  {row.gd > 0 ? `+${row.gd}` : row.gd}
-                </td>
-                {isClassic && (
-                  <td className="px-3 py-3 text-center tabular-nums text-gray-400">
-                    {row.bodyCount}
-                  </td>
-                )}
-                <td className="px-3 py-3 text-center tabular-nums font-bold text-amber-400">
-                  {row.pts}
-                </td>
-              </tr>
-            );
-          })}
+              )}
+
+              <td className="px-2 sm:px-4 py-3 text-center font-semibold tabular-nums text-teal-600 dark:text-teal-300">
+                {row.pts}
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
   );
 }
-
-export type { StandingRow };

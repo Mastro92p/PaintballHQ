@@ -399,7 +399,7 @@ export default function PublicGroupStage({
       <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 md:p-5">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-teal-300">
-            {isRoundRobin ? "Score Table" : `Group ${activeGroup}`}
+            {isRoundRobin ? "Score Table" : `${activeGroup}`}
           </h3>
           <span className="text-xs text-slate-400">
             {
@@ -414,7 +414,38 @@ export default function PublicGroupStage({
           </span>
         </div>
 
-        <StandingsTable rows={groupStandings} isClassic={isClassic} />
+        <details
+          className="group mb-4 overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]"
+          open={!isRoundRobin}
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium text-slate-200 marker:content-none">
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-[0.2em] text-teal-300">
+                Standings
+              </span>
+              <span className="rounded-full bg-white/5 px-2 py-0.5 text-[11px] text-slate-400">
+                {groupStandings.length} teams
+              </span>
+            </div>
+
+            <span className="text-slate-400 transition-transform duration-200 group-open:rotate-180">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </span>
+          </summary>
+
+          <div className="px-4 pb-4">
+            <StandingsTable rows={groupStandings} isClassic={isClassic} />
+          </div>
+        </details>
 
         <FixturesSection
           isRoundRobin={isRoundRobin}

@@ -21,7 +21,7 @@ export function TabSelector<T extends string>({
 }: TabSelectorProps<T>) {
   return (
     <div
-      className={`flex gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800 w-fit ${className}`}
+      className={`flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800 sm:w-fit sm:flex-nowrap ${className}`}
     >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;
@@ -31,17 +31,19 @@ export function TabSelector<T extends string>({
             key={tab.key}
             type="button"
             onClick={() => onChange(tab.key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all ${
+            className={`flex min-w-0 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-all sm:px-4 ${
+              tabs.length >= 4 ? "flex-1 basis-[calc(50%-2px)] sm:basis-auto sm:flex-none" : ""
+            } ${
               isActive
                 ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-sm"
                 : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             }`}
           >
-            <span>{tab.label}</span>
+            <span className="truncate">{tab.label}</span>
 
             {tab.count !== undefined && (
               <span
-                className={`text-xs tabular-nums px-1.5 py-0.5 rounded-full ${
+                className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs tabular-nums ${
                   isActive
                     ? "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                     : "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500"

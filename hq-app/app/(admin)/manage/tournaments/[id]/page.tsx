@@ -207,6 +207,67 @@ export default function ManageTournamentDetailPage({
   const [renamingBracket, setRenamingBracket] = useState(false);
   const [deletingBracket, setDeletingBracket] = useState(false);
 
+  async function handleReorderBrackets(bracketIds: number[]) {
+    setBracketError(null);
+
+    const previous = brackets;
+
+    setLocalTournament((prev) =>
+      prev
+        ? {
+            ...prev,
+            brackets: (prev.brackets ?? [])
+              .map((bracket) => ({
+                ...bracket,
+                sortOrder: bracketIds.indexOf(bracket.id),
+              }))
+              .sort((a, b) => a.sortOrder - b.sortOrder),
+          }
+        : prev
+    );
+
+    try {
+      const res = await fetch(`/api/tournaments/${id}/brackets`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reorder",
+          bracketIds,
+        }),
+      });
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(body.error ?? "Failed to reorder brackets");
+      }
+
+      const nextBrackets = body.brackets ?? [];
+      setLocalTournament((prev) =>
+        prev
+          ? {
+              ...prev,
+              brackets: nextBrackets,
+            }
+          : prev
+      );
+    } catch (error) {
+      console.error(error);
+      setBracketError(
+        error instanceof Error ? error.message : "Failed to reorder brackets"
+      );
+
+      setLocalTournament((prev) =>
+        prev
+          ? {
+              ...prev,
+              brackets: previous,
+            }
+          : prev
+      );
+    }
+  }
+
   async function handleResetBracket() {
     if (activeBracketId == null) {
       setBracketError("Select a bracket first");
@@ -523,6 +584,7 @@ export default function ManageTournamentDetailPage({
         onAddBracket={handleAddBracket}
         onRenameBracket={handleRenameBracket}
         onDeleteBracket={handleDeleteBracket}
+        onReorderBrackets={handleReorderBrackets}
         renamingBracket={renamingBracket}
         deletingBracket={deletingBracket}
         matches={activeBracketMatches}
