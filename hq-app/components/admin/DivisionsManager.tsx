@@ -169,8 +169,10 @@ export default function DivisionsManager() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-white">Divisions</h2>
-        <p className="mt-1 text-sm text-slate-400">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+          Divisions
+        </h2>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Manage predefined divisions used for teams and tournaments.
         </p>
       </div>
@@ -181,29 +183,29 @@ export default function DivisionsManager() {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="e.g. M3, X3, X5"
-          className="flex-1 rounded-lg border border-white/10 bg-slate-900/60 px-3 py-2 text-sm text-white placeholder:text-slate-500"
+          className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:border-white/10 dark:bg-slate-900/60 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-teal-500 dark:focus:ring-teal-500/20"
         />
         <button
           type="submit"
           disabled={submitting}
-          className="shrink-0 rounded-lg bg-emerald-500/20 px-4 py-2 text-sm font-medium text-emerald-300 hover:bg-emerald-500/30 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30"
         >
           {submitting ? "Adding..." : "Add"}
         </button>
       </form>
 
       {error && (
-        <p className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
           {error}
         </p>
       )}
 
       {loading ? (
-        <div className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-6 text-center text-sm text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-500">
           Loading...
         </div>
       ) : divisions.length === 0 ? (
-        <div className="rounded-2xl border border-white/10 bg-slate-900/60 px-4 py-6 text-center text-sm text-slate-500">
+        <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-500 shadow-sm dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-500">
           No divisions yet.
         </div>
       ) : (
@@ -212,15 +214,17 @@ export default function DivisionsManager() {
             {divisions.map((d) => (
               <div
                 key={d.id}
-                className="rounded-xl border border-white/10 bg-slate-900/60 px-4 py-3"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-slate-900/60"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-white truncate">{d.name}</span>
+                  <span className="truncate font-medium text-slate-900 dark:text-white">
+                    {d.name}
+                  </span>
                   <span
                     className={`shrink-0 rounded-full px-2 py-1 text-xs ${
                       d.isActive
-                        ? "bg-emerald-500/10 text-emerald-300"
-                        : "bg-slate-500/10 text-slate-400"
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                        : "bg-slate-100 text-slate-600 dark:bg-slate-500/10 dark:text-slate-400"
                     }`}
                   >
                     {d.isActive ? "Active" : "Inactive"}
@@ -231,14 +235,14 @@ export default function DivisionsManager() {
                   <button
                     type="button"
                     onClick={() => toggleActive(d)}
-                    className="flex-1 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-300"
+                    className="flex-1 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:hover:bg-amber-500/20"
                   >
                     {d.isActive ? "Deactivate" : "Activate"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setDivisionToDelete(d)}
-                    className="flex-1 rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-300"
+                    className="flex-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
                   >
                     Delete
                   </button>
@@ -247,9 +251,9 @@ export default function DivisionsManager() {
             ))}
           </div>
 
-          <div className="hidden sm:block overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
+          <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-slate-900/60 sm:block">
             <table className="min-w-full text-sm">
-              <thead className="bg-white/5 text-slate-400">
+              <thead className="bg-slate-50 text-slate-600 dark:bg-white/5 dark:text-slate-400">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">Name</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
@@ -258,31 +262,36 @@ export default function DivisionsManager() {
               </thead>
               <tbody>
                 {divisions.map((d) => (
-                  <tr key={d.id} className="border-t border-white/10 text-slate-200">
-                    <td className="px-4 py-3 font-medium text-white">{d.name}</td>
+                  <tr
+                    key={d.id}
+                    className="border-t border-slate-200 text-slate-700 dark:border-white/10 dark:text-slate-200"
+                  >
+                    <td className="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                      {d.name}
+                    </td>
                     <td className="px-4 py-3">
                       <span
                         className={`rounded-full px-2 py-1 text-xs ${
                           d.isActive
-                            ? "bg-emerald-500/10 text-emerald-300"
-                            : "bg-slate-500/10 text-slate-400"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300"
+                            : "bg-slate-100 text-slate-600 dark:bg-slate-500/10 dark:text-slate-400"
                         }`}
                       >
                         {d.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right space-x-2 whitespace-nowrap">
+                    <td className="space-x-2 whitespace-nowrap px-4 py-3 text-right">
                       <button
                         type="button"
                         onClick={() => toggleActive(d)}
-                        className="text-xs text-amber-300 hover:underline"
+                        className="text-xs font-medium text-amber-700 hover:underline dark:text-amber-300"
                       >
                         {d.isActive ? "Deactivate" : "Activate"}
                       </button>
                       <button
                         type="button"
                         onClick={() => setDivisionToDelete(d)}
-                        className="text-xs text-rose-400 hover:underline"
+                        className="text-xs font-medium text-rose-700 hover:underline dark:text-rose-400"
                       >
                         Delete
                       </button>
