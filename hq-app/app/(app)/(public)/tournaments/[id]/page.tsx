@@ -144,7 +144,7 @@ export default function TournamentPublicPage({
   <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#07131f] dark:text-white">
     <div className="mx-auto max-w-5xl px-4 py-8">
       <section className="space-y-5">
-        <TournamentHeader tournament={data} theme="dark" />
+        <TournamentHeader tournament={data}  />
 
           <TabSelector tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 

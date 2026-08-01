@@ -40,14 +40,16 @@ export function InfoTab({ data }: Props) {
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-white">Tournament Info</h2>
-        <p className="mt-1 text-sm text-slate-400">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          Tournament Info
+          </h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
           General details, format settings, and participation numbers.
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
-        <div className="divide-y divide-white/10">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-slate-900/60">
+        <div className="divide-y divide-gray-200 dark:divide-white/10">
           <InfoRow label="Name" value={data.name ?? "—"} />
           <InfoRow label="Date" value={data.date ? formatDate(data.date) : "—"} />
           <InfoRow label="Location" value={data.location ?? "—"} />

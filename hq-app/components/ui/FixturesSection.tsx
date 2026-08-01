@@ -30,12 +30,12 @@ export function FixturesSection({
   return (
     <>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <h4 className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+        <h4 className="text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-slate-400">
           Fixtures
         </h4>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-slate-400">Team</label>
+          <label className="text-xs font-medium text-gray-500 dark:text-slate-400">Team</label>
 
           <TeamFilterDropdown
             teams={activeTeams}
@@ -47,7 +47,7 @@ export function FixturesSection({
             <button
               type="button"
               onClick={() => onTeamFilterChange("all")}
-              className="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:bg-white/5 hover:text-white"
+              className="rounded-lg border border-gray-200 dark:border-white/10 px-2.5 py-1.5 text-xs font-medium text-gray-600 dark:text-slate-300 transition-colors hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
             >
               Clear
             </button>
@@ -60,9 +60,9 @@ export function FixturesSection({
           {roundKeys.length > 0 ? (
             roundKeys.map((round) => (
               <div key={round} className="space-y-3">
-                <h4 className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-slate-400">
+                <h4 className="flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-gray-500 dark:text-slate-400">
                   <span>{getRoundHeading(round, matchesByRound[round])}</span>
-                  <span className="h-px flex-1 bg-white/10" />
+                  <span className="h-px flex-1 bg-gray-200 dark:bg-white/10" />
                 </h4>
                 <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                   {matchesByRound[round].map((match) => (
@@ -77,7 +77,7 @@ export function FixturesSection({
               </div>
             ))
           ) : (
-            <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-6 text-sm text-slate-400">
+            <div className="rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.02] px-4 py-6 text-sm text-gray-500 dark:text-slate-400">
               No fixtures match this filter.
             </div>
           )}
@@ -96,7 +96,7 @@ export function FixturesSection({
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-4 py-6 text-sm text-slate-400">
+            <div className="rounded-xl border border-dashed border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.02] px-4 py-6 text-sm text-gray-500 dark:text-slate-400">
               No matches scheduled for this group yet.
             </div>
           )}

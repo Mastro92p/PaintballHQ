@@ -119,6 +119,7 @@ export default function TeamsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 uppercase text-xs tracking-widest">
                   <tr>
+                    <th className="px-4 py-3 text-left">Logo</th>
                     <th className="px-3 py-3 sm:px-5 text-left">Team Name</th>
                     <th className="hidden sm:table-cell px-5 py-3 text-left">Division</th>
                     <th className="hidden sm:table-cell px-5 py-3 text-left">Tournaments</th>
@@ -148,18 +149,26 @@ export default function TeamsPage() {
                         }}
                         className="cursor-pointer bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:bg-gray-50 dark:focus-visible:bg-gray-800"
                       >
-                        <td className="relative p-0 font-semibold text-gray-900 dark:text-gray-100 overflow-hidden">
-                          {t.logoUrl && (
-                            <img
-                              src={t.logoUrl}
-                              alt=""
-                              loading="lazy"
-                              className="absolute inset-0 h-full w-full object-cover opacity-45 dark:opacity-40"
-                            />
-                          )}
-                          <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-white/60 to-white dark:from-gray-900/10 dark:via-gray-900/60 dark:to-gray-900" />
-                          <span className="relative z-10 block px-3 py-4 sm:px-5">{t.name}</span>
-                        </td>
+                <td className="px-4 py-3">
+                  <div className="w-10 h-10 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex items-center justify-center overflow-hidden shrink-0">
+                    {t.logoUrl ? (
+                      <img
+                        src={t.logoUrl}
+                        alt={`${t.name} logo`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span className="text-[10px] text-gray-400 text-center leading-tight">
+                        No logo
+                      </span>
+                    )}
+                  </div>
+                </td>
+
+                <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                  {t.name}
+                </td>
                         <td className="hidden sm:table-cell px-5 py-4 text-gray-700 dark:text-gray-300">
                           {t.division?.name ?? "—"}
                         </td>

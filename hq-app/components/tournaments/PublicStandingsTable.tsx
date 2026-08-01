@@ -2,15 +2,12 @@ import { computeGroupedStandings, computeRoundRobinStandings, applyClassicScorin
 import { Match } from "@/types";
 import { getClassicMatchResult } from "@/lib/utils";
 
-
 type TournamentType = "round_robin" | "round_robin_classic" | "group_and_bracket" | "groupandbracket" | "single_elimination";
-
 
 type FormatConfig = {
   qualifiersPerGroup?: number;
   wildCardCount?: number;
 };
-
 
 type Props = {
   tournamentType: TournamentType | string;
@@ -19,31 +16,25 @@ type Props = {
   formatConfig?: FormatConfig | null;
 };
 
-
 function getRowClassName(
   row: StandingRow,
   qualifiersPerGroup: number,
   wildCardIds: Set<number>
 ) {
   if ((row.groupRank ?? 999) <= qualifiersPerGroup) {
-    return "bg-emerald-500/10";
+    return "bg-emerald-50 dark:bg-emerald-500/10";
   }
-
 
   if (wildCardIds.has(row.teamId)) {
-    return "bg-amber-500/10";
+    return "bg-amber-50 dark:bg-amber-500/10";
   }
-
 
   return "";
 }
 
-
 function renderGoalDiff(value: number) {
   return value > 0 ? `+${value}` : value;
 }
-
-
 
 function StandingsTable({
   rows,
@@ -61,10 +52,10 @@ function StandingsTable({
   showBodyCount?: boolean;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
+    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-white/10 dark:bg-slate-900/60">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-white/5 text-slate-400">
+          <thead className="bg-gray-50 text-gray-500 dark:bg-white/5 dark:text-slate-400">
             <tr>
               {showOverallRank && (
                 <th className="px-4 py-3 text-left font-medium">Rank</th>
@@ -74,70 +65,67 @@ function StandingsTable({
               )}
               <th className="px-4 py-3 text-left font-medium">Team</th>
               <th className="px-3 py-3 text-right font-medium">P</th>
-              <th className="px-3 py-3 text-right font-medium text-emerald-400">W</th>
+              <th className="px-3 py-3 text-right font-medium text-emerald-600 dark:text-emerald-400">W</th>
               <th className="px-3 py-3 text-right font-medium">D</th>
-              <th className="px-3 py-3 text-right font-medium text-rose-400">L</th>
+              <th className="px-3 py-3 text-right font-medium text-rose-600 dark:text-rose-400">L</th>
               <th className="px-3 py-3 text-right font-medium">GF</th>
               <th className="px-3 py-3 text-right font-medium">GA</th>
               <th className="px-3 py-3 text-right font-medium">GD</th>
               {showBodyCount && (
-                <th className="px-3 py-3 text-right font-medium text-sky-400">BC</th>
+                <th className="px-3 py-3 text-right font-medium text-sky-600 dark:text-sky-400">BC</th>
               )}
               <th className="px-4 py-3 text-right font-medium">PTS</th>
             </tr>
           </thead>
 
-
           <tbody>
             {rows.map((row) => (
               <tr
                 key={row.teamId}
-                className={`border-t border-white/10 text-slate-200 ${getRowClassName(
+                className={`border-t border-gray-200 text-gray-700 dark:border-white/10 dark:text-slate-200 ${getRowClassName(
                   row,
                   qualifiersPerGroup,
                   wildCardIds
                 )}`}
               >
                 {showOverallRank && (
-                  <td className="px-4 py-3 text-slate-300">{row.overallRank}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-slate-300">{row.overallRank}</td>
                 )}
-
 
                 {showGroupRank && (
-                  <td className="px-4 py-3 text-slate-300">{row.groupRank}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-slate-300">{row.groupRank}</td>
                 )}
 
-
-                <td className="px-4 py-3 font-medium text-white">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded-md border border-white/10 bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
-                    {row.teamLogoUrl ? (
-                      <img
-                        src={row.teamLogoUrl}
-                        alt={`${row.teamName} logo`}
-                        className="w-full h-full object-cover"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <span className="text-[8px] text-slate-500">—</span>
-                    )}
+                <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-6 h-6 rounded-md border border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
+                      {row.teamLogoUrl ? (
+                        <img
+                          src={row.teamLogoUrl}
+                          alt={`${row.teamName} logo`}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <span className="text-[8px] text-gray-400 dark:text-slate-500">—</span>
+                      )}
+                    </div>
+                    <span>{row.teamName}</span>
                   </div>
-                  <span>{row.teamName}</span>
-                </div>
-              </td>
+                </td>
                 <td className="px-3 py-3 text-right">{row.played}</td>
-                <td className="px-3 py-3 text-right text-emerald-400">{row.wins}</td>
+                <td className="px-3 py-3 text-right text-emerald-600 dark:text-emerald-400">{row.wins}</td>
                 <td className="px-3 py-3 text-right">{row.draws}</td>
-                <td className="px-3 py-3 text-right text-rose-400">{row.losses}</td>
+                <td className="px-3 py-3 text-right text-rose-600 dark:text-rose-400">{row.losses}</td>
                 <td className="px-3 py-3 text-right">{row.gf}</td>
                 <td className="px-3 py-3 text-right">{row.ga}</td>
                 <td className="px-3 py-3 text-right">{renderGoalDiff(row.gd)}</td>
                 {showBodyCount && (
-                  <td className="px-3 py-3 text-right text-sky-400">
+                  <td className="px-3 py-3 text-right text-sky-600 dark:text-sky-400">
                     {row.bodyCount ?? 0}
                   </td>
                 )}
-                <td className="px-4 py-3 text-right font-semibold text-amber-300">
+                <td className="px-4 py-3 text-right font-semibold text-amber-600 dark:text-amber-300">
                   {row.points}
                 </td>
               </tr>
@@ -148,7 +136,6 @@ function StandingsTable({
     </div>
   );
 }
-
 
 export function PublicStandingsTable({
   tournamentType,
@@ -163,16 +150,14 @@ export function PublicStandingsTable({
       standings = applyClassicScoring(standings, matches);
     }
 
-
     return (
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">Standings</h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Standings</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             Rankings based on completed matches.
           </p>
         </div>
-
 
         <StandingsTable
           rows={standings}
@@ -180,8 +165,7 @@ export function PublicStandingsTable({
           showBodyCount={tournamentType === "round_robin_classic"}
         />
 
-
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-gray-400 dark:text-slate-500">
           {tournamentType === "round_robin_classic"
             ? "Points follow classic scoring rules, including body count bonus."
             : "Points: Win = 3 · Draw = 1 · Loss = 0."}{" "}
@@ -191,11 +175,9 @@ export function PublicStandingsTable({
     );
   }
 
-
   if (tournamentType === "group_and_bracket" || tournamentType === "groupandbracket") {
     const qualifiersPerGroup = formatConfig?.qualifiersPerGroup ?? 2;
     const wildCardCount = formatConfig?.wildCardCount ?? 0;
-
 
     const { grouped, wildcardRows } = computeGroupedStandings(
       teams,
@@ -204,41 +186,35 @@ export function PublicStandingsTable({
       wildCardCount
     );
 
-
     const wildCardIds = new Set(wildcardRows.map((row) => row.teamId));
-
 
     return (
       <section className="space-y-6">
         <div>
-          <h2 className="text-lg font-semibold text-white">Standings</h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Standings</h2>
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             Teams are ranked inside each group, with overall ranking shown for cross-group comparison.
           </p>
         </div>
 
-
         <div className="flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-emerald-300">
+          <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300">
             Top {qualifiersPerGroup} in each group qualify
           </span>
 
-
           {wildCardCount > 0 && (
-            <span className="rounded-full border border-amber-400/20 bg-amber-500/10 px-3 py-1 text-amber-300">
+            <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-amber-700 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-300">
               {wildCardCount} wildcard{wildCardCount > 1 ? "s" : ""}
             </span>
           )}
         </div>
 
-
         {Object.entries(grouped).map(([group, rows]) => (
           <div key={group} className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-white">Group {group}</h3>
-              <span className="text-xs text-slate-500">{rows.length} teams</span>
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">Group {group}</h3>
+              <span className="text-xs text-gray-400 dark:text-slate-500">{rows.length} teams</span>
             </div>
-
 
             <StandingsTable
               rows={rows}
@@ -250,17 +226,14 @@ export function PublicStandingsTable({
           </div>
         ))}
 
-
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-gray-400 dark:text-slate-500">
           Points: Win = 3 · Draw = 1 · Loss = 0. Tiebreakers: GD, then GF.
         </p>
       </section>
     );
   }
 
-
   return null;
 }
-
 
 export default PublicStandingsTable;

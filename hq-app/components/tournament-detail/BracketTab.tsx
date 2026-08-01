@@ -1016,284 +1016,287 @@ export function BracketTab({
     [sortableBrackets, brackets, onReorderBrackets]
   );
 
-  return (
-    <section className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-          Bracket
-        </h2>
+return (
+  <section className="space-y-6">
+    <div className="flex items-center justify-between">
+      <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+        Bracket
+      </h2>
 
-        {!readonly && (
-          <div className="flex items-center gap-2">
-            {hasBracketMatches && (
-              <Button
-                size="sm"
-                variant="danger"
-                loading={resettingBracket}
-                onClick={onResetBracket}
-                disabled={!hasActiveBracket}
-              >
-                ↺ Reset Bracket
-              </Button>
-            )}
-
+      {!readonly && (
+        <div className="flex items-center gap-2">
+          {hasBracketMatches && (
             <Button
               size="sm"
-              loading={generatingBracket}
-              disabled={!canGenerate}
-              title={
-                !hasActiveBracket
-                  ? "Add or select a bracket first"
-                  : hasBracketMatches
-                  ? "Reset the bracket first"
-                  : editableTeams.length < 2
-                  ? "Enroll at least 2 teams first"
-                  : isManual
-                  ? "Choose how many teams advance"
-                  : ""
-              }
-              onClick={handleGenerateClick}
+              variant="danger"
+              loading={resettingBracket}
+              onClick={onResetBracket}
+              disabled={!hasActiveBracket}
             >
-              ⚡ Generate Bracket
+              ↺ Reset Bracket
             </Button>
-          </div>
-        )}
-      </div>
-
-      <DragDropProvider
-        onDragStart={!readonly ? handleBracketsDragStart : undefined}
-        onDragEnd={!readonly ? handleBracketsDragEnd : undefined}
-      >
-        <div className="flex flex-wrap gap-2">
-          {sortableBrackets.map((bracket, index) =>
-            !readonly ? (
-              <SortableBracketTabButton
-                key={bracket.id}
-                bracket={bracket}
-                index={index}
-                selected={bracket.id === activeBracketId}
-                onSelect={(bracketId) => onSelectBracket?.(bracketId)}
-              />
-            ) : (
-              <button
-                key={bracket.id}
-                type="button"
-                onClick={() => onSelectBracket?.(bracket.id)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  bracket.id === activeBracketId
-                    ? "bg-teal-600 text-white"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
-                title={bracket.name ?? `Bracket ${index + 1}`}
-              >
-                {bracket.name?.trim() || `B${index + 1}`}
-              </button>
-            )
           )}
 
-          {!readonly && (
+          <Button
+            size="sm"
+            loading={generatingBracket}
+            disabled={!canGenerate}
+            title={
+              !hasActiveBracket
+                ? "Add or select a bracket first"
+                : hasBracketMatches
+                ? "Reset the bracket first"
+                : editableTeams.length < 2
+                ? "Enroll at least 2 teams first"
+                : isManual
+                ? "Choose how many teams advance"
+                : ""
+            }
+            onClick={handleGenerateClick}
+          >
+            ⚡ Generate Bracket
+          </Button>
+        </div>
+      )}
+    </div>
+
+    <DragDropProvider
+      onDragStart={!readonly ? handleBracketsDragStart : undefined}
+      onDragEnd={!readonly ? handleBracketsDragEnd : undefined}
+    >
+      <div className="flex flex-wrap gap-2">
+        {sortableBrackets.map((bracket, index) =>
+          !readonly ? (
+            <SortableBracketTabButton
+              key={bracket.id}
+              bracket={bracket}
+              index={index}
+              selected={bracket.id === activeBracketId}
+              onSelect={(bracketId) => onSelectBracket?.(bracketId)}
+            />
+          ) : (
+            <button
+              key={bracket.id}
+              type="button"
+              onClick={() => onSelectBracket?.(bracket.id)}
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                bracket.id === activeBracketId
+                  ? "bg-teal-600 text-white"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+              title={bracket.name ?? `Bracket ${index + 1}`}
+            >
+              {bracket.name?.trim() || `B${index + 1}`}
+            </button>
+          )
+        )}
+
+        {!readonly && (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            onClick={onAddBracket}
+          >
+            + Add
+          </Button>
+        )}
+      </div>
+    </DragDropProvider>
+
+    {hasActiveBracket && (
+      <div className="flex items-center gap-3">
+        {isRenamingBracket && activeBracket ? (
+          <>
+            <input
+              autoFocus
+              value={bracketNameDraft}
+              onChange={(e) => setBracketNameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const nextName = bracketNameDraft.trim();
+                  if (nextName) {
+                    onRenameBracket?.(activeBracket.id, nextName);
+                  }
+                  setIsRenamingBracket(false);
+                }
+
+                if (e.key === "Escape") {
+                  setBracketNameDraft(activeBracket.name?.trim() || "");
+                  setIsRenamingBracket(false);
+                }
+              }}
+              className="w-56 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+              placeholder="Bracket name"
+            />
             <Button
               type="button"
               size="sm"
               variant="secondary"
-              onClick={onAddBracket}
-            >
-              + Add
-            </Button>
-          )}
-        </div>
-      </DragDropProvider>
-
-      {hasActiveBracket && (
-        <div className="flex items-center gap-3">
-          {isRenamingBracket && activeBracket ? (
-            <>
-              <input
-                autoFocus
-                value={bracketNameDraft}
-                onChange={(e) => setBracketNameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const nextName = bracketNameDraft.trim();
-                    if (nextName) {
-                      onRenameBracket?.(activeBracket.id, nextName);
-                    }
-                    setIsRenamingBracket(false);
-                  }
-
-                  if (e.key === "Escape") {
-                    setBracketNameDraft(activeBracket.name?.trim() || "");
-                    setIsRenamingBracket(false);
-                  }
-                }}
-                className="w-56 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
-                placeholder="Bracket name"
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                loading={renamingBracket}
-                onClick={() => {
-                  const nextName = bracketNameDraft.trim();
-                  if (activeBracket && nextName) {
-                    onRenameBracket?.(activeBracket.id, nextName);
-                  }
-                  setIsRenamingBracket(false);
-                }}
-              >
-                Save
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => {
-                  setBracketNameDraft(activeBracket.name?.trim() || "");
-                  setIsRenamingBracket(false);
-                }}
-              >
-                Cancel
-              </Button>
-            </>
-          ) : (
-            <>
-              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                {activeBracket?.name?.trim() || "Bracket"}
-              </span>
-              <span className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
-
-              {!readonly && activeBracket && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setIsRenamingBracket(true)}
-                    className="text-xs font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
-                  >
-                    Rename
-                  </button>
-                  <button
-                    type="button"
-                    disabled={deletingBracket}
-                    onClick={() => onDeleteBracket?.(activeBracket.id)}
-                    className="text-xs font-medium text-red-500 hover:text-red-600 disabled:opacity-50 dark:text-red-400 dark:hover:text-red-300"
-                  >
-                    {deletingBracket ? "Deleting…" : "Delete"}
-                  </button>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      <p className="text-sm text-gray-500 dark:text-gray-400">
-        {readonly
-          ? "Knockout bracket."
-          : isManual
-          ? "Manual knockout bracket with direct match editing and automatic byes."
-          : "Knockout bracket with direct match editing."}
-      </p>
-
-      {!readonly && bracketError && (
-        <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
-          {bracketError}
-        </div>
-      )}
-
-      {!hasActiveBracket ? (
-        <div className="text-center py-10 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-gray-400">
-          <p className="text-2xl mb-2">🏆</p>
-          <p className="font-medium">No bracket selected</p>
-          <p className="text-sm mt-1">
-            Create a bracket tab first, then generate its knockout stage.
-          </p>
-        </div>
-      ) : !hasBracketMatches ? (
-        <div className="text-center py-10 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-gray-400">
-          <p className="text-2xl mb-2">🏆</p>
-          <p className="font-medium">
-            {readonly ? "Bracket not available yet" : "This bracket is empty"}
-          </p>
-          <p className="text-sm mt-1">
-            {readonly
-              ? "The knockout stage will appear here once it has been generated."
-              : isManual
-              ? "Generate this bracket and choose how many teams advance to start the knockout stage."
-              : "Generate this bracket to start the knockout stage."}
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="text-xs text-gray-400 dark:text-gray-500">
-              {canPan ? "Drag to pan" : "Zoom in to pan around"}
-            </div>
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                onClick={() =>
-                  setZoom((z) => Math.max(0.9, +(z - 0.1).toFixed(2)))
+              loading={renamingBracket}
+              onClick={() => {
+                const nextName = bracketNameDraft.trim();
+                if (activeBracket && nextName) {
+                  onRenameBracket?.(activeBracket.id, nextName);
                 }
-              >
-                −
-              </button>
-
-              <button
-                type="button"
-                className="rounded-md bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                onClick={() => setZoom(1)}
-              >
-                {Math.round(scale * 100)}%
-              </button>
-
-              <button
-                type="button"
-                className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                onClick={() =>
-                  setZoom((z) => Math.min(1.35, +(z + 0.1).toFixed(2)))
-                }
-              >
-                +
-              </button>
-            </div>
-          </div>
-
-          <div
-            ref={wrapperRef}
-            className="relative w-full overflow-auto rounded-lg"
-            style={{
-              cursor: canPan ? (isPanning ? "grabbing" : "grab") : "default",
-            }}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={endPan}
-            onPointerLeave={endPan}
-            onPointerCancel={endPan}
-          >
-            <div
-              style={{
-                width: Math.max(
-                  scaledWidth,
-                  wrapperRef.current?.clientWidth ?? 0
-                ),
-                height: scaledHeight,
-                position: "relative",
+                setIsRenamingBracket(false);
               }}
             >
-              <div
-                className="relative origin-top-left select-none"
-                style={{
-                  width: canvasWidth,
-                  minHeight: canvasHeight,
-                  transform: `scale(${scale})`,
-                  transformOrigin: "top left",
-                  background:
-                    "linear-gradient(180deg, #0c0f14 0%, #090c11 100%)",
-                }}
-              >
+              Save
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setBracketNameDraft(activeBracket.name?.trim() || "");
+                setIsRenamingBracket(false);
+              }}
+            >
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <>
+            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+              {activeBracket?.name?.trim() || "Bracket"}
+            </span>
+            <span className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+
+            {!readonly && activeBracket && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsRenamingBracket(true)}
+                  className="text-xs font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                >
+                  Rename
+                </button>
+                <button
+                  type="button"
+                  disabled={deletingBracket}
+                  onClick={() => onDeleteBracket?.(activeBracket.id)}
+                  className="text-xs font-medium text-red-500 hover:text-red-600 disabled:opacity-50 dark:text-red-400 dark:hover:text-red-300"
+                >
+                  {deletingBracket ? "Deleting…" : "Delete"}
+                </button>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    )}
+
+    <p className="text-sm text-gray-500 dark:text-gray-400">
+      {readonly
+        ? "Knockout bracket."
+        : isManual
+        ? "Manual knockout bracket with direct match editing and automatic byes."
+        : "Knockout bracket with direct match editing."}
+    </p>
+
+    {!readonly && bracketError && (
+      <div className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3">
+        {bracketError}
+      </div>
+    )}
+
+    {!hasActiveBracket ? (
+      <div className="text-center py-10 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-gray-400">
+        <p className="text-2xl mb-2">🏆</p>
+        <p className="font-medium">No bracket selected</p>
+        <p className="text-sm mt-1">
+          Create a bracket tab first, then generate its knockout stage.
+        </p>
+      </div>
+    ) : !hasBracketMatches ? (
+      <div className="text-center py-10 rounded-lg border border-dashed border-gray-200 dark:border-gray-700 text-gray-400">
+        <p className="text-2xl mb-2">🏆</p>
+        <p className="font-medium">
+          {readonly ? "Bracket not available yet" : "This bracket is empty"}
+        </p>
+        <p className="text-sm mt-1">
+          {readonly
+            ? "The knockout stage will appear here once it has been generated."
+            : isManual
+            ? "Generate this bracket and choose how many teams advance to start the knockout stage."
+            : "Generate this bracket to start the knockout stage."}
+        </p>
+      </div>
+    ) : (
+      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="text-xs text-gray-400 dark:text-gray-500">
+            {canPan ? "Drag to pan" : "Zoom in to pan around"}
+          </div>
+
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              onClick={() =>
+                setZoom((z) => Math.max(0.9, +(z - 0.1).toFixed(2)))
+              }
+            >
+              −
+            </button>
+
+            <button
+              type="button"
+              className="rounded-md bg-gray-100 dark:bg-gray-800 px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              onClick={() => setZoom(1)}
+            >
+              {Math.round(scale * 100)}%
+            </button>
+
+            <button
+              type="button"
+              className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              onClick={() =>
+                setZoom((z) => Math.min(1.35, +(z + 0.1).toFixed(2)))
+              }
+            >
+              +
+            </button>
+          </div>
+        </div>
+
+        <div
+          ref={wrapperRef}
+          className="relative w-full overflow-auto rounded-lg"
+          style={{
+            cursor: canPan ? (isPanning ? "grabbing" : "grab") : "default",
+          }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endPan}
+          onPointerLeave={endPan}
+          onPointerCancel={endPan}
+        >
+          <div
+            style={{
+              width: Math.max(
+                scaledWidth,
+                wrapperRef.current?.clientWidth ?? 0
+              ),
+              height: scaledHeight,
+              position: "relative",
+            }}
+          >
+            <div
+              className="relative origin-top-left select-none overflow-hidden"
+              style={{
+                width: canvasWidth,
+                minHeight: canvasHeight,
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              }}
+            >
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)] dark:bg-[linear-gradient(180deg,#0c0f14_0%,#090c11_100%)]" />
+
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.05)_1px,transparent_1px)] bg-[size:24px_24px] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] dark:bg-[size:24px_24px]" />
+
+              <div className="relative z-10">
                 {mainPhases.map((phase) => {
                   const first = positionedMainMatches.find(
                     (m) => m.phase === phase
@@ -1355,28 +1358,29 @@ export function BracketTab({
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
-      {!readonly && (
-        <ManualAdvancingTeamsModal
-          open={manualModalOpen}
-          teamCount={editableTeams.length}
-          loading={generatingBracket}
-          onClose={() => setManualModalOpen(false)}
-          onConfirm={handleConfirmManualGenerate}
-        />
-      )}
+    {!readonly && (
+      <ManualAdvancingTeamsModal
+        open={manualModalOpen}
+        teamCount={editableTeams.length}
+        loading={generatingBracket}
+        onClose={() => setManualModalOpen(false)}
+        onConfirm={handleConfirmManualGenerate}
+      />
+    )}
 
-      {!readonly && (
-        <BracketMatchEditModal
-          open={!!editingBracketMatch}
-          match={editingBracketMatch}
-          teams={editableTeams}
-          loading={bracketEditSaving}
-          onClose={() => onCloseBracketEdit?.()}
-          onSave={(input) => onSaveBracketEdit?.(input)}
-        />
-      )}
-    </section>
-  );
+    {!readonly && (
+      <BracketMatchEditModal
+        open={!!editingBracketMatch}
+        match={editingBracketMatch}
+        teams={editableTeams}
+        loading={bracketEditSaving}
+        onClose={() => onCloseBracketEdit?.()}
+        onSave={(input) => onSaveBracketEdit?.(input)}
+      />
+    )}
+  </section>
+);
 }
