@@ -26,6 +26,7 @@ export interface Tournament {
   id: number;
   name: string;
   date: string;
+  startDateTime: Date | null;
   location: string;
   status: TournamentStatus;
   createdAt: Date;
@@ -133,6 +134,7 @@ export interface User {
 export interface CreateTournamentBody {
   name: string;
   date: string;
+  startDateTime?: Date | string | null;
   location: string;
   status?: TournamentStatus;
   type?: TournamentType;
@@ -147,6 +149,7 @@ export interface CreateTournamentBody {
 export interface UpdateTournamentBody {
   name?: string;
   date?: string;
+  startDateTime?: Date | string | null;
   location?: string;
   status?: TournamentStatus;
   type?: TournamentType;

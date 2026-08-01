@@ -36,6 +36,30 @@ function hydrateTournament(
   };
 }
 
+function splitStartDateTime(startDateTime: Date | string | null | undefined) {
+  if (!startDateTime) return { date: "", time: "" };
+
+  const d = new Date(startDateTime);
+  if (isNaN(d.getTime())) return { date: "", time: "" };
+
+  const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+  const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(
+    2,
+    "0"
+  )}`;
+
+  return { date, time };
+}
+
+function buildStartDateTime(date: string, time: string): string | null {
+  if (!date) return null;
+  const safeTime = time?.trim() ? time : "00:00";
+  const parsed = new Date(`${date}T${safeTime}:00`);
+  return isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
 export function useManageTournamentsCrud() {
   const { data, loading, error } = useFetch<Tournament[]>("/api/tournaments");
   const { data: divisions } = useFetch<Division[]>("/api/divisions");
@@ -70,6 +94,7 @@ export function useManageTournamentsCrud() {
     setForm({
       name: t.name ?? "",
       date: t.date?.slice(0, 10) ?? "",
+      time: splitStartDateTime(t.startDateTime).time,
       location: t.location ?? "",
       status: t.status ?? "upcoming",
       type: t.type ?? "round_robin",
@@ -150,6 +175,7 @@ export function useManageTournamentsCrud() {
     const body: CreateTournamentBody | UpdateTournamentBody = {
       name: form.name,
       date: form.date,
+      startDateTime: buildStartDateTime(form.date, form.time),
       location: form.location,
       status: form.status,
       type: form.type,

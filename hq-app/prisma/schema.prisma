@@ -47,6 +47,7 @@ model Tournament {
   id             Int      @id @default(autoincrement())
   name           String
   date           String
+  startDateTime  DateTime?
   location       String
   status         String   @default("upcoming")
   createdAt      DateTime @default(now())
@@ -66,6 +67,8 @@ model Tournament {
   teams              TournamentTeam[]
   brackets           TournamentBracket[]
   manualStandingDays LeagueManualStandingDay[]
+
+  @@index([startDateTime])
 }
 
 model Team {

@@ -115,6 +115,7 @@ function openTournamentSettings() {
   setSettingsForm({
     name: tournament.name ?? "",
     date: tournament.date?.slice(0, 10) ?? "",
+    time: "", 
     location: tournament.location ?? "",
     status: tournament.status ?? "upcoming",
     type: (tournament.type as Tournament["type"]) ?? "round_robin",

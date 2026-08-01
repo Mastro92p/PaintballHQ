@@ -5,7 +5,7 @@ import type { CreateTournamentBody } from '@/types'
 export async function GET() {
   try {
     const tournaments = await prisma.tournament.findMany({
-      orderBy: { date: 'desc' },
+      orderBy: [{ startDateTime: 'desc' }, { date: 'desc' }],
       include: {
         teams: {
           include: {
@@ -58,10 +58,20 @@ export async function POST(req: Request) {
       return apiError('Invalid division')
     }
 
+    let startDateTime: Date | null = null
+    if (body.startDateTime) {
+      const parsed = new Date(body.startDateTime)
+      if (isNaN(parsed.getTime())) {
+        return apiError('Invalid start date/time')
+      }
+      startDateTime = parsed
+    }
+
     const tournament = await prisma.tournament.create({
       data: {
         name: body.name.trim(),
         date: body.date,
+        startDateTime,
         location: body.location.trim(),
         status: body.status ?? 'upcoming',
         type: body.type,

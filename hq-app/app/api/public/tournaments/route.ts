@@ -17,7 +17,10 @@ export async function GET() {
             },
         ],
         },
-      orderBy: { date: "desc" },
+      orderBy: [
+        { startDateTime: { sort: 'desc', nulls: 'last' } },
+        { date: 'desc' },
+      ],
       include: {
         teams: {
           include: {

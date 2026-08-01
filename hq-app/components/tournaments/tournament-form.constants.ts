@@ -32,6 +32,7 @@ export const MANUAL_UNLIMITED = 9999;
 export const EMPTY_TOURNAMENT_FORM: TournamentFormState = {
   name: "",
   date: "",
+  time: "",
   location: "",
   status: "upcoming",
   type: "round_robin",

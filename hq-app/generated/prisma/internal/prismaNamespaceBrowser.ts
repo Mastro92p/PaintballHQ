@@ -118,6 +118,7 @@ export const TournamentScalarFieldEnum = {
   id: 'id',
   name: 'name',
   date: 'date',
+  startDateTime: 'startDateTime',
   location: 'location',
   status: 'status',
   createdAt: 'createdAt',

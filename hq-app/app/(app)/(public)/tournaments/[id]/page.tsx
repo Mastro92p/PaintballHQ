@@ -116,12 +116,12 @@ export default function TournamentPublicPage({
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#07131f] text-white">
+      <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#07131f] dark:text-white">
         <div className="mx-auto max-w-5xl px-4 py-8">
           <div className="space-y-4 animate-pulse">
-            <div className="h-10 w-72 rounded-xl bg-white/10" />
-            <div className="h-5 w-96 rounded-lg bg-white/10" />
-            <div className="h-12 w-[520px] rounded-2xl bg-white/10" />
+            <div className="h-10 w-72 rounded-xl bg-slate-200 dark:bg-white/10" />
+            <div className="h-5 w-96 rounded-lg bg-slate-200 dark:bg-white/10" />
+            <div className="h-12 w-[520px] rounded-2xl bg-slate-200 dark:bg-white/10" />
           </div>
         </div>
       </main>
@@ -130,9 +130,9 @@ export default function TournamentPublicPage({
 
   if (error || !data) {
     return (
-      <main className="min-h-screen bg-[#07131f] text-white">
+      <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#07131f] dark:text-white">
         <div className="mx-auto max-w-5xl px-4 py-8">
-          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <div className="rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200">
             Tournament not found
           </div>
         </div>
@@ -141,10 +141,10 @@ export default function TournamentPublicPage({
   }
 
   return (
-    <main className="min-h-screen bg-[#07131f] text-white">
-      <div className="mx-auto max-w-5xl px-4 py-8">
-        <section className="space-y-5">
-          <TournamentHeader tournament={data} theme="dark" />
+  <main className="min-h-screen bg-slate-50 text-slate-900 dark:bg-[#07131f] dark:text-white">
+    <div className="mx-auto max-w-5xl px-4 py-8">
+      <section className="space-y-5">
+        <TournamentHeader tournament={data} theme="dark" />
 
           <TabSelector tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 

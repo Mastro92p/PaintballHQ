@@ -89,22 +89,12 @@ return (
 
     {/* Foreground */}
     <div className="relative z-10">
-      <div className="mb-2 flex items-center justify-between">
-        <span
-          className={[
-            "rounded-full px-2.5 py-1 text-xs font-semibold capitalize shadow-sm",
-            completed
-              ? "bg-emerald-500 text-white"
-              : "bg-amber-500 text-slate-950",
-          ].join(" ")}
-        >
-          {match.status}
-        </span>
-
-        <span className="text-xs text-slate-400">
+      <div className="relative mb-2 h-4">
+        <span className="absolute inset-x-0 top-0 text-center text-xs text-slate-400">
           {match.round && !isRoundRobin ? `Block ${match.round}` : ""}
         </span>
       </div>
+
 
       <div className="flex items-center gap-3">
         <div className="flex min-w-0 flex-1 items-center">

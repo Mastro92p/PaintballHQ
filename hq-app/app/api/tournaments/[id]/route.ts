@@ -80,11 +80,25 @@ export async function PATCH(
       }
     }
 
+    let startDateTime: Date | null | undefined = undefined
+    if (body.startDateTime !== undefined) {
+      if (body.startDateTime === null) {
+        startDateTime = null
+      } else {
+        const parsed = new Date(body.startDateTime)
+        if (isNaN(parsed.getTime())) {
+          return apiError('Invalid start date/time')
+        }
+        startDateTime = parsed
+      }
+    }
+
     const tournament = await prisma.tournament.update({
       where: { id },
       data: {
         ...(body.name !== undefined && { name: body.name.trim() }),
         ...(body.date !== undefined && { date: body.date }),
+        ...(startDateTime !== undefined && { startDateTime }),
         ...(body.location !== undefined && { location: body.location.trim() }),
         ...(body.status !== undefined && { status: body.status }),
         ...(body.type !== undefined && { type: body.type }),

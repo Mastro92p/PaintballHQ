@@ -28,6 +28,7 @@ type TournamentStatus = Tournament["status"];
 export type TournamentFormState = {
   name: string;
   date: string;
+  time: string;
   location: string;
   status: TournamentStatus;
   type: TournamentType;
@@ -144,6 +145,19 @@ export function TournamentFormModal({
 
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Start Time <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={form.time}
+                    onChange={(e) => setField("time", e.target.value)}
+                    className={inputCls("time")}
+                  />
+                  <FieldError message={formErrors.time} />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Division <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
                   <select
@@ -161,7 +175,7 @@ export function TournamentFormModal({
                   <FieldError message={formErrors.divisionId} />
                 </div>
 
-                <div className="space-y-1 sm:col-span-2">
+                <div className="space-y-1">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Location <span className="text-red-500">*</span>
                   </label>

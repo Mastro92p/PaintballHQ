@@ -14,9 +14,8 @@ import { GroupTeamPanel } from "@/components/tournament-detail/GroupTeamPanel";
 import { ManualGroupManager } from "@/components/tournament-detail/ManualGroupManager";
 
 import { DragDropProvider } from "@dnd-kit/react";
-import { useSortable, isSortable } from "@dnd-kit/react/sortable";
+import { useSortable } from "@dnd-kit/react/sortable";
 import { move } from "@dnd-kit/helpers";
-
 
 type Props = {
   matches: Match[];
@@ -212,7 +211,6 @@ function SortableGroupTabButton({
   );
 }
 
-
 export function MatchesTab({
   matches,
   enrolledTeams,
@@ -244,68 +242,74 @@ export function MatchesTab({
   onDeleteGroup,
   onReorderGroups,
 }: Props) {
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-    const groupMatches = matches.filter((m) => m.phase === "group");
-    const [sortableGroups, setSortableGroups] = useState(groups);
-    const [isDraggingGroups, setIsDraggingGroups] = useState(false);
+  const groupMatches = matches.filter((m) => m.phase === "group");
+  const [sortableGroups, setSortableGroups] = useState(groups);
+  const [isDraggingGroups, setIsDraggingGroups] = useState(false);
 
-    const matchesByGroup = groupMatches.reduce<Record<number, Match[]>>((acc, m) => {
-      if (m.groupId == null) return acc;
-      if (!acc[m.groupId]) acc[m.groupId] = [];
-      acc[m.groupId].push(m);
+  const [isAddingGroup, setIsAddingGroup] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
+
+  const [isRenamingGroup, setIsRenamingGroup] = useState(false);
+  const [groupNameDraft, setGroupNameDraft] = useState("");
+
+  const matchesByGroup = groupMatches.reduce<Record<number, Match[]>>((acc, m) => {
+    if (m.groupId == null) return acc;
+    if (!acc[m.groupId]) acc[m.groupId] = [];
+    acc[m.groupId].push(m);
+    return acc;
+  }, {});
+
+  const matchesByRound = matches
+    .filter((m) => m.phase === "group")
+    .reduce<Record<number, Match[]>>((acc, m) => {
+      const r = m.round ?? 0;
+      if (!acc[r]) acc[r] = [];
+      acc[r].push(m);
       return acc;
     }, {});
 
-    const matchesByRound = matches
-      .filter((m) => m.phase === "group")
-      .reduce<Record<number, Match[]>>((acc, m) => {
-        const r = m.round ?? 0;
-        if (!acc[r]) acc[r] = [];
-        acc[r].push(m);
-        return acc;
-      }, {});
+  const groupIds = useMemo(() => {
+    if (managementMode === "manual") {
+      return sortableGroups.map((g) => g.id);
+    }
 
-    const groupIds = useMemo(() => {
-      if (managementMode === "manual") {
-        return sortableGroups.map((g) => g.id);
-      }
+    return groups
+      .filter((g) => (matchesByGroup[g.id] ?? []).length > 0)
+      .map((g) => g.id);
+  }, [managementMode, sortableGroups, groups, matchesByGroup]);
 
-      return groups
-        .filter((g) => (matchesByGroup[g.id] ?? []).length > 0)
-        .map((g) => g.id);
-    }, [managementMode, sortableGroups, groups, matchesByGroup]);
+  const isEmpty = isGroupAndBracket
+    ? managementMode === "manual"
+      ? groupIds.length === 0
+      : groupMatches.length === 0
+    : matches.length === 0;
 
-    const isEmpty = isGroupAndBracket
-      ? managementMode === "manual"
-        ? groupIds.length === 0
-        : groupMatches.length === 0
-      : matches.length === 0;
+  const urlGroupParam = searchParams.get("groupId");
+  const urlGroupId = urlGroupParam ? Number(urlGroupParam) : null;
 
-    const urlGroupParam = searchParams.get("groupId");
-    const urlGroupId = urlGroupParam ? Number(urlGroupParam) : null;
+  const [activeGroup, setActiveGroup] = useState<number | null>(urlGroupId);
 
-    const [activeGroup, setActiveGroup] = useState<number | null>(urlGroupId);
+  useEffect(() => {
+    if (!isDraggingGroups) {
+      setSortableGroups(groups);
+    }
+  }, [groups, isDraggingGroups]);
 
-    useEffect(() => {
-      if (!isDraggingGroups) {
-        setSortableGroups(groups);
-      }
-    }, [groups, isDraggingGroups]);
+  useEffect(() => {
+    if (!groupIds.length) return;
 
-    useEffect(() => {
-      if (!groupIds.length) return;
-
-      if (
-        urlGroupId != null &&
-        !Number.isNaN(urlGroupId) &&
-        groupIds.includes(urlGroupId)
-      ) {
-        setActiveGroup(urlGroupId);
-        if (setActiveGroupTab) setActiveGroupTab(urlGroupId);
-        return;
-      }
+    if (
+      urlGroupId != null &&
+      !Number.isNaN(urlGroupId) &&
+      groupIds.includes(urlGroupId)
+    ) {
+      setActiveGroup(urlGroupId);
+      if (setActiveGroupTab) setActiveGroupTab(urlGroupId);
+      return;
+    }
 
     const preferred = activeGroupTab != null && groupIds.includes(activeGroupTab)
       ? activeGroupTab
@@ -316,6 +320,11 @@ export function MatchesTab({
     setActiveGroup(preferred);
     if (setActiveGroupTab) setActiveGroupTab(preferred);
   }, [urlGroupId, groupIds, activeGroup, activeGroupTab, setActiveGroupTab]);
+
+  useEffect(() => {
+    setIsRenamingGroup(false);
+    setGroupNameDraft(activeGroup != null ? groupNameById[activeGroup] ?? "" : "");
+  }, [activeGroup, groupNameById]);
 
   function selectGroup(groupId: number) {
     setActiveGroup(groupId);
@@ -345,41 +354,47 @@ export function MatchesTab({
   const overallStandings = getStandings(enrolledTeams, matches, isClassic);
 
   const visibleGroups =
-  managementMode === "manual"
-    ? sortableGroups.filter((group) => groupIds.includes(group.id))
-    : groups.filter((group) => groupIds.includes(group.id));
+    managementMode === "manual"
+      ? sortableGroups.filter((group) => groupIds.includes(group.id))
+      : groups.filter((group) => groupIds.includes(group.id));
 
+  const handleGroupsDragStart = useCallback(() => {
+    setIsDraggingGroups(true);
+  }, []);
 
-    const handleGroupsDragStart = useCallback(() => {
-      setIsDraggingGroups(true);
-    }, []);
+  const handleGroupsDragEnd = useCallback(
+    async (event: any) => {
+      setIsDraggingGroups(false);
 
-    const handleGroupsDragEnd = useCallback(
-      async (event: any) => {
-        setIsDraggingGroups(false);
+      const nextGroups = move(sortableGroups, event);
 
-        const nextGroups = move(sortableGroups, event);
+      if (
+        nextGroups.length === sortableGroups.length &&
+        nextGroups.every((group, index) => group.id === sortableGroups[index]?.id)
+      ) {
+        return;
+      }
 
-        if (
-          nextGroups.length === sortableGroups.length &&
-          nextGroups.every((group, index) => group.id === sortableGroups[index]?.id)
-        ) {
-          return;
-        }
+      setSortableGroups(nextGroups);
 
-        setSortableGroups(nextGroups);
+      try {
+        await onReorderGroups(nextGroups.map((group) => group.id));
+      } catch (error) {
+        console.error(error);
+        setSortableGroups(groups);
+      }
+    },
+    [sortableGroups, groups, onReorderGroups]
+  );
 
-        try {
-          await onReorderGroups(nextGroups.map((group) => group.id));
-        } catch (error) {
-          console.error(error);
-          setSortableGroups(groups);
-        }
-      },
-      [sortableGroups, groups, onReorderGroups]
-    );
-
-
+  function handleConfirmAddGroup() {
+    const name = newGroupName.trim();
+    if (name) {
+      onAddGroup(name);
+    }
+    setNewGroupName("");
+    setIsAddingGroup(false);
+  }
 
   return (
     <section className="space-y-6">
@@ -468,74 +483,183 @@ export function MatchesTab({
         </div>
       ) : isGroupAndBracket ? (
         <div className="space-y-6">
-          {managementMode === "manual" && (
-            <ManualGroupManager
-              groups={groups}
-              savingGroups={savingGroups}
-              onAddGroup={onAddGroup}
-              onRenameGroup={onRenameGroup}
-              onDeleteGroup={onDeleteGroup}
-            />
-          )}
+          <DragDropProvider
+            onDragStart={managementMode === "manual" ? handleGroupsDragStart : undefined}
+            onDragEnd={managementMode === "manual" ? handleGroupsDragEnd : undefined}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              {visibleGroups.map((group, index) => {
+                const total = matchesByGroup[group.id]?.length ?? 0;
+                const played = (matchesByGroup[group.id] ?? []).filter(
+                  (m) => m.status === "completed"
+                ).length;
+                const teamCount = enrolledTeams.filter((t) =>
+                  (teamGroups[t.id] ?? []).includes(group.id)
+                ).length;
 
-        <DragDropProvider
-          onDragStart={managementMode === "manual" ? handleGroupsDragStart : undefined}
-          onDragEnd={managementMode === "manual" ? handleGroupsDragEnd : undefined}
-        >
-          <div className="flex flex-wrap gap-2">
-            {visibleGroups.map((group, index) => {
-              const total = matchesByGroup[group.id]?.length ?? 0;
-              const played = (matchesByGroup[group.id] ?? []).filter(
-                (m) => m.status === "completed"
-              ).length;
-              const teamCount = enrolledTeams.filter((t) =>
-                (teamGroups[t.id] ?? []).includes(group.id)
-              ).length;
+                const subtitle =
+                  managementMode === "manual"
+                    ? `${teamCount} team${teamCount === 1 ? "" : "s"}`
+                    : `${played}/${total}`;
 
-              const subtitle =
-                managementMode === "manual"
-                  ? `${teamCount} team${teamCount === 1 ? "" : "s"}`
-                  : `${played}/${total}`;
+                return managementMode === "manual" ? (
+                  <SortableGroupTabButton
+                    key={group.id}
+                    group={group}
+                    index={index}
+                    selected={currentGroup === group.id}
+                    subtitle={subtitle}
+                    onSelect={selectGroup}
+                  />
+                ) : (
+                  <button
+                    key={group.id}
+                    type="button"
+                    onClick={() => selectGroup(group.id)}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      currentGroup === group.id
+                        ? "bg-teal-600 text-white"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {group.name}
+                    <span className="ml-2 text-xs opacity-80">{subtitle}</span>
+                  </button>
+                );
+              })}
 
-              return managementMode === "manual" ? (
-                <SortableGroupTabButton
-                  key={group.id}
-                  group={group}
-                  index={index}
-                  selected={currentGroup === group.id}
-                  subtitle={subtitle}
-                  onSelect={selectGroup}
-                />
-              ) : (
-                <button
-                  key={group.id}
-                  type="button"
-                  onClick={() => selectGroup(group.id)}
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    currentGroup === group.id
-                      ? "bg-teal-600 text-white"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                  }`}
-                >
-                  {group.name}
-                  <span className="ml-2 text-xs opacity-80">{subtitle}</span>
-                </button>
-              );
-            })}
-          </div>
-        </DragDropProvider>
+              {managementMode === "manual" && (
+                isAddingGroup ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      autoFocus
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleConfirmAddGroup();
+                        if (e.key === "Escape") {
+                          setNewGroupName("");
+                          setIsAddingGroup(false);
+                        }
+                      }}
+                      placeholder="Group name"
+                      className="w-40 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      loading={savingGroups}
+                      onClick={handleConfirmAddGroup}
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setNewGroupName("");
+                        setIsAddingGroup(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => setIsAddingGroup(true)}
+                  >
+                    + Add
+                  </Button>
+                )
+              )}
+            </div>
+          </DragDropProvider>
 
           {currentGroup != null && (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                  {groupNameById[currentGroup] ?? `Group ${currentGroup}`}
-                </span>
-                <span className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
-                <span className="text-xs text-gray-400 tabular-nums">
-                  {currentMatches.filter((m) => m.status === "completed").length}/
-                  {currentMatches.length} played
-                </span>
+                {isRenamingGroup ? (
+                  <>
+                    <input
+                      autoFocus
+                      value={groupNameDraft}
+                      onChange={(e) => setGroupNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const nextName = groupNameDraft.trim();
+                          if (nextName) onRenameGroup(currentGroup, nextName);
+                          setIsRenamingGroup(false);
+                        }
+                        if (e.key === "Escape") {
+                          setGroupNameDraft(groupNameById[currentGroup] ?? "");
+                          setIsRenamingGroup(false);
+                        }
+                      }}
+                      className="w-56 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100"
+                      placeholder="Group name"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      loading={savingGroups}
+                      onClick={() => {
+                        const nextName = groupNameDraft.trim();
+                        if (nextName) onRenameGroup(currentGroup, nextName);
+                        setIsRenamingGroup(false);
+                      }}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setGroupNameDraft(groupNameById[currentGroup] ?? "");
+                        setIsRenamingGroup(false);
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      {groupNameById[currentGroup] ?? `Group ${currentGroup}`}
+                    </span>
+                    <span className="flex-1 h-px bg-gray-100 dark:bg-gray-800" />
+                    <span className="text-xs text-gray-400 tabular-nums">
+                      {currentMatches.filter((m) => m.status === "completed").length}/
+                      {currentMatches.length} played
+                    </span>
+
+                    {managementMode === "manual" && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setIsRenamingGroup(true)}
+                          className="text-xs font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+                        >
+                          Rename
+                        </button>
+                        <button
+                          type="button"
+                          disabled={savingGroups}
+                          onClick={() => onDeleteGroup(currentGroup)}
+                          className="text-xs font-medium text-red-500 hover:text-red-600 disabled:opacity-50 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
 
               {managementMode === "manual" && (
