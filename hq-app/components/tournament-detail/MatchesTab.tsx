@@ -119,6 +119,7 @@ function computeClassicStandings(teams: Team[], matches: Match[]): StandingRow[]
     .map((r) => ({
       teamId: r.team.id,
       teamName: r.team.name,
+      played: r.w + r.d + r.l,
       w: r.w,
       d: r.d,
       l: r.l,
@@ -141,6 +142,7 @@ function computeStandardStandings(teams: Team[], matches: Match[]): StandingRow[
   return standings.map((s) => ({
     teamId: s.teamId,
     teamName: s.teamName,
+    played: s.wins + s.draws + s.losses,
     w: s.wins,
     d: s.draws,
     l: s.losses,

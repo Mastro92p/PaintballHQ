@@ -3,6 +3,7 @@
 export type StandingRow = {
   teamId: number;
   teamName: string;
+  played: number;
   w: number;
   d: number;
   l: number;
@@ -37,6 +38,7 @@ export function GroupStandingsTable({
           <tr>
             <th className="px-2 sm:px-4 py-3 text-left font-medium w-10">#</th>
             <th className="px-2 sm:px-4 py-3 text-left font-medium">Team</th>
+            <th className="px-2 sm:px-4 py-3 text-center font-medium w-10 sm:w-auto">P</th>
             <th className="px-2 sm:px-4 py-3 text-center font-medium w-10 sm:w-auto">W</th>
             <th className="px-2 sm:px-4 py-3 text-center font-medium w-10 sm:w-auto">D</th>
             <th className="px-2 sm:px-4 py-3 text-center font-medium w-10 sm:w-auto">L</th>
@@ -51,7 +53,9 @@ export function GroupStandingsTable({
               </th>
             )}
 
-            <th className="px-2 sm:px-4 py-3 text-center font-medium w-12 sm:w-auto">Pts</th>
+            <th className="px-2 sm:px-4 py-3 text-center font-medium w-12 sm:w-auto">
+              Pts
+            </th>
           </tr>
         </thead>
 
@@ -68,6 +72,9 @@ export function GroupStandingsTable({
                 </div>
               </td>
 
+              <td className="px-2 sm:px-4 py-3 text-center tabular-nums">
+                {row.played}
+              </td>
               <td className="px-2 sm:px-4 py-3 text-center tabular-nums">{row.w}</td>
               <td className="px-2 sm:px-4 py-3 text-center tabular-nums">{row.d}</td>
               <td className="px-2 sm:px-4 py-3 text-center tabular-nums">{row.l}</td>
