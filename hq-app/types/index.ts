@@ -293,15 +293,18 @@ export type Division = {
   name: string;
   isActive: boolean;
   createdAt: string;
+  sortOrder: number;
 };
 
 export interface CreateDivisionBody {
   name: string;
+  sortOrder?: number;
 }
 
 export type UpdateDivisionBody = {
   name?: string;
   isActive?: boolean;
+  sortOrder?: number;
 };
 
 export type MatchDetail = {
@@ -339,13 +342,13 @@ export type LeagueTeam = {
     id: number;
     name: string;
     divisionId?: number | null;
-    division?: { id: number; name: string } | null;
+    division?: { id: number; name: string; sortOrder?: number | null } | null;
   } | null;
 };
 
 export type TournamentWithMatches = Tournament & {
   divisionId?: number | null;
-  division?: { id: number; name: string } | null;
+  division?: { id: number; name: string; sortOrder?: number | null } | null;
   teams: {
     teamId: number;
     team: {

@@ -170,9 +170,18 @@ async function getLeagueDetail(id: number) {
             orderBy: [{ sortOrder: "asc" }, { date: "asc" }],
           },
         },
-        orderBy: {
-          divisionId: "asc",
-        },
+        orderBy: [
+          {
+            division: {
+              sortOrder: "asc",
+            },
+          },
+          {
+            division: {
+              name: "asc",
+            },
+          },
+        ],
       },
     },
   });

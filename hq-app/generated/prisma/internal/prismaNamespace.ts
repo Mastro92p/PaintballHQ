@@ -1517,6 +1517,7 @@ export const DivisionScalarFieldEnum = {
   id: 'id',
   name: 'name',
   isActive: 'isActive',
+  sortOrder: 'sortOrder',
   createdAt: 'createdAt'
 } as const
 

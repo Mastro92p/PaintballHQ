@@ -28,16 +28,19 @@ export type AggregateDivision = {
 
 export type DivisionAvgAggregateOutputType = {
   id: number | null
+  sortOrder: number | null
 }
 
 export type DivisionSumAggregateOutputType = {
   id: number | null
+  sortOrder: number | null
 }
 
 export type DivisionMinAggregateOutputType = {
   id: number | null
   name: string | null
   isActive: boolean | null
+  sortOrder: number | null
   createdAt: Date | null
 }
 
@@ -45,6 +48,7 @@ export type DivisionMaxAggregateOutputType = {
   id: number | null
   name: string | null
   isActive: boolean | null
+  sortOrder: number | null
   createdAt: Date | null
 }
 
@@ -52,6 +56,7 @@ export type DivisionCountAggregateOutputType = {
   id: number
   name: number
   isActive: number
+  sortOrder: number
   createdAt: number
   _all: number
 }
@@ -59,16 +64,19 @@ export type DivisionCountAggregateOutputType = {
 
 export type DivisionAvgAggregateInputType = {
   id?: true
+  sortOrder?: true
 }
 
 export type DivisionSumAggregateInputType = {
   id?: true
+  sortOrder?: true
 }
 
 export type DivisionMinAggregateInputType = {
   id?: true
   name?: true
   isActive?: true
+  sortOrder?: true
   createdAt?: true
 }
 
@@ -76,6 +84,7 @@ export type DivisionMaxAggregateInputType = {
   id?: true
   name?: true
   isActive?: true
+  sortOrder?: true
   createdAt?: true
 }
 
@@ -83,6 +92,7 @@ export type DivisionCountAggregateInputType = {
   id?: true
   name?: true
   isActive?: true
+  sortOrder?: true
   createdAt?: true
   _all?: true
 }
@@ -177,6 +187,7 @@ export type DivisionGroupByOutputType = {
   id: number
   name: string
   isActive: boolean
+  sortOrder: number
   createdAt: Date
   _count: DivisionCountAggregateOutputType | null
   _avg: DivisionAvgAggregateOutputType | null
@@ -207,6 +218,7 @@ export type DivisionWhereInput = {
   id?: Prisma.IntFilter<"Division"> | number
   name?: Prisma.StringFilter<"Division"> | string
   isActive?: Prisma.BoolFilter<"Division"> | boolean
+  sortOrder?: Prisma.IntFilter<"Division"> | number
   createdAt?: Prisma.DateTimeFilter<"Division"> | Date | string
   teams?: Prisma.TeamListRelationFilter
   tournaments?: Prisma.TournamentListRelationFilter
@@ -217,6 +229,7 @@ export type DivisionOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   teams?: Prisma.TeamOrderByRelationAggregateInput
   tournaments?: Prisma.TournamentOrderByRelationAggregateInput
@@ -230,6 +243,7 @@ export type DivisionWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.DivisionWhereInput[]
   NOT?: Prisma.DivisionWhereInput | Prisma.DivisionWhereInput[]
   isActive?: Prisma.BoolFilter<"Division"> | boolean
+  sortOrder?: Prisma.IntFilter<"Division"> | number
   createdAt?: Prisma.DateTimeFilter<"Division"> | Date | string
   teams?: Prisma.TeamListRelationFilter
   tournaments?: Prisma.TournamentListRelationFilter
@@ -240,6 +254,7 @@ export type DivisionOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.DivisionCountOrderByAggregateInput
   _avg?: Prisma.DivisionAvgOrderByAggregateInput
@@ -255,12 +270,14 @@ export type DivisionScalarWhereWithAggregatesInput = {
   id?: Prisma.IntWithAggregatesFilter<"Division"> | number
   name?: Prisma.StringWithAggregatesFilter<"Division"> | string
   isActive?: Prisma.BoolWithAggregatesFilter<"Division"> | boolean
+  sortOrder?: Prisma.IntWithAggregatesFilter<"Division"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Division"> | Date | string
 }
 
 export type DivisionCreateInput = {
   name: string
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutDivisionInput
   tournaments?: Prisma.TournamentCreateNestedManyWithoutDivisionInput
@@ -271,6 +288,7 @@ export type DivisionUncheckedCreateInput = {
   id?: number
   name: string
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutDivisionInput
   tournaments?: Prisma.TournamentUncheckedCreateNestedManyWithoutDivisionInput
@@ -280,6 +298,7 @@ export type DivisionUncheckedCreateInput = {
 export type DivisionUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutDivisionNestedInput
   tournaments?: Prisma.TournamentUpdateManyWithoutDivisionNestedInput
@@ -290,6 +309,7 @@ export type DivisionUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutDivisionNestedInput
   tournaments?: Prisma.TournamentUncheckedUpdateManyWithoutDivisionNestedInput
@@ -300,12 +320,14 @@ export type DivisionCreateManyInput = {
   id?: number
   name: string
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
 }
 
 export type DivisionUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -313,6 +335,7 @@ export type DivisionUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -320,17 +343,20 @@ export type DivisionCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type DivisionAvgOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
 }
 
 export type DivisionMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -338,11 +364,13 @@ export type DivisionMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type DivisionSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+  sortOrder?: Prisma.SortOrder
 }
 
 export type DivisionNullableScalarRelationFilter = {
@@ -404,6 +432,7 @@ export type DivisionUpdateOneRequiredWithoutManualStandingTablesNestedInput = {
 export type DivisionCreateWithoutTournamentsInput = {
   name: string
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutDivisionInput
   manualStandingTables?: Prisma.LeagueManualStandingTableCreateNestedManyWithoutDivisionInput
@@ -413,6 +442,7 @@ export type DivisionUncheckedCreateWithoutTournamentsInput = {
   id?: number
   name: string
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutDivisionInput
   manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedCreateNestedManyWithoutDivisionInput
@@ -437,6 +467,7 @@ export type DivisionUpdateToOneWithWhereWithoutTournamentsInput = {
 export type DivisionUpdateWithoutTournamentsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutDivisionNestedInput
   manualStandingTables?: Prisma.LeagueManualStandingTableUpdateManyWithoutDivisionNestedInput
@@ -446,6 +477,7 @@ export type DivisionUncheckedUpdateWithoutTournamentsInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutDivisionNestedInput
   manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedUpdateManyWithoutDivisionNestedInput
@@ -454,6 +486,7 @@ export type DivisionUncheckedUpdateWithoutTournamentsInput = {
 export type DivisionCreateWithoutTeamsInput = {
   name: string
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   tournaments?: Prisma.TournamentCreateNestedManyWithoutDivisionInput
   manualStandingTables?: Prisma.LeagueManualStandingTableCreateNestedManyWithoutDivisionInput
@@ -463,6 +496,7 @@ export type DivisionUncheckedCreateWithoutTeamsInput = {
   id?: number
   name: string
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   tournaments?: Prisma.TournamentUncheckedCreateNestedManyWithoutDivisionInput
   manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedCreateNestedManyWithoutDivisionInput
@@ -487,6 +521,7 @@ export type DivisionUpdateToOneWithWhereWithoutTeamsInput = {
 export type DivisionUpdateWithoutTeamsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tournaments?: Prisma.TournamentUpdateManyWithoutDivisionNestedInput
   manualStandingTables?: Prisma.LeagueManualStandingTableUpdateManyWithoutDivisionNestedInput
@@ -496,6 +531,7 @@ export type DivisionUncheckedUpdateWithoutTeamsInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   tournaments?: Prisma.TournamentUncheckedUpdateManyWithoutDivisionNestedInput
   manualStandingTables?: Prisma.LeagueManualStandingTableUncheckedUpdateManyWithoutDivisionNestedInput
@@ -504,6 +540,7 @@ export type DivisionUncheckedUpdateWithoutTeamsInput = {
 export type DivisionCreateWithoutManualStandingTablesInput = {
   name: string
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   teams?: Prisma.TeamCreateNestedManyWithoutDivisionInput
   tournaments?: Prisma.TournamentCreateNestedManyWithoutDivisionInput
@@ -513,6 +550,7 @@ export type DivisionUncheckedCreateWithoutManualStandingTablesInput = {
   id?: number
   name: string
   isActive?: boolean
+  sortOrder?: number
   createdAt?: Date | string
   teams?: Prisma.TeamUncheckedCreateNestedManyWithoutDivisionInput
   tournaments?: Prisma.TournamentUncheckedCreateNestedManyWithoutDivisionInput
@@ -537,6 +575,7 @@ export type DivisionUpdateToOneWithWhereWithoutManualStandingTablesInput = {
 export type DivisionUpdateWithoutManualStandingTablesInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUpdateManyWithoutDivisionNestedInput
   tournaments?: Prisma.TournamentUpdateManyWithoutDivisionNestedInput
@@ -546,6 +585,7 @@ export type DivisionUncheckedUpdateWithoutManualStandingTablesInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  sortOrder?: Prisma.IntFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   teams?: Prisma.TeamUncheckedUpdateManyWithoutDivisionNestedInput
   tournaments?: Prisma.TournamentUncheckedUpdateManyWithoutDivisionNestedInput
@@ -604,6 +644,7 @@ export type DivisionSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   id?: boolean
   name?: boolean
   isActive?: boolean
+  sortOrder?: boolean
   createdAt?: boolean
   teams?: boolean | Prisma.Division$teamsArgs<ExtArgs>
   tournaments?: boolean | Prisma.Division$tournamentsArgs<ExtArgs>
@@ -615,6 +656,7 @@ export type DivisionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   id?: boolean
   name?: boolean
   isActive?: boolean
+  sortOrder?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["division"]>
 
@@ -622,6 +664,7 @@ export type DivisionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   id?: boolean
   name?: boolean
   isActive?: boolean
+  sortOrder?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["division"]>
 
@@ -629,10 +672,11 @@ export type DivisionSelectScalar = {
   id?: boolean
   name?: boolean
   isActive?: boolean
+  sortOrder?: boolean
   createdAt?: boolean
 }
 
-export type DivisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "isActive" | "createdAt", ExtArgs["result"]["division"]>
+export type DivisionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "isActive" | "sortOrder" | "createdAt", ExtArgs["result"]["division"]>
 export type DivisionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   teams?: boolean | Prisma.Division$teamsArgs<ExtArgs>
   tournaments?: boolean | Prisma.Division$tournamentsArgs<ExtArgs>
@@ -653,6 +697,7 @@ export type $DivisionPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     id: number
     name: string
     isActive: boolean
+    sortOrder: number
     createdAt: Date
   }, ExtArgs["result"]["division"]>
   composites: {}
@@ -1083,6 +1128,7 @@ export interface DivisionFieldRefs {
   readonly id: Prisma.FieldRef<"Division", 'Int'>
   readonly name: Prisma.FieldRef<"Division", 'String'>
   readonly isActive: Prisma.FieldRef<"Division", 'Boolean'>
+  readonly sortOrder: Prisma.FieldRef<"Division", 'Int'>
   readonly createdAt: Prisma.FieldRef<"Division", 'DateTime'>
 }
     

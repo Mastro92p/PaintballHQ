@@ -23,6 +23,7 @@ import {
 
 import LeagueManualStandingsPublicTable from "@/components/leagues/LeagueManualStandingsPublicTable";
 import LeagueStandingsTable from "@/components/leagues/LeagueStandingsTable";
+import DivisionPills, { type DivFilter } from "@/components/ui/DivisionPills";
 
 const STATUS_LABELS: Record<string, string> = {
   active: "Active",
@@ -46,7 +47,6 @@ const STATUS_TEXT: Record<string, string> = {
 };
 
 type Tab = "tournaments" | "standings" | "rankings" | "teams";
-type DivFilter = number | "all";
 
 function formatDateBlock(dateStr: string) {
   const d = new Date(dateStr);
@@ -66,46 +66,6 @@ function formatDateShort(value: string) {
   });
 }
 
-function DivisionPills({
-  divisions,
-  value,
-  onChange,
-}: {
-  divisions: { id: number; name: string }[];
-  value: DivFilter;
-  onChange: (v: DivFilter) => void;
-}) {
-  if (!divisions.length) return null;
-
-  return (
-    <div className="flex gap-2 flex-wrap">
-      <button
-        onClick={() => onChange("all")}
-        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-          value === "all"
-            ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-            : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-        }`}
-      >
-        All divisions
-      </button>
-
-      {divisions.map((d) => (
-        <button
-          key={d.id}
-          onClick={() => onChange(d.id)}
-          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-            value === d.id
-              ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
-              : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-          }`}
-        >
-          {d.name}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export default function LeagueDetailPage({
   params,
@@ -121,26 +81,49 @@ export default function LeagueDetailPage({
 
   const router = useRouter();
 
-  const divisions = useMemo(() => {
-    if (!data) return [];
-    const map: Record<number, string> = {};
+const divisions = useMemo(() => {
+  if (!data) return [];
 
-    data.tournaments?.forEach((t) => {
-      if (t.division) map[t.division.id] = t.division.name;
-    });
+  const byId = new Map<number, { id: number; name: string; sortOrder?: number | null }>();
 
-    data.teams?.forEach((lt) => {
-      if (lt.team?.division) map[lt.team.division.id] = lt.team.division.name;
-    });
+  data.tournaments?.forEach((t) => {
+    if (t.division && !byId.has(t.division.id)) {
+      byId.set(t.division.id, {
+        id: t.division.id,
+        name: t.division.name,
+        sortOrder: t.division.sortOrder ?? null,
+      });
+    }
+  });
 
-    data.manualStandingTables?.forEach((table) => {
-      if (table.division) map[table.division.id] = table.division.name;
-    });
+  data.teams?.forEach((lt) => {
+    if (lt.team?.division && !byId.has(lt.team.division.id)) {
+      byId.set(lt.team.division.id, {
+        id: lt.team.division.id,
+        name: lt.team.division.name,
+        sortOrder: lt.team.division.sortOrder ?? null,
+      });
+    }
+  });
 
-    return Object.entries(map)
-      .map(([id, name]) => ({ id: Number(id), name }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [data]);
+  data.manualStandingTables?.forEach((table) => {
+    if (table.division && !byId.has(table.division.id)) {
+      byId.set(table.division.id, {
+        id: table.division.id,
+        name: table.division.name,
+        sortOrder: table.division.sortOrder ?? null,
+      });
+    }
+  });
+
+  return Array.from(byId.values()).sort((a, b) => {
+    const aOrder = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const bOrder = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+
+    if (aOrder !== bOrder) return aOrder - bOrder;
+    return a.name.localeCompare(b.name);
+  });
+}, [data]);
 
   const filteredTournaments = useMemo(() => {
     if (!data?.tournaments) return [];
@@ -158,7 +141,7 @@ export default function LeagueDetailPage({
   }, [data, teamDivFilter]);
 
 
-const standingsByDivision = useMemo(() => {
+  const standingsByDivision = useMemo(() => {
     if (!data?.tournaments) return [];
 
     type Group = {
@@ -167,25 +150,39 @@ const standingsByDivision = useMemo(() => {
       tournaments: TournamentWithMatches[];
     };
 
-    const groups: Record<string, Group> = {};
+    const groups = new Map<string, Group>();
 
     data.tournaments.forEach((t) => {
       const divId = t.divisionId ?? t.division?.id ?? null;
       const key = divId != null ? String(divId) : "unassigned";
 
-      if (!groups[key]) {
-        groups[key] = {
+      if (!groups.has(key)) {
+        groups.set(key, {
           divisionId: divId,
           divisionName: t.division?.name ?? "Unassigned",
           tournaments: [],
-        };
+        });
       }
 
-      groups[key].tournaments.push(t);
+      groups.get(key)!.tournaments.push(t);
     });
 
-    return Object.values(groups)
-      .sort((a, b) => a.divisionName.localeCompare(b.divisionName))
+    const divisionIndex = new Map(divisions.map((d, index) => [d.id, index]));
+
+    return Array.from(groups.values())
+      .sort((a, b) => {
+        const aIndex =
+          a.divisionId != null
+            ? (divisionIndex.get(a.divisionId) ?? Number.MAX_SAFE_INTEGER)
+            : Number.MAX_SAFE_INTEGER;
+        const bIndex =
+          b.divisionId != null
+            ? (divisionIndex.get(b.divisionId) ?? Number.MAX_SAFE_INTEGER)
+            : Number.MAX_SAFE_INTEGER;
+
+        if (aIndex !== bIndex) return aIndex - bIndex;
+        return a.divisionName.localeCompare(b.divisionName);
+      })
       .map((group) => {
         const teamsMap: Record<number, TournamentTeam> = {};
         const allMatches: Match[] = [];
@@ -218,12 +215,13 @@ const standingsByDivision = useMemo(() => {
         }
 
         return {
+          divisionId: group.divisionId,
           divisionName: group.divisionName,
           standings,
           showBodyCount: isClassic,
         };
       });
-  }, [data]);
+  }, [data, divisions]);
 
 
   const manualStandingsByDivision = useMemo(() => {
@@ -305,9 +303,12 @@ const standingsByDivision = useMemo(() => {
   }, [manualStandingsByDivision, standingsDivFilter]);
 
   const visibleStandingsGroups = useMemo(() => {
-    if (standingsDivFilter === "all") return standingsByDivision;      const selectedName = divisions.find((d) => d.id === standingsDivFilter)?.name;
-    return standingsByDivision.filter((g) => g.divisionName === selectedName);
-  }, [standingsByDivision, standingsDivFilter, divisions]);
+    if (standingsDivFilter === "all") return standingsByDivision;
+
+    return standingsByDivision.filter(
+      (group) => group.divisionId === standingsDivFilter
+    );
+  }, [standingsByDivision, standingsDivFilter]);
 
 
   if (loading) {

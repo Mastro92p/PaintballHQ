@@ -54,26 +54,21 @@ export function LeagueManualStandingsTab({
   }, [tables]);
 
   const divisionOptions = useMemo(() => {
-    const options = tables
-      .filter(
-        (table): table is LeagueManualStandingTable & { divisionId: number } =>
-          table.divisionId != null
-      )
-      .map((table) => ({
-        id: table.divisionId,
-        name: table.division?.name ?? `Division ${table.divisionId}`,
-        isActive: table.division?.isActive,
-      }));
-
     const unique = new Map<number, { id: number; name: string; isActive?: boolean }>();
 
-    options.forEach((option) => {
-      if (!unique.has(option.id)) {
-        unique.set(option.id, option);
+    tables.forEach((table) => {
+      if (table.divisionId == null) return;
+
+      if (!unique.has(table.divisionId)) {
+        unique.set(table.divisionId, {
+          id: table.divisionId,
+          name: table.division?.name ?? `Division ${table.divisionId}`,
+          isActive: table.division?.isActive,
+        });
       }
     });
 
-    return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(unique.values());
   }, [tables]);
 
   const visibleTables = useMemo(() => {

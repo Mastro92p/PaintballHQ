@@ -101,7 +101,7 @@ export default function ManageLeagueDetailPage({
 
     const map = new Map<
       number,
-      { id: number; name: string; isActive?: boolean | null }
+      { id: number; name: string; isActive?: boolean | null; sortOrder?: number | null }
     >();
 
     localLeague.tournaments.forEach((t) => {
@@ -110,11 +110,18 @@ export default function ManageLeagueDetailPage({
           id: t.division.id,
           name: t.division.name,
           isActive: t.division.isActive,
+          sortOrder: t.division.sortOrder,
         });
       }
     });
 
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return Array.from(map.values()).sort((a, b) => {
+      const aSort = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      const bSort = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+
+      if (aSort !== bSort) return aSort - bSort;
+      return a.name.localeCompare(b.name);
+    });
   }, [localLeague]);
 
   const filteredLeagueTournaments = useMemo(() => {
@@ -148,6 +155,21 @@ export default function ManageLeagueDetailPage({
       (t) => !assignedIds.has(t.id) && !t.leagueId
     );
   }, [localAllTournaments, localLeague]);
+
+
+  const sortedManualStandingTables = useMemo(() => {
+    return [...(localLeague?.manualStandingTables ?? [])].sort((a, b) => {
+      const aSort = a.division?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+      const bSort = b.division?.sortOrder ?? Number.MAX_SAFE_INTEGER;
+
+      if (aSort !== bSort) return aSort - bSort;
+
+      const aName = a.division?.name ?? "";
+      const bName = b.division?.name ?? "";
+      return aName.localeCompare(bName);
+    });
+  }, [localLeague?.manualStandingTables]);
+  
 
   async function reloadLeague() {
     const res = await fetch(`/api/leagues/${id}`);
@@ -350,7 +372,6 @@ export default function ManageLeagueDetailPage({
   }
 
   const league = localLeague;
-
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "tournaments", label: "Tournaments", count: league.tournaments.length },
     { key: "teams", label: "Teams", count: league.teams.length },
@@ -411,7 +432,7 @@ export default function ManageLeagueDetailPage({
       {activeTab === "manual-standings" && (
         <LeagueManualStandingsTab
           leagueId={league.id}
-          tables={league.manualStandingTables ?? []}
+          tables={sortedManualStandingTables}
           leagueTeams={league.teams}
           onUpdated={reloadLeague}
         />

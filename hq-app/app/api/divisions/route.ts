@@ -5,7 +5,7 @@ import type { CreateDivisionBody } from "@/types";
 export async function GET() {
   try {
     const divisions = await prisma.division.findMany({
-      orderBy: [{ isActive: "desc" }, { name: "asc" }],
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
 
     return Response.json(divisions);
@@ -36,9 +36,15 @@ export async function POST(req: Request) {
       return apiError("Division already exists");
     }
 
+    const lastDivision = await prisma.division.findFirst({
+      orderBy: [{ sortOrder: "desc" }, { id: "desc" }],
+      select: { sortOrder: true },
+    });
+
     const division = await prisma.division.create({
       data: {
         name,
+        sortOrder: (lastDivision?.sortOrder ?? -1) + 1,
       },
     });
 

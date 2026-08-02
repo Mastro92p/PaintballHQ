@@ -8,6 +8,9 @@ async function ensureManualStandingTablesForLeague(leagueId: number) {
       tournaments: {
         where: {
           isHidden: false,
+          division: {
+            isActive: true,
+          },
         },
         include: {
           division: true,
@@ -27,7 +30,7 @@ async function ensureManualStandingTablesForLeague(leagueId: number) {
         id: number;
         name: string;
         date: string;
-        divisionId: number | null;
+        divisionId: number;
       }>;
     }
   >();
@@ -49,6 +52,8 @@ async function ensureManualStandingTablesForLeague(leagueId: number) {
       divisionId: tournament.divisionId,
     });
   }
+
+  const activeDivisionIds = new Set(tournamentsByDivision.keys());
 
   for (const { divisionId, tournaments } of tournamentsByDivision.values()) {
     let table = await prisma.leagueManualStandingTable.findFirst({
@@ -120,6 +125,15 @@ async function ensureManualStandingTablesForLeague(leagueId: number) {
     }
   }
 
+  await prisma.leagueManualStandingTable.deleteMany({
+    where: {
+      leagueId,
+      divisionId: {
+        notIn: [...activeDivisionIds],
+      },
+    },
+  });
+
   return true;
 }
 
@@ -133,6 +147,10 @@ async function getPublicLeagueDetail(id: number) {
       tournaments: {
         where: {
           isHidden: false,
+          OR: [
+            { divisionId: null },
+            { division: { isActive: true } },
+          ],
         },
         include: {
           division: true,
@@ -150,6 +168,12 @@ async function getPublicLeagueDetail(id: number) {
         orderBy: { date: "desc" },
       },
       teams: {
+        where: {
+          OR: [
+            { team: { divisionId: null } },
+            { team: { division: { isActive: true } } },
+          ],
+        },
         include: {
           team: {
             include: {
@@ -159,9 +183,22 @@ async function getPublicLeagueDetail(id: number) {
         },
       },
       manualStandingTables: {
+        where: {
+          division: {
+            isActive: true,
+          },
+        },
         include: {
           division: true,
           days: {
+            where: {
+              tournament: {
+                isHidden: false,
+                division: {
+                  isActive: true,
+                },
+              },
+            },
             include: {
               tournament: true,
               scores: {
@@ -176,9 +213,18 @@ async function getPublicLeagueDetail(id: number) {
             orderBy: [{ sortOrder: "asc" }, { date: "asc" }],
           },
         },
-        orderBy: {
-          divisionId: "asc",
-        },
+        orderBy: [
+          {
+            division: {
+              sortOrder: "asc",
+            },
+          },
+          {
+            division: {
+              name: "asc",
+            },
+          },
+        ],
       },
     },
   });
