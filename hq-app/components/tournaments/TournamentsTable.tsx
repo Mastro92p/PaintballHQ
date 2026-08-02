@@ -7,9 +7,9 @@ import { formatDate } from "@/lib/utils";
 import {
   getTournamentStatusBadgeVariant,
   getTournamentStatusLabel,
-} from "@/lib/tournamentStatusStyles";
+} from "@/lib/tournaments/tournamentStatusStyles";
 import type { Tournament } from "@/types";
-import { formatTournamentType } from "@/lib/tournamentType";
+import { formatTournamentType } from "@/lib/tournaments/tournamentType";
 
 type TournamentsTableProps = {
   tournaments: Tournament[];

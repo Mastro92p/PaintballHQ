@@ -7,12 +7,12 @@ import {
   getTournamentTeamCount,
   truncateText,
   type TournamentWithDetails,
-} from "@/lib/tournamentList";
+} from "@/lib/tournaments/tournamentList";
 import {
   getTournamentStatusDotClass,
   getTournamentStatusLabel,
   getTournamentStatusTextClass,
-} from "@/lib/tournamentStatusStyles";
+} from "@/lib/tournaments/tournamentStatusStyles";
 
 export function TournamentListItem({
   tournament,

@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useFetch } from "@/hooks/use-fetch";
 import { usePublicTournamentFilters } from "@/hooks/usePublicTournamentFilters";
-import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
+import { DivisionFilterChips } from "@/components/ui/DivisionFilterChips";
 import { TournamentStatusTabs } from "@/components/tournaments/TournamentStatusTabs";
 import { TournamentListItem } from "@/components/tournaments/TournamentListItem";
 import { TournamentsPageHeader } from "@/components/tournaments/TournamentsPageHeader";
@@ -11,7 +11,7 @@ import { TournamentsLoadingState } from "@/components/tournaments/TournamentsLoa
 import { TournamentsEmptyState } from "@/components/tournaments/TournamentsEmptyState";
 import { TournamentsErrorState } from "@/components/tournaments/TournamentsErrorState";
 import type { Division } from "@/types";
-import type { TournamentWithDetails } from "@/lib/tournamentList";
+import type { TournamentWithDetails } from "@/lib/tournaments/tournamentList";
 
 export default function TournamentsPage() {
   const { data, loading, error } = useFetch<TournamentWithDetails[]>("/api/public/tournaments");

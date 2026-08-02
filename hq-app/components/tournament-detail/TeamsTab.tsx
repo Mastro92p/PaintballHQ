@@ -1,5 +1,5 @@
 import type { Team } from "@/types";
-import { TeamsTransferTab } from "@/components/team-assignment/TeamsTransferTab";
+import { TeamsTransferTab } from "@/components/ui/TeamsTransferTab";
 
 type Props = {
   localAvailable: Team[];

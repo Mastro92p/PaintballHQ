@@ -7,8 +7,8 @@ import { formatDate } from "@/lib/utils";
 import {
   getTournamentStatusBadgeVariant,
   getTournamentStatusLabel,
-} from "@/lib/tournamentStatusStyles";
-import { formatTournamentType } from "@/lib/tournamentType";
+} from "@/lib/tournaments/tournamentStatusStyles";
+import { formatTournamentType } from "@/lib/tournaments/tournamentType";
 import type { TournamentDetail } from "@/types";
 
 type Tab = "teams" | "matches" | "bracket" | "info";

@@ -2,18 +2,31 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { LeagueManualStandingTable, LeagueTeam } from "@/types";
-import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
+import { DivisionFilterChips } from "@/components/ui/DivisionFilterChips";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 type Props = {
   leagueId: number;
   tables: LeagueManualStandingTable[];
   leagueTeams: LeagueTeam[];
   onUpdated: () => Promise<void> | void;
+  onRegenerate: () => Promise<void> | void;
+  regenerating?: boolean;
 };
 
 type DraftCell = {
   score: string;
   eventRank: string;
+};
+
+type DayToDelete = {
+  id: number;
+  label: string;
+};
+
+type TableToDelete = {
+  id: number;
+  label: string;
 };
 
 function formatDateShort(value: string) {
@@ -25,15 +38,19 @@ function formatDateShort(value: string) {
   });
 }
 
-export function LeagueManualStandingsTab({
+export function LeagueManualRankingsTab({
   leagueId,
   tables,
   leagueTeams,
   onUpdated,
+  onRegenerate,
+  regenerating = false,
 }: Props) {
   const [drafts, setDrafts] = useState<Record<string, DraftCell>>({});
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [divisionFilter, setDivisionFilter] = useState<string>("all");
+  const [dayToDelete, setDayToDelete] = useState<DayToDelete | null>(null);
+  const [tableToDelete, setTableToDelete] = useState<TableToDelete | null>(null);
 
   useEffect(() => {
     const next: Record<string, DraftCell> = {};
@@ -157,9 +174,6 @@ export function LeagueManualStandingsTab({
       eventRank: number | null;
     }> = [];
 
-
-    
-
     tableModels.forEach((table) => {
       table.rows.forEach((row) => {
         row.cells.forEach((cell) => {
@@ -242,33 +256,91 @@ export function LeagueManualStandingsTab({
 
     setSavingKey("bulk");
     try {
-      const res = await fetch("/api/leagues/manual-standings/score", {
+      const res = await fetch(`/api/leagues/${leagueId}/manual-rankings/score`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          leagueId,
           updates: dirtyUpdates,
         }),
       });
 
       if (!res.ok) {
-        throw new Error("Failed to save scores");
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to save rankings");
       }
 
       await onUpdated();
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "Failed to save rankings");
     } finally {
       setSavingKey(null);
     }
   }
 
-  if (!tables.length) {
-    return (
-      <section className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center bg-white dark:bg-gray-900">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          No manual standing tables available yet.
-        </p>
-      </section>
-    );
+  async function confirmDeleteDay() {
+    if (!dayToDelete) return;
+
+    setSavingKey(`day:${dayToDelete.id}`);
+    try {
+      const res = await fetch(
+        `/api/leagues/${leagueId}/manual-rankings/days/${dayToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to delete ranking day");
+      }
+
+      setDayToDelete(null);
+      await onUpdated();
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "Failed to delete ranking day");
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function confirmDeleteTable() {
+    if (!tableToDelete) return;
+
+    setSavingKey(`table:${tableToDelete.id}`);
+    try {
+      const res = await fetch(
+        `/api/leagues/${leagueId}/manual-rankings/tables/${tableToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to delete ranking table");
+      }
+
+      setTableToDelete(null);
+      await onUpdated();
+    } catch (error) {
+      console.error(error);
+      alert(error instanceof Error ? error.message : "Failed to delete ranking table");
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function handleRegenerateClick() {
+    if (dirtyUpdates.length > 0) {
+      alert("Please save or discard your unsaved changes before regenerating.");
+      return;
+    }
+
+    await onRegenerate();
   }
 
   return (
@@ -285,6 +357,27 @@ export function LeagueManualStandingsTab({
           appearance: textfield;
         }
       `}</style>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            Manual rankings
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Regenerate tables from the league&apos;s currently assigned tournaments.
+            Detached days or tables can be removed manually.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleRegenerateClick}
+          disabled={regenerating || savingKey !== null}
+          className="inline-flex items-center justify-center rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {regenerating ? "Regenerating..." : "Regenerate tables"}
+        </button>
+      </div>
 
       <DivisionFilterChips
         divisions={divisionOptions}
@@ -306,7 +399,7 @@ export function LeagueManualStandingsTab({
         <button
           type="button"
           onClick={saveAllChanges}
-          disabled={!dirtyUpdates.length || savingKey === "bulk"}
+          disabled={!dirtyUpdates.length || savingKey !== null || regenerating}
           className="inline-flex items-center rounded-lg bg-teal-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {savingKey === "bulk"
@@ -317,40 +410,66 @@ export function LeagueManualStandingsTab({
         </button>
       </div>
 
-      {tableModels.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 p-8 text-center bg-white dark:bg-gray-900">
+      {!tables.length ? (
+        <section className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-900">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            No manual standings for this division.
+            No manual ranking tables available yet. Use regenerate to create them
+            from eligible league tournaments.
+          </p>
+        </section>
+      ) : tableModels.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-900">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            No manual rankings for this division.
           </p>
         </div>
       ) : (
         tableModels.map((table) => (
           <div
             key={table.id}
-            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden"
+            className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
           >
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-start justify-between gap-3 border-b border-gray-200 px-4 py-3 dark:border-gray-700">
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {table.division?.name ?? "Unassigned Division"}
                 </h3>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                  Manual 100-point standings by tournament day.
+                <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                  Points by tournament day.
                 </p>
               </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (dirtyUpdates.length > 0) {
+                    alert("Please save or discard your unsaved changes before deleting a table.");
+                    return;
+                  }
+
+                  setTableToDelete({
+                    id: table.id,
+                    label: table.division?.name ?? "Unassigned Division",
+                  });
+                }}
+                disabled={savingKey !== null || regenerating}
+                className="inline-flex items-center rounded-md border border-red-200 px-2.5 py-1.5 text-[11px] font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/40"
+              >
+                Remove table
+              </button>
             </div>
 
             {table.days.length === 0 ? (
-              <div className="px-4 py-8 text-sm text-center text-gray-500 dark:text-gray-400">
+              <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                 No tournament days found for this division.
               </div>
             ) : table.rows.length === 0 ? (
-              <div className="px-4 py-8 text-sm text-center text-gray-500 dark:text-gray-400">
+              <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                 No league teams enrolled in this division.
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs table-fixed">
+                <table className="w-full table-fixed text-xs">
                   <thead className="bg-slate-700/85 dark:bg-slate-800/95">
                     <tr>
                       <th className="w-[120px] px-2.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-300 dark:text-slate-300">
@@ -360,15 +479,33 @@ export function LeagueManualStandingsTab({
                       {table.days.map((day) => (
                         <th
                           key={day.id}
-                          className="px-1.5 py-2 text-left text-[10px] font-semibold text-slate-300 dark:text-slate-300 w-[118px]"
+                          className="w-[118px] px-1.5 py-2 text-left text-[10px] font-semibold text-slate-300 dark:text-slate-300"
                         >
-                          <div className="space-y-0.5">
-                            <div className="font-semibold text-slate-100 dark:text-slate-100 normal-case leading-snug line-clamp-3">
+                          <div className="space-y-1">
+                            <div className="line-clamp-3 font-semibold leading-snug text-slate-100 dark:text-slate-100">
                               {day.tournament?.name ?? day.label}
                             </div>
-                            <div className="text-[9px] text-slate-400 dark:text-slate-400 font-normal">
+                            <div className="text-[9px] font-normal text-slate-400 dark:text-slate-400">
                               {formatDateShort(day.tournament?.date ?? day.date)}
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (dirtyUpdates.length > 0) {
+                                  alert("Please save or discard your unsaved changes before deleting a day.");
+                                  return;
+                                }
+
+                                setDayToDelete({
+                                  id: day.id,
+                                  label: day.tournament?.name ?? day.label,
+                                });
+                              }}
+                              disabled={savingKey !== null || regenerating}
+                              className="inline-flex items-center rounded border border-red-400/30 px-1.5 py-0.5 text-[9px] font-medium text-red-200 transition-colors hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              Remove
+                            </button>
                           </div>
                         </th>
                       ))}
@@ -393,7 +530,7 @@ export function LeagueManualStandingsTab({
                             : ""
                         }`}
                       >
-                        <td className="px-2.5 py-2 font-medium text-[12px] text-gray-900 dark:text-gray-100 leading-snug break-words">
+                        <td className="break-words px-2.5 py-2 text-[12px] font-medium leading-snug text-gray-900 dark:text-gray-100">
                           {row.team.name}
                         </td>
 
@@ -408,7 +545,7 @@ export function LeagueManualStandingsTab({
                             <td key={cell.key} className="px-1.5 py-2">
                               <div className="flex items-end gap-1">
                                 <div className="min-w-0 flex-1">
-                                  <label className="block text-[8px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">
+                                  <label className="mb-0.5 block text-[8px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
                                     Score
                                   </label>
                                   <input
@@ -425,12 +562,12 @@ export function LeagueManualStandingsTab({
                                         cell.savedEventRank
                                       )
                                     }
-                                    className="w-full h-7 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-1.5 text-[11px] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                                    className="h-7 w-full rounded-md border border-gray-200 bg-white px-1.5 text-[11px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-600 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
                                   />
                                 </div>
 
                                 <div className="w-[40px] shrink-0">
-                                  <label className="block text-[8px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">
+                                  <label className="mb-0.5 block text-[8px] uppercase tracking-wide text-gray-400 dark:text-gray-500">
                                     Rank
                                   </label>
                                   <input
@@ -447,7 +584,7 @@ export function LeagueManualStandingsTab({
                                         cell.savedEventRank
                                       )
                                     }
-                                    className="w-full h-7 rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 px-1 text-center text-[11px] text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                                    className="h-7 w-full rounded-md border border-gray-200 bg-white px-1 text-center text-[11px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-teal-600 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-100"
                                   />
                                 </div>
                               </div>
@@ -455,7 +592,7 @@ export function LeagueManualStandingsTab({
                           );
                         })}
 
-                        <td className="px-2.5 py-2 text-right font-semibold text-[11px] text-gray-900 dark:text-gray-100 tabular-nums whitespace-nowrap">
+                        <td className="whitespace-nowrap px-2.5 py-2 text-right text-[11px] font-semibold tabular-nums text-gray-900 dark:text-gray-100">
                           {row.totalScore == null ? "—" : row.totalScore.toFixed(2)}
                         </td>
                       </tr>
@@ -467,8 +604,50 @@ export function LeagueManualStandingsTab({
           </div>
         ))
       )}
+
+      <ConfirmModal
+        open={!!dayToDelete}
+        title={
+          dayToDelete
+            ? `Remove ranking day "${dayToDelete.label}"?`
+            : "Remove ranking day?"
+        }
+        description="This will permanently delete all saved scores for that ranking day."
+        confirmLabel="Delete day"
+        cancelLabel="Cancel"
+        danger
+        requireText="DELETE"
+        requireTextLabel='Type "DELETE" to confirm'
+        loading={dayToDelete ? savingKey === `day:${dayToDelete.id}` : false}
+        onCancel={() => {
+          if (dayToDelete && savingKey === `day:${dayToDelete.id}`) return;
+          setDayToDelete(null);
+        }}
+        onConfirm={confirmDeleteDay}
+      />
+
+      <ConfirmModal
+        open={!!tableToDelete}
+        title={
+          tableToDelete
+            ? `Remove ranking table "${tableToDelete.label}"?`
+            : "Remove ranking table?"
+        }
+        description="This will permanently delete all days and saved scores in this ranking table."
+        confirmLabel="Delete table"
+        cancelLabel="Cancel"
+        danger
+        requireText="DELETE"
+        requireTextLabel='Type "DELETE" to confirm'
+        loading={tableToDelete ? savingKey === `table:${tableToDelete.id}` : false}
+        onCancel={() => {
+          if (tableToDelete && savingKey === `table:${tableToDelete.id}`) return;
+          setTableToDelete(null);
+        }}
+        onConfirm={confirmDeleteTable}
+      />
     </section>
   );
 }
 
-export default LeagueManualStandingsTab;
+export default LeagueManualRankingsTab;

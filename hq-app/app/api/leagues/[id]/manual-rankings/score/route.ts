@@ -1,21 +1,30 @@
 import { prisma } from "@/lib/db";
 import { apiError } from "@/lib/utils";
 
-type ManualStandingBulkUpdateItem = {
+type ManualRankingBulkUpdateItem = {
   dayId: number;
   teamId: number;
   score: number | null;
   eventRank: number | null;
 };
 
-type ManualStandingBulkUpdateInput = {
-  leagueId?: number;
-  updates: ManualStandingBulkUpdateItem[];
+type ManualRankingBulkUpdateInput = {
+  updates: ManualRankingBulkUpdateItem[];
 };
 
-export async function PATCH(req: Request) {
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    const body: ManualStandingBulkUpdateInput = await req.json();
+    const { id: rawId } = await params;
+    const leagueId = Number(rawId);
+
+    if (Number.isNaN(leagueId)) {
+      return apiError("Invalid league id", 400);
+    }
+
+    const body: ManualRankingBulkUpdateInput = await req.json();
 
     if (!Array.isArray(body.updates) || body.updates.length === 0) {
       return apiError("No updates provided", 400);
@@ -26,7 +35,9 @@ export async function PATCH(req: Request) {
       const teamId = Number(item.teamId);
 
       const normalizedScore =
-        item.score === null || item.score === undefined || item.score === ("" as never)
+        item.score === null ||
+        item.score === undefined ||
+        item.score === ("" as never)
           ? null
           : Number(item.score);
 
@@ -94,7 +105,11 @@ export async function PATCH(req: Request) {
     for (const item of updates) {
       const day = dayMap.get(item.dayId);
       if (!day) {
-        return apiError(`Manual standings day not found: ${item.dayId}`, 404);
+        return apiError(`Manual rankings day not found: ${item.dayId}`, 404);
+      }
+
+      if (day.table.leagueId !== leagueId) {
+        return apiError("Manual rankings day does not belong to this league", 400);
       }
 
       const team = teamMap.get(item.teamId);
@@ -109,13 +124,10 @@ export async function PATCH(req: Request) {
 
     const leagueAssignments = await prisma.leagueTeam.findMany({
       where: {
-        OR: updates.map((item) => {
-          const day = dayMap.get(item.dayId)!;
-          return {
-            leagueId: day.table.leagueId,
-            teamId: item.teamId,
-          };
-        }),
+        leagueId,
+        teamId: {
+          in: uniqueTeamIds,
+        },
       },
       select: {
         leagueId: true,
@@ -128,8 +140,7 @@ export async function PATCH(req: Request) {
     );
 
     for (const item of updates) {
-      const day = dayMap.get(item.dayId)!;
-      const assignmentKey = `${day.table.leagueId}:${item.teamId}`;
+      const assignmentKey = `${leagueId}:${item.teamId}`;
       if (!assignmentSet.has(assignmentKey)) {
         return apiError("Team is not assigned to this league", 400);
       }
@@ -163,6 +174,6 @@ export async function PATCH(req: Request) {
       updatedCount: result.length,
     });
   } catch {
-    return apiError("Failed to save manual standing scores", 500);
+    return apiError("Failed to save manual ranking scores", 500);
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
+import { DivisionFilterChips } from "@/components/ui/DivisionFilterChips";
 import type { Division } from "@/types";
 
 type TournamentsFiltersProps = {

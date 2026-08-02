@@ -4,8 +4,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/utils";
-import { getTournamentStatusBadgeVariant, getTournamentStatusLabel } from "@/lib/tournamentStatusStyles";
-import { formatTournamentType } from "@/lib/tournamentType";
+import { getTournamentStatusBadgeVariant, getTournamentStatusLabel } from "@/lib/tournaments/tournamentStatusStyles";
+import { formatTournamentType } from "@/lib/tournaments/tournamentType";
 import type { TournamentDetail } from "@/types";
 
 type Tab = "teams" | "matches" | "bracket" | "info";

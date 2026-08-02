@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/Badge";
 import {
   getTournamentStatusBadgeVariant,
   getTournamentStatusLabel,
-} from "@/lib/tournamentStatusStyles";
+} from "@/lib/tournaments/tournamentStatusStyles";
 import type { ReactNode } from "react";
 
 type BaseRowProps = {

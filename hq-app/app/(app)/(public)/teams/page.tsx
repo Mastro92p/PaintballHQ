@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useFetch } from "@/hooks/use-fetch";
 import { WinRateBar } from "@/components/ui/WinRateBar";
 import type { Division, TeamWithStats } from "@/types";
-import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
+import { DivisionFilterChips } from "@/components/ui/DivisionFilterChips";
 
 export default function TeamsPage() {
   const { data, loading, error } = useFetch<TeamWithStats[]>("/api/public/teams");

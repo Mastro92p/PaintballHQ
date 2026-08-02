@@ -6,7 +6,7 @@ import TeamFormModal from "@/components/teams/TeamFormModal";
 import type { Team, Division } from "@/types";
 import { ManageTeamsHeader } from "@/components/teams/ManageTeamsHeader";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
+import { DivisionFilterChips } from "@/components/ui/DivisionFilterChips";
 import { AdminTeamTable } from "@/components/teams/AdminTeamTable";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { handleMissingEntity } from "@/lib/handle-missing-entity";

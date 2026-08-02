@@ -3,7 +3,7 @@
 import { use, useEffect, useMemo, useState } from "react";
 import { useFetch } from "@/hooks/use-fetch";
 import type { Team, Tournament, LeagueDetail, LeagueFormState } from "@/types";
-import { TeamsTransferTab } from "@/components/team-assignment/TeamsTransferTab";
+import { TeamsTransferTab } from "@/components/ui/TeamsTransferTab";
 import { LeagueInfoTab } from "@/components/leagues/LeagueInfoTab";
 import { AssignTournamentModal } from "@/components/leagues/AssignTournamentModal";
 import { LeagueTournamentsTab } from "@/components/leagues/LeagueTournamentsTab";
@@ -11,8 +11,8 @@ import { LeaguePageHeader } from "@/components/leagues/LeaguePageHeader";
 import { LeagueDetailSkeleton } from "@/components/leagues/LeagueDetailSkeleton";
 import { LeagueNotFoundState } from "@/components/leagues/LeagueNotFoundState";
 import { handleMissingEntity } from "@/lib/handle-missing-entity";
-import { DivisionFilterChips } from "@/components/divisions/DivisionFilterChips";
-import LeagueManualStandingsTab from "@/components/leagues/LeagueManualStandingsTab";
+import { DivisionFilterChips } from "@/components/ui/DivisionFilterChips";
+import LeagueManualRankingsTab from "@/components/leagues/LeagueManualRankingsTab";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 type Tab = "tournaments" | "teams" | "manual-standings" | "info";
@@ -171,12 +171,38 @@ export default function ManageLeagueDetailPage({
   }, [localLeague?.manualStandingTables]);
   
 
+  const [regeneratingRankings, setRegeneratingRankings] = useState(false);
+
   async function reloadLeague() {
     const res = await fetch(`/api/leagues/${id}`);
     if (!res.ok) throw new Error("Failed to reload league");
 
     const fresh: LeagueDetail = await res.json();
     setLocalLeague(fresh);
+  }
+
+  async function handleManualStandingsUpdated() {
+    await reloadLeague();
+  }
+
+  async function handleRegenerateManualStandings() {
+    setRegeneratingRankings(true);
+
+    try {
+      const res = await fetch(`/api/leagues/${id}/generate-rankings`, {
+        method: "POST",
+      });
+
+      const result = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(result?.error ?? "Failed to regenerate rankings");
+      }
+
+      await reloadLeague();
+    } finally {
+      setRegeneratingRankings(false);
+    }
   }
 
   async function handleInfoSave() {
@@ -430,11 +456,13 @@ export default function ManageLeagueDetailPage({
       )}
 
       {activeTab === "manual-standings" && (
-        <LeagueManualStandingsTab
+        <LeagueManualRankingsTab
           leagueId={league.id}
           tables={sortedManualStandingTables}
           leagueTeams={league.teams}
-          onUpdated={reloadLeague}
+          onUpdated={handleManualStandingsUpdated}
+          onRegenerate={handleRegenerateManualStandings}
+          regenerating={regeneratingRankings}
         />
       )}
 

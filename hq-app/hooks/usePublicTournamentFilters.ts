@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Division } from "@/types";
-import type { TournamentWithDetails } from "@/lib/tournamentList";
+import type { TournamentWithDetails } from "@/lib/tournaments/tournamentList";
 
 type UsePublicTournamentFiltersArgs = {
   tournaments: TournamentWithDetails[] | null | undefined;
