@@ -19,7 +19,6 @@ import { LeagueFormModal } from "@/components/leagues/LeagueFormModal";
 const emptyForm: LeagueFormState = {
   name: "",
   description: "",
-  logoUrl: "",
   isHidden: false,
 };
 
@@ -64,7 +63,6 @@ export default function ManageLeaguesPage() {
     setForm({
       name: l.name,
       description: l.description ?? "",
-      logoUrl: l.logoUrl ?? "",
       isHidden: l.isHidden ?? false,
     });
     setFormErrors({});
@@ -93,91 +91,7 @@ export default function ManageLeaguesPage() {
     return Object.keys(errors).length === 0;
   }
 
-  async function handleSave() {
-    if (!validate()) return;
 
-    setSaving(true);
-
-    const body: CreateLeagueBody | UpdateLeagueBody = {
-      name: form.name,
-      description: form.description || undefined,
-      logoUrl: form.logoUrl || undefined,
-      isHidden: form.isHidden,
-    };
-
-    try {
-      let savedLeague: League;
-
-      if (editing) {
-        const res = await fetch(`/api/leagues/${editing.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-
-        const result = await res.json().catch(() => null);
-
-        if (
-          await handleMissingEntity(res, {
-            entityName: "league",
-            action: "update",
-            reload: reloadLeagues,
-            onMissing: closeModal,
-          })
-        ) {
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error(result?.error ?? "Failed to update league");
-        }
-
-        savedLeague = {
-          ...editing,
-          ...(result?.league ?? result ?? {}),
-          ...body,
-        } as League;
-
-        setLocalLeagues((prev) =>
-          prev.map((l) => (l.id === savedLeague.id ? savedLeague : l))
-        );
-      } else {
-        const res = await fetch("/api/leagues", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-
-        const result = await res.json().catch(() => null);
-
-        if (
-          await handleMissingEntity(res, {
-            entityName: "league",
-            action: "update",
-            reload: reloadLeagues,
-            onMissing: closeModal,
-          })
-        ) {
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error(result?.error ?? "Failed to create league");
-        }
-
-        savedLeague = {
-          ...(result?.league ?? result),
-          ...body,
-        } as League;
-
-        setLocalLeagues((prev) => [...prev, savedLeague]);
-      }
-
-      closeModal();
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function handleDelete(id: number) {
     const previous = localLeagues;
@@ -231,6 +145,16 @@ export default function ManageLeaguesPage() {
     }`;
   }
 
+  function handleSavedLeague(league: League, mode: "create" | "edit") {
+    setLocalLeagues((prev) =>
+      mode === "edit"
+        ? prev.map((l) => (l.id === league.id ? league : l))
+        : [...prev, league]
+    );
+
+    closeModal();
+  }
+
   return (
     <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
       <ManageLeaguesHeader onCreate={openCreate} />
@@ -273,19 +197,9 @@ export default function ManageLeaguesPage() {
       <LeagueFormModal
         open={modalOpen}
         editing={editing}
-        form={form}
-        errors={formErrors}
-        saving={saving}
-        inputCls={inputCls}
         onClose={closeModal}
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSave();
-        }}
-        onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
-        onClearError={(field) =>
-          setFormErrors((prev) => ({ ...prev, [field]: undefined }))
-        }
+        reloadLeagues={reloadLeagues}
+        onSaved={handleSavedLeague}
       />
     </main>
   );

@@ -101,17 +101,7 @@ export function LeagueInfoTab({
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Logo URL
-            </label>
-            <input
-              value={infoForm.logoUrl}
-              onChange={(e) => onChange({ logoUrl: e.target.value })}
-              className={inputCls}
-              placeholder="https://..."
-            />
-          </div>
+
 
           <div className="flex gap-2">
             <Button variant="secondary" type="button" onClick={onCancel}>

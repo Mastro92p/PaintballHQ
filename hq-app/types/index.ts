@@ -377,7 +377,6 @@ export interface AssignTeamGroupBody {
 export type LeagueFormState = {
   name: string;
   description: string;
-  logoUrl: string;
   isHidden: boolean;
 };
 
@@ -436,3 +435,4 @@ export type LeagueManualStandingCellInput = {
   score: number | null;
   eventRank?: number | null;
 };
+

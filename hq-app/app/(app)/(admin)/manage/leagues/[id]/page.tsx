@@ -33,7 +33,6 @@ export default function ManageLeagueDetailPage({
   const [infoForm, setInfoForm] = useState<LeagueFormState>({
     name: "",
     description: "",
-    logoUrl: "",
     isHidden: false,
   });
   const [infoSaving, setInfoSaving] = useState(false);
@@ -77,7 +76,6 @@ export default function ManageLeagueDetailPage({
     setInfoForm({
       name: localLeague.name,
       description: localLeague.description ?? "",
-      logoUrl: localLeague.logoUrl ?? "",
       isHidden: false,
     });
   }, [localLeague]);
@@ -216,7 +214,6 @@ export default function ManageLeagueDetailPage({
         body: JSON.stringify({
           name: infoForm.name.trim(),
           description: infoForm.description || null,
-          logoUrl: infoForm.logoUrl || null,
         }),
       });
 
