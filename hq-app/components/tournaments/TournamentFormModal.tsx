@@ -97,7 +97,7 @@ export function TournamentFormModal({
 }: TournamentFormModalProps) {
   const showThirdPlaceMatch =
     form.type === "bracket" ||
-    (form.type === "group_and_bracket" && form.managementMode === "auto");
+    form.type === "group_and_bracket";
 
   return (
     <Modal
