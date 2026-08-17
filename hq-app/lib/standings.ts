@@ -33,9 +33,18 @@ export type GroupedStandingsResult = {
   wildcardRows: StandingRow[];
 };
 
-export function sortStandings(a: StandingRow, b: StandingRow) {
+type StandingsOptions = {
+  useBodyCount?: boolean;
+}
+
+export function sortStandings(
+  a: StandingRow,
+  b: StandingRow,
+  options: StandingsOptions = {}
+) {
   return (
     b.points - a.points ||
+    (options.useBodyCount ? (b.bodyCount ?? 0) - (a.bodyCount ?? 0) : 0) ||
     b.gd - a.gd ||
     b.gf - a.gf ||
     a.ga - b.ga ||
@@ -77,6 +86,7 @@ function getOrCreateRow(
       ga: 0,
       gd: 0,
       points: 0,
+      bodyCount: 0,
     };
   }
 
@@ -87,7 +97,10 @@ function applyMatchToRows(
   rowA: StandingRow,
   rowB: StandingRow,
   scoreA: number,
-  scoreB: number
+  scoreB: number,
+  bodyCountA: number | null | undefined,
+  bodyCountB: number | null | undefined,
+  options: StandingsOptions = {}
 ) {
   rowA.played += 1;
   rowB.played += 1;
@@ -96,6 +109,11 @@ function applyMatchToRows(
   rowA.ga += scoreB;
   rowB.gf += scoreB;
   rowB.ga += scoreA;
+
+  if (options.useBodyCount) {
+    rowA.bodyCount = (rowA.bodyCount ?? 0) + (bodyCountA ?? 0);
+    rowB.bodyCount = (rowB.bodyCount ?? 0) + (bodyCountB ?? 0);
+  }
 
   if (scoreA > scoreB) {
     rowA.wins += 1;
@@ -115,7 +133,8 @@ function applyMatchToRows(
 
 export function computeRoundRobinStandings(
   teams: TournamentTeam[],
-  matches: Match[]
+  matches: Match[],
+  options: StandingsOptions = {}
 ): StandingRow[] {
   const teamMap = buildTeamMap(teams);
   const rows: Record<number, StandingRow> = {};
@@ -134,6 +153,7 @@ export function computeRoundRobinStandings(
       ga: 0,
       gd: 0,
       points: 0,
+      bodyCount: 0,
     };
   }
 
@@ -153,7 +173,15 @@ export function computeRoundRobinStandings(
 
     if (!rowA || !rowB) continue;
 
-    applyMatchToRows(rowA, rowB, match.scoreA, match.scoreB);
+    applyMatchToRows(
+      rowA,
+      rowB,
+      match.scoreA,
+      match.scoreB,
+      match.bodyCountA,
+      match.bodyCountB,
+      options
+    );
   }
 
   return Object.values(rows)
@@ -161,7 +189,7 @@ export function computeRoundRobinStandings(
       ...row,
       gd: row.gf - row.ga,
     }))
-    .sort(sortStandings)
+    .sort((a, b) => sortStandings(a, b, options))
     .map((row, index) => ({
       ...row,
       overallRank: index + 1,
@@ -223,13 +251,8 @@ export function applyClassicScoring(rows: StandingRow[], matches: Match[]): Stan
     bodyCount: overrides[row.teamId].bodyCount,
   }));
 
-  merged.sort(
-    (x, y) =>
-      y.points - x.points ||
-      y.gd - x.gd ||
-      y.gf - x.gf ||
-      (y.bodyCount ?? 0) - (x.bodyCount ?? 0) ||
-      x.teamName.localeCompare(y.teamName)
+  merged.sort((a, b) =>
+    sortStandings(a, b, { useBodyCount: true })
   );
 
   merged.forEach((row, index) => {
@@ -245,7 +268,8 @@ export function computeGroupedStandings(
   teams: TournamentTeam[],
   matches: Match[],
   qualifiersPerGroup = 2,
-  wildCardCount = 0
+  wildCardCount = 0,
+  options: StandingsOptions = {}
 ): GroupedStandingsResult {
   const teamMap = buildTeamMap(teams);
   const rowsByGroup: Record<string, Record<number, StandingRow>> = {};
@@ -289,7 +313,15 @@ export function computeGroupedStandings(
       continue;
     }
 
-    applyMatchToRows(rowA, rowB, match.scoreA, match.scoreB);
+    applyMatchToRows(
+    rowA,
+    rowB,
+    match.scoreA,
+    match.scoreB,
+    match.bodyCountA,
+    match.bodyCountB,
+    options
+  );
   }
 
   const grouped: Record<string, StandingRow[]> = {};
@@ -300,7 +332,7 @@ export function computeGroupedStandings(
         ...row,
         gd: row.gf - row.ga,
       }))
-      .sort(sortStandings)
+      .sort((a, b) => sortStandings(a, b, options))
       .map((row, index) => ({
         ...row,
         groupRank: index + 1,
@@ -309,7 +341,7 @@ export function computeGroupedStandings(
 
   const allRows = Object.values(grouped)
     .flat()
-    .sort(sortStandings)
+    .sort((a, b) => sortStandings(a, b, options))
     .map((row, index) => ({
       ...row,
       overallRank: index + 1,
@@ -329,7 +361,7 @@ export function computeGroupedStandings(
   const wildcardRows = Object.values(grouped)
     .flat()
     .filter((row) => (row.groupRank ?? 999) > qualifiersPerGroup)
-    .sort(sortStandings)
+    .sort((a, b) => sortStandings(a, b, options))
     .slice(0, wildCardCount);
 
   return {

@@ -61,6 +61,8 @@ model Tournament {
 
   isHidden    Boolean  @default(false)
 
+  trackBodyCount Boolean @default(false)
+
   matches            Match[]
   division           Division? @relation(fields: [divisionId], references: [id])
   league             League?   @relation(fields: [leagueId], references: [id])

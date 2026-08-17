@@ -44,6 +44,7 @@ export const EMPTY_TOURNAMENT_FORM: TournamentFormState = {
   wildCardCount: "2",
   bracketSeedingRule: "crossover",
   thirdPlaceMatch: false,
+  trackBodyCount: false,
   isHidden: false
 };
 

@@ -31,6 +31,8 @@ export default function TournamentPublicPage({
     [data?.type]
   );
 
+  const bodyCountEnabled = data?.type === "round_robin_classic" || data?.trackBodyCount === true;
+
   const brackets = data?.brackets ?? [];
 
   useEffect(() => {
@@ -149,15 +151,16 @@ export default function TournamentPublicPage({
           <TabSelector tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
 
           {activeTab === "standings" && (
-            <PublicStandingsTable
-              tournamentType={data.type}
-              teams={data.teams}
-              matches={data.matches}
-              formatConfig={data.formatConfig as {
-                qualifiersPerGroup?: number;
-                wildCardCount?: number;
-              }}
-            />
+          <PublicStandingsTable
+            tournamentType={data.type}
+            teams={data.teams}
+            matches={data.matches}
+            bodyCountEnabled={bodyCountEnabled}
+            formatConfig={data.formatConfig as {
+              qualifiersPerGroup?: number;
+              wildCardCount?: number;
+            }}
+          />
           )}
 
           {activeTab === "groupStage" && (
@@ -169,6 +172,7 @@ export default function TournamentPublicPage({
               hasGroupMatches={hasGroupMatches}
               tournamentType={data.type}
               isRoundRobin={isRoundRobin}
+              bodyCountEnabled={bodyCountEnabled}
             />
           )}
 

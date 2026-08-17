@@ -207,9 +207,23 @@ const divisions = useMemo(() => {
         });
 
         const teamsList = Object.values(teamsMap);
-        const isClassic = group.tournaments.some((t) => t.type === "round_robin_classic");
 
-        let standings = computeRoundRobinStandings(teamsList, allMatches);
+        const isClassic = group.tournaments.some(
+          (t) => t.type === "round_robin_classic"
+        );
+
+        const shouldUseBodyCount = group.tournaments.some(
+          (t) =>
+            t.type === "round_robin_classic" ||
+            t.trackBodyCount === true
+        );
+
+        let standings = computeRoundRobinStandings(
+          teamsList,
+          allMatches,
+          isClassic ? undefined : { useBodyCount: shouldUseBodyCount }
+        );
+
         if (isClassic) {
           standings = applyClassicScoring(standings, allMatches);
         }
@@ -218,7 +232,7 @@ const divisions = useMemo(() => {
           divisionId: group.divisionId,
           divisionName: group.divisionName,
           standings,
-          showBodyCount: isClassic,
+          showBodyCount: shouldUseBodyCount,
         };
       });
   }, [data, divisions]);

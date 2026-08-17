@@ -32,6 +32,7 @@ type PublicGroupStageProps = {
     | "group_and_bracket"
     | string;
   hasGroupMatches: boolean;
+  bodyCountEnabled: boolean;
   isRoundRobin?: boolean;
 };
 
@@ -62,11 +63,13 @@ export default function PublicGroupStage({
   isGroupAndBracket,
   hasGroupMatches,
   tournamentType,
+  bodyCountEnabled,
   isRoundRobin: isRoundRobinProp,
 }: PublicGroupStageProps) {
   const isRoundRobin =
     isRoundRobinProp ?? ROUND_ROBIN_TYPES.includes(tournamentType);
   const isClassic = tournamentType === "round_robin_classic";
+  const shouldUseBodyCount = isClassic || bodyCountEnabled;
 
   const groupDefinitions = useMemo(() => {
     if (isRoundRobin) {
@@ -294,6 +297,11 @@ export default function PublicGroupStage({
       b.gf += match.scoreB!;
       b.ga += match.scoreA!;
 
+      if (shouldUseBodyCount) {
+        a.bodyCount += match.bodyCountA ?? 0;
+        b.bodyCount += match.bodyCountB ?? 0;
+      }
+
       if (isClassic) {
         const result = getClassicMatchResult(
           match.scoreA ?? null,
@@ -304,8 +312,6 @@ export default function PublicGroupStage({
 
         a.points += result.pointsA;
         b.points += result.pointsB;
-        a.bodyCount += result.bodyCountA;
-        b.bodyCount += result.bodyCountB;
 
         if (result.winner === "A") {
           a.wins += 1;
@@ -340,12 +346,12 @@ export default function PublicGroupStage({
       .sort(
         (a, b) =>
           b.points - a.points ||
-          (isClassic ? b.bodyCount - a.bodyCount : 0) ||
+          (shouldUseBodyCount ? b.bodyCount - a.bodyCount : 0) ||
           b.gd - a.gd ||
           b.gf - a.gf ||
           a.teamName.localeCompare(b.teamName)
       );
-  }, [activeMatches, activeTeams, isClassic]);
+  }, [activeMatches, activeTeams, isClassic, shouldUseBodyCount]);
 
   const matchCountByGroup = useMemo(
     () =>
@@ -443,13 +449,18 @@ return (
         </summary>
 
         <div className="px-4 pb-4">
-          <StandingsTable rows={groupStandings} isClassic={isClassic} />
+          <StandingsTable
+            rows={groupStandings}
+            isClassic={isClassic}
+            showBodyCount={shouldUseBodyCount}
+          />
         </div>
       </details>
 
       <FixturesSection
         isRoundRobin={isRoundRobin}
         isClassic={isClassic}
+        bodyCountEnabled={bodyCountEnabled}
         activeTeams={activeTeams}
         teamFilter={teamFilter}
         onTeamFilterChange={setTeamFilter}

@@ -97,6 +97,7 @@ export function useTournamentMatchesState({
 
   const isGroupAndBracket = tournament?.type === "group_and_bracket";
   const isClassic = tournament?.type === "round_robin_classic";
+  const bodyCountEnabled = isClassic || tournament?.trackBodyCount === true;
   const canAddMatch =
     tournament?.type === "round_robin" ||
     tournament?.type === "round_robin_classic" ||
@@ -490,6 +491,7 @@ export function useTournamentMatchesState({
     hasBracketMatches,
     hasGroupMatches,
     isClassic,
+    bodyCountEnabled,
     canAddMatch,
     modalTeams,
     editModalTeams,

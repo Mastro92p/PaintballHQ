@@ -129,7 +129,8 @@ export const TournamentScalarFieldEnum = {
   formatConfig: 'formatConfig',
   divisionId: 'divisionId',
   managementMode: 'managementMode',
-  isHidden: 'isHidden'
+  isHidden: 'isHidden',
+  trackBodyCount: 'trackBodyCount'
 } as const
 
 export type TournamentScalarFieldEnum = (typeof TournamentScalarFieldEnum)[keyof typeof TournamentScalarFieldEnum]

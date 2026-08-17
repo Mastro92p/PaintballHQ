@@ -7,6 +7,7 @@ import { TeamFilterDropdown } from "@/components/ui/TeamFilterDropdown";
 type FixturesSectionProps = {
   isRoundRobin: boolean;
   isClassic: boolean;
+  bodyCountEnabled: boolean;
   activeTeams: Team[];
   teamFilter: number | "all";
   onTeamFilterChange: (value: number | "all") => void;
@@ -19,6 +20,7 @@ type FixturesSectionProps = {
 export function FixturesSection({
   isRoundRobin,
   isClassic,
+  bodyCountEnabled,
   activeTeams,
   teamFilter,
   onTeamFilterChange,
@@ -71,6 +73,7 @@ export function FixturesSection({
                       match={match}
                       isClassic={isClassic}
                       isRoundRobin={isRoundRobin}
+                      bodyCountEnabled={bodyCountEnabled}
                     />
                   ))}
                 </div>
@@ -87,12 +90,13 @@ export function FixturesSection({
           {filteredMatches.length > 0 ? (
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               {filteredMatches.map((match) => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  isClassic={isClassic}
-                  isRoundRobin={isRoundRobin}
-                />
+              <MatchCard
+                key={match.id}
+                match={match}
+                isClassic={isClassic}
+                isRoundRobin={isRoundRobin}
+                bodyCountEnabled={bodyCountEnabled}
+              />
               ))}
             </div>
           ) : (

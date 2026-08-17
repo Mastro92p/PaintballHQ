@@ -42,6 +42,7 @@ export interface Tournament {
   division?: Division | null;
   managementMode: ManagementMode;
   isHidden: boolean;
+  trackBodyCount: boolean;
 }
 
 export interface Team {
@@ -144,6 +145,7 @@ export interface CreateTournamentBody {
   teamIds?: number[];
   formatConfig?: FormatConfig;
   isHidden?: boolean;
+  trackBodyCount?: boolean;
 }
 
 export interface UpdateTournamentBody {
@@ -160,6 +162,7 @@ export interface UpdateTournamentBody {
   teamIds?: number[];
   formatConfig?: FormatConfig;
   isHidden?: boolean;
+  trackBodyCount?: boolean;
 }
 
 export interface CreateTeamBody {

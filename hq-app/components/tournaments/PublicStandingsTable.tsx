@@ -25,6 +25,7 @@ type Props = {
   teams: TournamentTeam[];
   matches: Match[];
   formatConfig?: FormatConfig | null;
+  bodyCountEnabled: boolean;
 };
 
 function getRowClassName(
@@ -198,11 +199,20 @@ export function PublicStandingsTable({
   teams,
   matches,
   formatConfig,
+  bodyCountEnabled,
 }: Props) {
-  if (tournamentType === "round_robin" || tournamentType === "round_robin_classic") {
-    let standings = computeRoundRobinStandings(teams, matches);
 
-    if (tournamentType === "round_robin_classic") {
+  const isClassic = tournamentType === "round_robin_classic";
+  const shouldUseBodyCount = isClassic || bodyCountEnabled;
+
+  if (tournamentType === "round_robin" || tournamentType === "round_robin_classic") {
+    let standings = computeRoundRobinStandings(
+      teams,
+      matches,
+      isClassic ? undefined : { useBodyCount: shouldUseBodyCount }
+    );
+
+    if (isClassic) {
       standings = applyClassicScoring(standings, matches);
     }
 
@@ -220,7 +230,7 @@ export function PublicStandingsTable({
         <StandingsTable
           rows={standings}
           showOverallRank
-          showBodyCount={tournamentType === "round_robin_classic"}
+          showBodyCount={shouldUseBodyCount}
         />
 
         <p className="text-xs text-gray-400 dark:text-slate-500">
@@ -241,7 +251,8 @@ export function PublicStandingsTable({
       teams,
       matches,
       qualifiersPerGroup,
-      wildCardCount
+      wildCardCount,
+      { useBodyCount: shouldUseBodyCount }
     );
 
     const wildCardIds = new Set(wildcardRows.map((row) => row.teamId));
@@ -286,6 +297,7 @@ export function PublicStandingsTable({
               showOverallRank
               qualifiersPerGroup={qualifiersPerGroup}
               wildCardIds={wildCardIds}
+              showBodyCount={shouldUseBodyCount}
             />
           </div>
         ))}

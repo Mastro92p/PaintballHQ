@@ -80,6 +80,7 @@ export async function POST(req: Request) {
         divisionId,
         formatConfig: body.formatConfig ?? undefined,
         isHidden: body.isHidden ?? false,
+        trackBodyCount: body.trackBodyCount ?? false,
         teams: body.teamIds?.length
           ? { create: body.teamIds.map((teamId) => ({ teamId })) }
           : undefined,

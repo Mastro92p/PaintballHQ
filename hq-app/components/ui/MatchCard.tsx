@@ -7,12 +7,14 @@ type MatchCardProps = {
   match: Match;
   isClassic?: boolean;
   isRoundRobin?: boolean;
+  bodyCountEnabled?: boolean;
 };
 
 export function MatchCard({
   match,
   isClassic = false,
   isRoundRobin = false,
+  bodyCountEnabled = false,
 }: MatchCardProps) {
   const completed =
     match.status === "completed" &&
@@ -111,7 +113,7 @@ export function MatchCard({
 
           {completed ? (
             <div className="relative z-10 flex shrink-0 items-center gap-0.5 sm:gap-1.5">
-              {isClassic && match.bodyCountA != null && (
+              {bodyCountEnabled  && match.bodyCountA != null && (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full border border-gray-200 dark:border-white/10 bg-gray-200 dark:bg-slate-800/100 px-1 text-[8px] font-semibold leading-none text-gray-700 dark:text-slate-100 tabular-nums sm:h-6 sm:min-w-6 sm:px-1.5 sm:text-[10px]">
                   {match.bodyCountA}
                 </span>
@@ -147,7 +149,7 @@ export function MatchCard({
                 {match.scoreB}
               </span>
 
-              {isClassic && match.bodyCountB != null && (
+              {bodyCountEnabled  && match.bodyCountB != null && (
                 <span className="flex h-4 min-w-4 items-center justify-center rounded-full border border-gray-200 dark:border-white/10 bg-gray-200 dark:bg-slate-800/100 px-1 text-[8px] font-semibold leading-none text-gray-700 dark:text-slate-100 tabular-nums sm:h-6 sm:min-w-6 sm:px-1.5 sm:text-[10px]">
                   {match.bodyCountB}
                 </span>

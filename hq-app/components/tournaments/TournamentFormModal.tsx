@@ -41,6 +41,7 @@ export type TournamentFormState = {
   bracketSeedingRule: FormatConfig["bracketSeedingRule"];
   thirdPlaceMatch: boolean;
   isHidden: boolean;
+  trackBodyCount: boolean;
 };
 
 export type TournamentFormErrors = Partial<Record<keyof TournamentFormState, string>>;
@@ -253,6 +254,40 @@ export function TournamentFormModal({
                   </div>
                 )}
               </div>
+
+                <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4 dark:border-gray-700">
+                  <div className="space-y-0.5 pr-4">
+                    <label
+                      htmlFor="trackBodyCount"
+                      className="text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                      Track body count
+                    </label>
+                    <p className="text-xs text-gray-400">
+                      Record body count for each team when entering match results.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    id="trackBodyCount"
+                    role="switch"
+                    aria-checked={form.trackBodyCount}
+                    onClick={() => setField("trackBodyCount", !form.trackBodyCount)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 ${
+                      form.trackBodyCount
+                        ? "bg-teal-600"
+                        : "bg-gray-200 dark:bg-gray-700"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                        form.trackBodyCount ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+
             </Section>
 
             <Section title="Status">

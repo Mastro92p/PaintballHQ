@@ -18,9 +18,14 @@ export type StandingRow = {
 type StandingsTableProps = {
   rows: StandingRow[];
   isClassic: boolean;
+  showBodyCount: boolean;
 };
 
-export function StandingsTable({ rows, isClassic }: StandingsTableProps) {
+export function StandingsTable({ 
+  rows, 
+  showBodyCount, 
+
+}: StandingsTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-white/[0.03]">
       <div className="overflow-x-auto">
@@ -40,7 +45,7 @@ export function StandingsTable({ rows, isClassic }: StandingsTableProps) {
               <th className="px-3 py-3 text-right font-medium">GF</th>
               <th className="px-3 py-3 text-right font-medium">GA</th>
               <th className="px-3 py-3 text-right font-medium">GD</th>
-              {isClassic && (
+              {showBodyCount  && (
                 <th className="px-3 py-3 text-right font-medium text-sky-600 dark:text-sky-400/80">
                   BC
                 </th>
@@ -95,7 +100,7 @@ export function StandingsTable({ rows, isClassic }: StandingsTableProps) {
                 <td className="px-3 py-3 text-right text-gray-700 dark:text-slate-300 tabular-nums">
                   {row.gd > 0 ? `+${row.gd}` : row.gd}
                 </td>
-                {isClassic && (
+                {showBodyCount  && (
                   <td className="px-3 py-3 text-right text-sky-600 dark:text-sky-400 tabular-nums">
                     {row.bodyCount}
                   </td>

@@ -128,6 +128,7 @@ function openTournamentSettings() {
     bracketSeedingRule: fc.bracketSeedingRule ?? "crossover",
     thirdPlaceMatch: fc.thirdPlaceMatch ?? false,
     isHidden: tournament.isHidden ?? false,
+    trackBodyCount: settingsForm.trackBodyCount,
   });
 
   setSettingsErrors({});

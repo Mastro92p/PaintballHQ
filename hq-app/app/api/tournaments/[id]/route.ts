@@ -107,6 +107,7 @@ export async function PATCH(
         ...(body.teamsToAdvance !== undefined && { teamsToAdvance: body.teamsToAdvance }),
         ...(body.leagueId !== undefined && { leagueId: body.leagueId ?? null }),
         ...(body.isHidden !== undefined && { isHidden: body.isHidden }),
+        ...(body.trackBodyCount !== undefined && {trackBodyCount: body.trackBodyCount,}),
         ...(divisionId !== undefined && { divisionId }),
       },
       include: {

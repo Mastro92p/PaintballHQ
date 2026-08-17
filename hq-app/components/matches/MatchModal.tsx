@@ -77,6 +77,7 @@ type MatchModalProps = {
   submitLabel: string;
   loading: boolean;
   isClassic: boolean;
+  bodyCountEnabled: boolean;
   requireTeams?: boolean;
   teams: Team[];
   form: MatchForm;
@@ -93,6 +94,7 @@ export default function MatchModal({
   submitLabel,
   loading,
   isClassic,
+  bodyCountEnabled,
   requireTeams = false,
   teams,
   form,
@@ -202,7 +204,7 @@ export default function MatchModal({
           </div>
         </div>
 
-        {isClassic && (
+        {bodyCountEnabled && (
           <div style={threeColGrid}>
             <div className="space-y-1">
               <label className="text-xs font-bold uppercase tracking-widest text-gray-400">

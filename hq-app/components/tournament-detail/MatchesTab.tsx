@@ -23,6 +23,7 @@ type Props = {
   isGroupAndBracket: boolean;
   hasGroupMatches: boolean;
   isClassic: boolean;
+  shouldUseBodyCount: boolean;
   canAddMatch: boolean;
   managementMode: "auto" | "manual";
   formatConfig: FormatConfig | null;
@@ -134,30 +135,68 @@ function computeClassicStandings(teams: Team[], matches: Match[]): StandingRow[]
     );
 }
 
-function computeStandardStandings(teams: Team[], matches: Match[]): StandingRow[] {
+function computeStandardStandings(teams: Team[], matches: Match[], shouldUseBodyCount: boolean): StandingRow[] {
   const teamMap = Object.fromEntries(teams.map((t) => [t.id, t.name]));
   const enrolledIds = teams.map((t) => t.id);
   const standings = calcStandings(matches, teamMap, enrolledIds);
 
-  return standings.map((s) => ({
-    teamId: s.teamId,
-    teamName: s.teamName,
-    played: s.wins + s.draws + s.losses,
-    w: s.wins,
-    d: s.draws,
-    l: s.losses,
-    gf: s.goalsFor,
-    ga: s.goalsAgainst,
-    gd: s.goalDiff,
-    pts: s.points,
-    bodyCount: 0,
-  }));
+  const bodyCountByTeam: Record<number, number> = {};
+
+  if (shouldUseBodyCount) {
+    for (const match of matches) {
+      const completed =
+        match.status === "completed" &&
+        match.teamAId != null &&
+        match.teamBId != null &&
+        match.scoreA != null &&
+        match.scoreB != null;
+
+      if (!completed) continue;
+
+      bodyCountByTeam[match.teamAId!] =
+        (bodyCountByTeam[match.teamAId!] ?? 0) + (match.bodyCountA ?? 0);
+
+      bodyCountByTeam[match.teamBId!] =
+        (bodyCountByTeam[match.teamBId!] ?? 0) + (match.bodyCountB ?? 0);
+    }
+  }
+
+  return standings
+    .map((s) => ({
+      teamId: s.teamId,
+      teamName: s.teamName,
+      played: s.wins + s.draws + s.losses,
+      w: s.wins,
+      d: s.draws,
+      l: s.losses,
+      gf: s.goalsFor,
+      ga: s.goalsAgainst,
+      gd: s.goalDiff,
+      pts: s.points,
+      bodyCount: shouldUseBodyCount
+        ? bodyCountByTeam[s.teamId] ?? 0
+        : 0,
+    }))
+    .sort(
+      (a, b) =>
+        b.pts - a.pts ||
+        (shouldUseBodyCount ? b.bodyCount - a.bodyCount : 0) ||
+        b.gd - a.gd ||
+        b.gf - a.gf ||
+        a.ga - b.ga ||
+        a.teamName.localeCompare(b.teamName)
+    );
 }
 
-function getStandings(teams: Team[], matches: Match[], isClassic: boolean): StandingRow[] {
+function getStandings(
+  teams: Team[],
+  matches: Match[],
+  isClassic: boolean,
+  shouldUseBodyCount: boolean
+): StandingRow[] {
   return isClassic
     ? computeClassicStandings(teams, matches)
-    : computeStandardStandings(teams, matches);
+    : computeStandardStandings(teams, matches, shouldUseBodyCount);
 }
 
 function getRoundHeading(round: number, matches: Match[]) {
@@ -218,6 +257,7 @@ export function MatchesTab({
   enrolledTeams,
   isGroupAndBracket,
   isClassic,
+  shouldUseBodyCount,
   canAddMatch,
   hasGroupMatches,
   managementMode,
@@ -352,8 +392,19 @@ export function MatchesTab({
         : enrolledTeams.filter((t) => (teamGroups[t.id] ?? []).includes(currentGroup))
       : enrolledTeams.filter((t) => currentTeamIds.has(t.id));
 
-  const currentStandings = getStandings(currentGroupTeams, currentMatches, isClassic);
-  const overallStandings = getStandings(enrolledTeams, matches, isClassic);
+  const currentStandings = getStandings(
+    currentGroupTeams,
+    currentMatches,
+    isClassic,
+    shouldUseBodyCount
+  );
+
+  const overallStandings = getStandings(
+    enrolledTeams,
+    matches,
+    isClassic,
+    shouldUseBodyCount
+  );
 
   const visibleGroups =
     managementMode === "manual"
@@ -677,7 +728,10 @@ export function MatchesTab({
                 />
               )}
 
-              <GroupStandingsTable rows={currentStandings} isClassic={isClassic} />
+              <GroupStandingsTable
+                rows={currentStandings}
+                showBodyCount={shouldUseBodyCount}
+              />
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
                 {currentMatches
@@ -697,7 +751,10 @@ export function MatchesTab({
         </div>
       ) : (
         <div className="space-y-6">
-          <GroupStandingsTable rows={overallStandings} isClassic={isClassic} />
+          <GroupStandingsTable
+            rows={overallStandings}
+            showBodyCount={shouldUseBodyCount}
+          />
 
           {Object.entries(matchesByRound)
             .sort(([a], [b]) => Number(a) - Number(b))

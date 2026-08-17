@@ -16,12 +16,13 @@ export type StandingRow = {
 
 type GroupStandingsTableProps = {
   rows: StandingRow[];
-  isClassic?: boolean;
+  showBodyCount: boolean;
 };
 
 export function GroupStandingsTable({
   rows,
-  isClassic = false,
+  showBodyCount = false,
+  
 }: GroupStandingsTableProps) {
   if (rows.length === 0) {
     return (
@@ -47,9 +48,9 @@ export function GroupStandingsTable({
             <th className="hidden sm:table-cell px-4 py-3 text-center font-medium">GA</th>
             <th className="hidden sm:table-cell px-4 py-3 text-center font-medium">GD</th>
 
-            {isClassic && (
+            {showBodyCount  && (
               <th className="hidden sm:table-cell px-4 py-3 text-center font-medium">
-                Body
+                BC
               </th>
             )}
 
@@ -89,7 +90,7 @@ export function GroupStandingsTable({
                 {row.gd > 0 ? `+${row.gd}` : row.gd}
               </td>
 
-              {isClassic && (
+              {showBodyCount  && (
                 <td className="hidden sm:table-cell px-4 py-3 text-center tabular-nums">
                   {row.bodyCount}
                 </td>

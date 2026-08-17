@@ -106,6 +106,7 @@ export function useManageTournamentsCrud() {
       wildCardCount: String(fc.wildCardCount ?? 2),
       bracketSeedingRule: fc.bracketSeedingRule ?? "crossover",
       thirdPlaceMatch: fc.thirdPlaceMatch ?? false,
+      trackBodyCount: t.trackBodyCount ?? false,
       isHidden: t.isHidden ?? false,
     });
 
@@ -181,6 +182,7 @@ export function useManageTournamentsCrud() {
       type: form.type,
       divisionId: form.divisionId ? Number(form.divisionId) : null,
       isHidden: form.isHidden,
+      trackBodyCount: form.trackBodyCount,
       ...(form.type === "group_and_bracket" && {
         managementMode: form.managementMode,
       }),

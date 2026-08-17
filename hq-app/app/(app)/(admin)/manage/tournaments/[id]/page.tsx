@@ -137,6 +137,7 @@ export default function ManageTournamentDetailPage({
     localMatches,
     hasGroupMatches,
     isClassic,
+    bodyCountEnabled,
     canAddMatch,
     modalTeams,
     editModalTeams,
@@ -183,6 +184,8 @@ export default function ManageTournamentDetailPage({
       setLocalTournament((prev) => (prev ? { ...prev, matches } : prev));
     },
   });
+
+  const shouldUseBodyCount = isClassic || bodyCountEnabled;
 
   const activeBracketMatches = useMemo(
     () =>
@@ -591,6 +594,7 @@ export default function ManageTournamentDetailPage({
           enrolledTeams={enrolledTeams}
           isGroupAndBracket={tournament.type === "group_and_bracket"}
           isClassic={isClassic}
+          shouldUseBodyCount={shouldUseBodyCount}
           canAddMatch={canAddMatch}
           hasGroupMatches={hasGroupMatches}
           managementMode={tournament.managementMode ?? "auto"}
@@ -655,6 +659,7 @@ export default function ManageTournamentDetailPage({
         submitLabel="+ Add Match"
         loading={matchSaving}
         isClassic={isClassic}
+        bodyCountEnabled={bodyCountEnabled}
         requireTeams
         teams={modalTeams}
         form={matchForm}
@@ -674,6 +679,7 @@ export default function ManageTournamentDetailPage({
         submitLabel="Save Changes"
         loading={editSaving}
         isClassic={isClassic}
+        bodyCountEnabled={bodyCountEnabled}
         teams={editModalTeams}
         form={editForm}
         errors={editErrors}
