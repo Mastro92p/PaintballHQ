@@ -7,24 +7,29 @@ type Props = {
 };
 
 export function TeamHistoryModalContent({ team }: Props) {
-  const allMatches = [
-    ...(team.matchesA ?? []).map((m) => ({
-      ...m,
-      opponent: m.teamB,
-      myScore: m.scoreA,
-      oppScore: m.scoreB,
-      tournamentName: m.tournament?.name ?? "—",
-    })),
-    ...(team.matchesB ?? []).map((m) => ({
-      ...m,
-      opponent: m.teamA,
-      myScore: m.scoreB,
-      oppScore: m.scoreA,
-      tournamentName: m.tournament?.name ?? "—",
-    })),
-  ]
-    .filter((m) => m.status === "completed")
-    .sort((a, b) => (a.round ?? 0) - (b.round ?? 0));
+const allMatches = [
+  ...(team.matchesA ?? []).map((m) => ({
+    ...m,
+    opponent: m.teamB,
+    myScore: m.scoreA,
+    oppScore: m.scoreB,
+    tournamentName: m.tournament?.name ?? "—",
+  })),
+  ...(team.matchesB ?? []).map((m) => ({
+    ...m,
+    opponent: m.teamA,
+    myScore: m.scoreB,
+    oppScore: m.scoreA,
+    tournamentName: m.tournament?.name ?? "—",
+  })),
+]
+  .filter((m) => m.status === "completed")
+  .sort((matchA, matchB) => {
+    const creationTimeA = Date.parse(matchA.createdAt);
+    const creationTimeB = Date.parse(matchB.createdAt);
+
+    return creationTimeB - creationTimeA;
+  });
 
   const played = allMatches.length;
   const won = allMatches.filter((m) => (m.myScore ?? 0) > (m.oppScore ?? 0)).length;

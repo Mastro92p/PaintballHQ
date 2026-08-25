@@ -323,6 +323,7 @@ export type MatchDetail = {
   teamA?: { id: number; name: string };
   teamB?: { id: number; name: string };
   tournament?: { id: number; name: string };
+  createdAt: string;
 };
 
 export type TeamWithStats = Team & {
@@ -331,6 +332,7 @@ export type TeamWithStats = Team & {
   wins?: number;
   matchesA?: MatchDetail[];
   matchesB?: MatchDetail[];
+  createdAt: string;
 };
 
 export type TeamDetail = Team & {

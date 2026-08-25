@@ -16,16 +16,21 @@ export async function GET(_req: Request, { params }: RouteContext) {
     const team = await prisma.team.findFirst({
       where: {
         id: teamId,
-        OR: [
-          { divisionId: null },
-          { division: { isActive: true } },
-        ],
+        OR: [{ divisionId: null }, { division: { isActive: true } }],
       },
       include: {
         division: true,
         tournaments: { include: { tournament: true } },
-        matchesA: { include: { teamB: true, tournament: true } },
-        matchesB: { include: { teamA: true, tournament: true } },
+
+        matchesA: {
+          include: { teamB: true, tournament: true },
+          orderBy: { createdAt: "desc" },
+        },
+
+        matchesB: {
+          include: { teamA: true, tournament: true },
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -33,7 +38,7 @@ export async function GET(_req: Request, { params }: RouteContext) {
       return Response.json({ error: "Team not found" }, { status: 404 });
     }
 
-    const allMatches = [...team.matchesA, ...team.matchesB];
+    const allMatches = [...team.matchesA, ...team.matchesB].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     const completedMatches = allMatches.filter((m) => m.status === "completed");
 
     const wins = completedMatches.filter(
